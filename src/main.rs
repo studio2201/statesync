@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 use serde::Deserialize;
@@ -61,6 +61,9 @@ pub struct SessionInfo {
     
     #[serde(alias = "playState", alias = "PlayState")]
     pub play_state: Option<PlayState>,
+
+    #[serde(alias = "playlistItemId", alias = "PlaylistItemId")]
+    pub playlist_item_id: Option<String>,
 }
 
 #[derive(Debug, Clone, Deserialize, PartialEq)]
@@ -88,6 +91,9 @@ pub struct PlayState {
     
     #[serde(alias = "volumeLevel", alias = "VolumeLevel")]
     pub volume_level: Option<i32>,
+
+    #[serde(alias = "playlistItemId", alias = "PlaylistItemId")]
+    pub playlist_item_id: Option<String>,
 }
 
 pub struct EmbyClient {
@@ -173,6 +179,37 @@ impl EmbyClient {
             .ok_or_else(|| anyhow!("Create Playlist response missing Id field: {:?}", data))?;
         
         Ok(playlist_id.to_string())
+    }
+
+    pub async fn get_playlist_item_ids(&self, playlist_id: &str, user_id: &str) -> Result<Vec<String>> {
+        let url = format!(
+            "{}/Playlists/{}/Items?UserId={}&api_key={}",
+            self.base_url, playlist_id, user_id, self.api_key
+        );
+        let resp = self.client.get(&url)
+            .header("X-Emby-Token", &self.api_key)
+            .send()
+            .await
+            .context("Failed to get playlist items")?;
+        
+        if !resp.status().is_success() {
+            let body = resp.text().await.unwrap_or_default();
+            return Err(anyhow!("Get playlist items failed: {} - {}", url, body));
+        }
+
+        let data: serde_json::Value = resp.json()
+            .await
+            .context("Failed to parse playlist items")?;
+        
+        let mut ids = Vec::new();
+        if let Some(items) = data.get("Items").and_then(|i| i.as_array()) {
+            for item in items {
+                if let Some(pl_item_id) = item.get("PlaylistItemId").and_then(|id| id.as_str()) {
+                    ids.push(pl_item_id.to_string());
+                }
+            }
+        }
+        Ok(ids)
     }
 
     pub async fn delete_playlist(&self, playlist_id: &str) -> Result<()> {
@@ -329,7 +366,8 @@ pub struct WatchParty {
     pub item_id: String,
     pub item_name: String,
     pub user_playlists: HashMap<String, String>, // User ID -> Playlist ID
-    pub members: std::collections::HashSet<String>, // session IDs
+    pub playlist_item_ids: HashSet<String>,      // Set of EntryIds (PlaylistItemId)
+    pub members: HashSet<String>,                // session IDs
     pub collective_state: CollectivePlayState,
 }
 
@@ -456,10 +494,14 @@ async fn run_sync_logic(
             continue;
         }
 
-        if let Some(ref item) = s.now_playing_item {
+        // Check if the current session reports a playlist item ID that matches one of our watch-parties
+        let s_playlist_item_id = s.playlist_item_id.as_ref()
+            .or_else(|| s.play_state.as_ref().and_then(|p| p.playlist_item_id.as_ref()));
+
+        if let Some(pl_item_id) = s_playlist_item_id {
             let mut match_item_id = None;
             for party in state.active_parties.values() {
-                if party.user_playlists.values().any(|v| v == &item.id) {
+                if party.playlist_item_ids.contains(pl_item_id) {
                     match_item_id = Some(party.item_id.clone());
                     break;
                 }
@@ -572,11 +614,26 @@ async fn run_sync_logic(
             match client_clone.get_all_users().await {
                 Ok(users) => {
                     let mut user_playlists = HashMap::new();
+                    let mut playlist_item_ids = HashSet::new();
+                    
                     for user_id in users {
                         match client_clone.create_playlist(&user_id, &pl_name, &item_id).await {
                             Ok(playlist_id) => {
                                 info!("Created playlist ID {} for user {}", playlist_id, user_id);
-                                user_playlists.insert(user_id, playlist_id);
+                                user_playlists.insert(user_id.clone(), playlist_id.clone());
+                                
+                                // Fetch the PlaylistItemId entries in this playlist
+                                tokio::time::sleep(Duration::from_millis(150)).await;
+                                match client_clone.get_playlist_item_ids(&playlist_id, &user_id).await {
+                                    Ok(ids) => {
+                                        for id in ids {
+                                            playlist_item_ids.insert(id);
+                                        }
+                                    }
+                                    Err(e) => {
+                                        error!("Error fetching items for playlist {}: {}", playlist_id, e);
+                                    }
+                                }
                             }
                             Err(e) => {
                                 error!("Error creating playlist for user {}: {}", user_id, e);
@@ -586,7 +643,7 @@ async fn run_sync_logic(
                     
                     if !user_playlists.is_empty() {
                         let mut state = state_lock_clone.lock().await;
-                        let mut members = std::collections::HashSet::new();
+                        let mut members = HashSet::new();
                         members.insert(host_session_id);
                         state.active_parties.insert(
                             item_id.clone(),
@@ -594,6 +651,7 @@ async fn run_sync_logic(
                                 item_id,
                                 item_name,
                                 user_playlists,
+                                playlist_item_ids,
                                 members,
                                 collective_state: CollectivePlayState {
                                     position_ticks: 0,
