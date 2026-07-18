@@ -1,5 +1,5 @@
 # Stage 1: Build the static Rust application
-FROM blackdex/rust-musl:1.75.0 as builder
+FROM blackdex/rust-musl:1.85.0 as builder
 WORKDIR /usr/src/statesync
 COPY . .
 RUN cargo build --release --target x86_64-unknown-linux-musl

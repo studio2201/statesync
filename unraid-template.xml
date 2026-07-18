@@ -22,4 +22,5 @@
 
   <!-- Global Settings -->
   <Config Name="Log Level" Target="RUST_LOG" Default="info" Mode="" Description="Logging level (info, warn, error, debug)" Type="Variable" Display="advanced" Required="false" Mask="false"/>
+  <Config Name="Timezone" Target="TZ" Default="UTC" Mode="" Description="Container Timezone (e.g. America/New_York)" Type="Variable" Display="always" Required="false" Mask="false"/>
 </Container>
