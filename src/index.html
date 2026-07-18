@@ -16,23 +16,23 @@
     body.theme-royal { --bg: #0f051c; --panel: rgba(35,15,55,0.85); --border: #ffd700; --accent: #8a2be2; }
     body { background: var(--bg); color: var(--text); font-family: 'Share Tech Mono', monospace; margin: 0; padding: 30px; display: flex; justify-content: center; transition: background 0.3s; }
     .container { max-width: 1000px; width: 100%; }
-    h1 { font-size: 28px; text-shadow: 0 0 10px var(--border); border-bottom: 2px solid var(--border); padding-bottom: 10px; margin: 0 0 30px 0; color: var(--border); display: flex; justify-content: space-between; align-items: center; }
-    h2 { font-size: 16px; margin: 0 0 15px 0; color: var(--border); border-left: 3px solid var(--border); padding-left: 8px; text-shadow: 0 0 5px rgba(0,240,255,0.4); text-transform: uppercase; }
+    h1 { font-size: 28px; border-bottom: 2px solid var(--border); padding-bottom: 10px; margin: 0 0 30px 0; color: var(--border); display: flex; justify-content: space-between; align-items: center; }
+    h2 { font-size: 16px; margin: 0 0 15px 0; color: var(--border); border-left: 3px solid var(--border); padding-left: 8px; text-transform: uppercase; }
     .card { background: var(--panel); border: 1px solid var(--border); border-radius: 4px; padding: 20px; box-shadow: 0 0 15px rgba(0,240,255,0.15); margin-bottom: 25px; position: relative; }
     .row-grid { display: grid; grid-template-columns: 1fr 2fr; gap: 25px; }
     .server-row { display: flex; justify-content: space-between; align-items: center; background: rgba(5,10,25,0.8); border: 1px solid rgba(0,240,255,0.2); padding: 12px 18px; margin-bottom: 10px; }
     .server-info { display: flex; align-items: center; gap: 12px; }
-    .status-Connected { color: var(--green); text-shadow: 0 0 8px var(--green); }
-    .status-Reconnecting { color: var(--accent); text-shadow: 0 0 8px var(--accent); }
-    .status-Offline { color: var(--red); text-shadow: 0 0 8px var(--red); }
-    .btn { background: transparent; border: 1px solid var(--border); color: var(--border); padding: 8px 16px; font-family: inherit; font-size: 12px; cursor: pointer; text-shadow: 0 0 5px var(--border); transition: all 0.2s; }
+    .status-Connected { color: var(--green); }
+    .status-Reconnecting { color: var(--accent); }
+    .status-Offline { color: var(--red); }
+    .btn { background: transparent; border: 1px solid var(--border); color: var(--border); padding: 8px 16px; font-family: inherit; font-size: 12px; cursor: pointer; transition: all 0.2s; }
     .btn:hover { background: var(--border); color: #000; box-shadow: 0 0 10px var(--border); }
-    .btn-accent { border-color: var(--accent); color: var(--accent); text-shadow: 0 0 5px var(--accent); }
+    .btn-accent { border-color: var(--accent); color: var(--accent); }
     .btn-accent:hover { background: var(--accent); color: #000; box-shadow: 0 0 10px var(--accent); }
-    .btn-danger { border-color: var(--red); color: var(--red); text-shadow: 0 0 5px var(--red); }
+    .btn-danger { border-color: var(--red); color: var(--red); }
     .btn-danger:hover { background: var(--red); color: #000; box-shadow: 0 0 10px var(--red); }
     .badge { border: 1px solid rgba(0,240,255,0.4); padding: 2px 6px; font-size: 11px; color: var(--border); }
-    .log-feed { font-size: 12px; background: rgba(5,8,18,0.9); border: 1px solid rgba(0,240,255,0.2); padding: 15px; max-height: 200px; overflow-y: auto; color: var(--green); text-shadow: 0 0 3px rgba(0,255,102,0.4); }
+    .log-feed { font-size: 12px; background: rgba(5,8,18,0.9); border: 1px solid rgba(0,240,255,0.2); padding: 15px; max-height: 200px; overflow-y: auto; color: var(--green); }
     .log-line { border-bottom: 1px solid rgba(0,255,102,0.05); padding: 4px 0; }
     .modal { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.85); display: none; align-items: center; justify-content: center; z-index: 2000; }
     .modal-content { background: var(--bg); border: 2px solid var(--border); box-shadow: 0 0 30px var(--border); width: 450px; padding: 25px; position: relative; }
@@ -123,15 +123,15 @@
         document.getElementById('syncThreshold').value = currentConfig.sync_threshold_seconds;
         const statusSpan = document.getElementById('systemStatusText');
         if (currentConfig.servers.length === 0) {
-          statusSpan.innerText = '[ SYNC ENGINE: IDLE ]'; statusSpan.style.color = 'var(--border)'; statusSpan.style.textShadow = '0 0 8px var(--border)';
+          statusSpan.innerText = '[ SYNC ENGINE: IDLE ]'; statusSpan.style.color = 'var(--border)';
         } else {
           const statuses = status.servers.map(s => s.websocket_status);
           if (statuses.length === 0 || statuses.every(s => s === 'Offline')) {
-            statusSpan.innerText = '[ SYNC ENGINE: OFFLINE ]'; statusSpan.style.color = 'var(--red)'; statusSpan.style.textShadow = '0 0 8px var(--red)';
+            statusSpan.innerText = '[ SYNC ENGINE: OFFLINE ]'; statusSpan.style.color = 'var(--red)';
           } else if (statuses.some(s => s === 'Offline' || s === 'Reconnecting')) {
-            statusSpan.innerText = '[ SYNC ENGINE: DEGRADED ]'; statusSpan.style.color = 'var(--accent)'; statusSpan.style.textShadow = '0 0 8px var(--accent)';
+            statusSpan.innerText = '[ SYNC ENGINE: DEGRADED ]'; statusSpan.style.color = 'var(--accent)';
           } else {
-            statusSpan.innerText = '[ SYNC ENGINE: ONLINE ]'; statusSpan.style.color = 'var(--green)'; statusSpan.style.textShadow = '0 0 8px var(--green)';
+            statusSpan.innerText = '[ SYNC ENGINE: ONLINE ]'; statusSpan.style.color = 'var(--green)';
           }
         }
         const listDiv = document.getElementById('serverList');
@@ -175,7 +175,7 @@
               line.innerHTML = `&gt; [${log.timestamp}] ${log.message.toUpperCase()} FROM <span style="color:${sCol}">[${sBadge}: ${log.source_name.toUpperCase()}]</span> -&gt; <span style="color:${tCol}">[${tBadge}: ${log.target_name.toUpperCase()}]</span>`;
             } else {
               const color = log.level === 'error' ? 'var(--red)' : (log.level === 'warn' ? 'var(--accent)' : 'var(--border)');
-              line.innerHTML = `&gt; [${log.timestamp}] <span style="color:${color};text-shadow:0 0 5px ${color}">[${log.level.toUpperCase()}] ${log.message.toUpperCase()}</span>`;
+              line.innerHTML = `&gt; [${log.timestamp}] <span style="color:${color}">[${log.level.toUpperCase()}] ${log.message.toUpperCase()}</span>`;
             }
             logsDiv.appendChild(line);
           });
