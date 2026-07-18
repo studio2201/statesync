@@ -2,187 +2,196 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>statesync dashboard</title>
-  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap" rel="stylesheet">
+  <title>[ STATESYNC: HUD TERMINAL ]</title>
+  <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap" rel="stylesheet">
   <style>
-    :root { --bg: #0b0f19; --panel: rgba(30, 41, 59, 0.7); --border: rgba(255, 255, 255, 0.08); --primary: linear-gradient(135deg, #6366f1, #a855f7); --text: #f8fafc; --text-muted: #94a3b8; }
-    body { background: var(--bg); color: var(--text); font-family: 'Outfit', sans-serif; margin: 0; padding: 40px 20px; display: flex; justify-content: center; }
-    .container { max-width: 900px; width: 100%; }
-    h1 { font-size: 32px; font-weight: 600; background: var(--primary); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin: 0 0 10px 0; }
-    .subtitle { color: var(--text-muted); margin-bottom: 40px; font-size: 16px; }
-    .card { background: var(--panel); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border: 1px solid var(--border); border-radius: 20px; padding: 30px; margin-bottom: 30px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3); }
-    h2 { font-size: 20px; margin-top: 0; margin-bottom: 20px; font-weight: 600; }
-    .server-list { display: flex; flex-direction: column; gap: 15px; }
-    .server-row { display: flex; justify-content: space-between; align-items: center; background: rgba(15, 23, 42, 0.4); padding: 16px 20px; border-radius: 12px; border: 1px solid var(--border); }
+    :root { --bg: #03060f; --panel: rgba(10, 16, 32, 0.85); --border: #00f0ff; --accent: #ff8800; --green: #00ff66; --red: #ff0055; --text: #c0d0e8; }
+    body { background: var(--bg); color: var(--text); font-family: 'Share Tech Mono', monospace; margin: 0; padding: 30px; display: flex; justify-content: center; }
+    .container { max-width: 1000px; width: 100%; }
+    h1 { font-size: 28px; text-shadow: 0 0 10px var(--border); border-bottom: 2px solid var(--border); padding-bottom: 10px; margin: 0 0 30px 0; color: var(--border); display: flex; justify-content: space-between; align-items: center; }
+    h2 { font-size: 16px; margin: 0 0 15px 0; color: var(--border); border-left: 3px solid var(--border); padding-left: 8px; text-shadow: 0 0 5px rgba(0,240,255,0.4); text-transform: uppercase; }
+    .card { background: var(--panel); border: 1px solid var(--border); border-radius: 4px; padding: 20px; box-shadow: 0 0 15px rgba(0,240,255,0.15); margin-bottom: 25px; position: relative; }
+    .row-grid { display: grid; grid-template-columns: 1fr 2fr; gap: 25px; }
+    .server-row { display: flex; justify-content: space-between; align-items: center; background: rgba(5,10,25,0.8); border: 1px solid rgba(0,240,255,0.2); padding: 12px 18px; margin-bottom: 10px; }
     .server-info { display: flex; align-items: center; gap: 12px; }
-    .status-dot { width: 10px; height: 10px; border-radius: 50%; }
-    .status-Connected { background: #10b981; box-shadow: 0 0 10px #10b981; }
-    .status-Reconnecting { background: #f59e0b; box-shadow: 0 0 10px #f59e0b; }
-    .status-Offline { background: #ef4444; box-shadow: 0 0 10px #ef4444; }
-    .server-name { font-weight: 600; }
-    .server-type { background: rgba(99, 102, 241, 0.2); color: #a5b4fc; font-size: 11px; padding: 2px 8px; border-radius: 100px; text-transform: uppercase; letter-spacing: 0.5px; }
-    .btn { background: var(--primary); border: none; color: white; padding: 12px 24px; font-size: 14px; font-weight: 600; border-radius: 10px; cursor: pointer; transition: all 0.2s; }
-    .btn:hover { opacity: 0.9; transform: translateY(-1px); }
-    .btn-secondary { background: rgba(255,255,255,0.08); color: var(--text); border: 1px solid var(--border); }
-    .btn-secondary:hover { background: rgba(255,255,255,0.15); }
-    .btn-danger { background: rgba(239, 68, 68, 0.2); color: #fca5a5; border: 1px solid rgba(239, 68, 68, 0.3); padding: 8px 16px; border-radius: 8px; }
-    .btn-danger:hover { background: #ef4444; color: white; }
-    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px; }
-    .form-group { display: flex; flex-direction: column; gap: 8px; }
-    .form-group-full { grid-column: span 2; }
-    label { font-size: 13px; color: var(--text-muted); font-weight: 600; }
-    input, select { background: rgba(15, 23, 42, 0.6); border: 1px solid var(--border); color: white; padding: 12px; border-radius: 10px; font-family: inherit; outline: none; }
-    input:focus, select:focus { border-color: #6366f1; }
-    .badge { display: inline-block; padding: 4px 10px; border-radius: 6px; font-size: 12px; background: rgba(255,255,255,0.05); border: 1px solid var(--border); }
-    .log-container { font-family: monospace; font-size: 13px; background: rgba(15, 23, 42, 0.6); border-radius: 12px; border: 1px solid var(--border); padding: 16px; max-height: 250px; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; }
-    .log-line { border-bottom: 1px solid rgba(255,255,255,0.02); padding-bottom: 4px; }
-    .toast { position: fixed; bottom: 20px; right: 20px; background: #1e293b; border: 1px solid var(--border); padding: 16px 24px; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.3); display: none; animation: slideIn 0.3s ease; z-index: 1000; }
-    @keyframes slideIn { from { transform: translateY(100px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+    .status-Connected { color: var(--green); text-shadow: 0 0 8px var(--green); }
+    .status-Reconnecting { color: var(--accent); text-shadow: 0 0 8px var(--accent); }
+    .status-Offline { color: var(--red); text-shadow: 0 0 8px var(--red); }
+    .btn { background: transparent; border: 1px solid var(--border); color: var(--border); padding: 8px 16px; font-family: inherit; font-size: 12px; cursor: pointer; text-shadow: 0 0 5px var(--border); transition: all 0.2s; }
+    .btn:hover { background: var(--border); color: #000; box-shadow: 0 0 10px var(--border); }
+    .btn-accent { border-color: var(--accent); color: var(--accent); text-shadow: 0 0 5px var(--accent); }
+    .btn-accent:hover { background: var(--accent); color: #000; box-shadow: 0 0 10px var(--accent); }
+    .btn-danger { border-color: var(--red); color: var(--red); text-shadow: 0 0 5px var(--red); }
+    .btn-danger:hover { background: var(--red); color: #000; box-shadow: 0 0 10px var(--red); }
+    .badge { border: 1px solid rgba(0,240,255,0.4); padding: 2px 6px; font-size: 11px; color: var(--border); }
+    .log-feed { font-size: 12px; background: rgba(5,8,18,0.9); border: 1px solid rgba(0,240,255,0.2); padding: 15px; max-height: 200px; overflow-y: auto; color: var(--green); text-shadow: 0 0 3px rgba(0,255,102,0.4); }
+    .log-line { border-bottom: 1px solid rgba(0,255,102,0.05); padding: 4px 0; }
+    .modal { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.85); display: none; align-items: center; justify-content: center; z-index: 2000; }
+    .modal-content { background: var(--bg); border: 2px solid var(--border); box-shadow: 0 0 30px var(--border); width: 450px; padding: 25px; position: relative; }
+    .form-group { display: flex; flex-direction: column; gap: 6px; margin-bottom: 15px; }
+    input, select { background: rgba(5,10,25,0.8); border: 1px solid rgba(0,240,255,0.4); color: var(--text); padding: 8px; font-family: inherit; font-size: 13px; outline: none; }
+    input:focus, select:focus { border-color: var(--border); box-shadow: 0 0 8px rgba(0,240,255,0.4); }
+    .toast { position: fixed; bottom: 20px; right: 20px; background: var(--panel); border: 1px solid var(--border); padding: 12px 20px; display: none; animation: pulse 1s infinite alternate; }
+    @keyframes pulse { from { box-shadow: 0 0 5px var(--border); } to { box-shadow: 0 0 15px var(--border); } }
   </style>
 </head>
 <body>
   <div class="container">
-    <h1>statesync</h1>
-    <div class="subtitle">Dynamic multi-server playstate synchronization dashboard</div>
+    <h1>
+      <span>[ SYSTEM STATUS: ONLINE ]</span>
+      <div style="display: flex; gap: 10px">
+        <button class="btn btn-accent" onclick="openSettingsModal()">[ SETTINGS ]</button>
+        <button class="btn" onclick="openServerModal(-1)">[ + ADD MODULE ]</button>
+      </div>
+    </h1>
 
-    <!-- Live Active Syncs Card -->
-    <div id="activeSyncsCard" class="card" style="display: none;">
-      <h2>Currently Playing</h2>
-      <div class="server-list" id="activeSessions"></div>
-    </div>
-
-    <!-- Active Servers Card -->
-    <div class="card">
-      <h2>Media Servers</h2>
-      <div class="server-list" id="serverList">
-        <div style="color: var(--text-muted)">Loading servers...</div>
+    <!-- Top Grid: Synced Users & Currently Playing -->
+    <div class="row-grid">
+      <div class="card">
+        <h2>[ MAPPED USERS ]</h2>
+        <div id="syncedUsers" style="display: flex; flex-direction: column; gap: 8px;"></div>
+      </div>
+      <div class="card">
+        <h2>[ STREAM MONITOR ]</h2>
+        <div id="activeSessions" style="display: flex; flex-direction: column; gap: 10px;">
+          <div style="color: var(--accent)">NO ACTIVE STREAMS DETECTED</div>
+        </div>
       </div>
     </div>
 
-    <!-- Add Server Card -->
+    <!-- Middle: Media Servers -->
     <div class="card">
-      <h2>Add Media Server</h2>
+      <h2>[ TRANSCEIVER MODULES ]</h2>
+      <div class="server-list" id="serverList"></div>
+    </div>
+
+    <!-- Bottom: LOG -->
+    <div class="card">
+      <h2>[ TERMINAL LOG FEED ]</h2>
+      <div class="log-feed" id="syncLogs"></div>
+    </div>
+  </div>
+
+  <!-- Server Configuration Modal -->
+  <div class="modal" id="serverModal">
+    <div class="modal-content">
+      <h2 id="modalTitle">[ CONFIGURE MODULE ]</h2>
       <form id="serverForm">
-        <div class="form-grid">
-          <div class="form-group">
-            <label for="serverType">Server Type</label>
-            <select id="serverType">
-              <option value="jellyfin">Jellyfin</option>
-              <option value="emby">Emby</option>
-            </select>
-          </div>
-          <div class="form-group">
-            <label for="serverName">Friendly Name</label>
-            <input type="text" id="serverName" placeholder="e.g. Vacation Home" required>
-          </div>
-          <div class="form-group form-group-full">
-            <label for="serverUrl">Server Address</label>
-            <input type="url" id="serverUrl" placeholder="http://192.168.3.10:8096" required>
-          </div>
-          <div class="form-group form-group-full">
-            <label for="serverKey">API Key</label>
-            <input type="password" id="serverKey" placeholder="Enter server API key" required>
-          </div>
-        </div>
-        <div style="display: flex; gap: 12px">
-          <button type="submit" class="btn">Add Server</button>
-          <button type="button" class="btn btn-secondary" onclick="testConnection()">Test Connection</button>
+        <div class="form-group"><label>MODULE TYPE</label><select id="serverType"><option value="jellyfin">JELLYFIN</option><option value="emby">EMBY</option></select></div>
+        <div class="form-group"><label>IDENT NAME</label><input type="text" id="serverName" required></div>
+        <div class="form-group"><label>TRANSCEIVER IP:PORT</label><input type="url" id="serverUrl" placeholder="http://192.168.3.10:8096" required></div>
+        <div class="form-group"><label>ACCESS KEY (API)</label><input type="password" id="serverKey" required></div>
+        <div style="display: flex; justify-content: space-between; margin-top: 20px;">
+          <button type="submit" class="btn">[ SAVE ]</button>
+          <button type="button" class="btn btn-accent" onclick="testConnection()">[ TEST LINK ]</button>
+          <button type="button" class="btn btn-danger" onclick="closeModal('serverModal')">[ ABORT ]</button>
         </div>
       </form>
     </div>
+  </div>
 
-    <!-- Synced Users & Logs Grid -->
-    <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 30px;">
-      <div class="card" style="margin-bottom: 0;">
-        <h2>Synced Users</h2>
-        <div id="syncedUsers" style="display: flex; flex-wrap: wrap; gap: 8px;">
-          <div style="color: var(--text-muted)">Loading users...</div>
-        </div>
+  <!-- Settings Modal -->
+  <div class="modal" id="settingsModal">
+    <div class="modal-content">
+      <h2>[ GLOBAL SETTINGS ]</h2>
+      <div class="form-group"><label>SYNC WINDOW THRESHOLD (SECONDS)</label><input type="number" id="syncThreshold" min="1"></div>
+      <div style="display: flex; gap: 12px; margin-top: 20px;">
+        <button class="btn" onclick="saveSettings()">[ SAVE ]</button>
+        <button class="btn btn-danger" onclick="closeModal('settingsModal')">[ ABORT ]</button>
       </div>
-      <div class="card" style="margin-bottom: 0;">
-        <h2>Recent Sync Activity</h2>
-        <div class="log-container" id="syncLogs"><div style="color: var(--text-muted)">Waiting for sync events...</div></div>
-      </div>
-    </div>
-
-    <!-- Settings Card -->
-    <div class="card" style="margin-top: 30px;">
-      <h2>Settings</h2>
-      <div class="form-grid"><div class="form-group"><label for="syncThreshold">Sync Position Threshold (seconds)</label><input type="number" id="syncThreshold" value="5" min="1"></div></div>
-      <button class="btn" onclick="saveSettings()">Save Settings</button>
     </div>
   </div>
 
   <div class="toast" id="toast"></div>
 
   <script>
-    let currentConfig = { servers: [], sync_threshold_seconds: 5 };
+    let currentConfig = { servers: [], sync_threshold_seconds: 5 }; let editIndex = -1;
     async function loadDashboard() {
       try {
         const [configRes, statusRes] = await Promise.all([fetch('/api/config'), fetch('/api/status')]);
         currentConfig = await configRes.json(); const status = await statusRes.json();
         document.getElementById('syncThreshold').value = currentConfig.sync_threshold_seconds;
         const listDiv = document.getElementById('serverList');
-        if (currentConfig.servers.length === 0) {
-          listDiv.innerHTML = '<div style="color: var(--text-muted)">No media servers configured. Add one below!</div>';
-        } else {
+        if (currentConfig.servers.length === 0) { listDiv.innerHTML = '<div style="color: var(--accent)">NO CONFIGURED TRANSCEIVERS</div>'; } else {
           listDiv.innerHTML = '';
           currentConfig.servers.forEach((srv, idx) => {
             const sStatus = status.servers.find(s => s.name === srv.name) || { users_count: 0, media_count: 0, websocket_status: 'Offline' };
             const row = document.createElement('div'); row.className = 'server-row';
-            row.innerHTML = `<div class="server-info"><div class="status-dot status-${sStatus.websocket_status}"></div><div><div style="display: flex; align-items: center; gap: 8px"><span class="server-name">${srv.name}</span><span class="server-type">${srv.is_emby ? 'emby' : 'jellyfin'}</span></div><div style="font-size: 12px; color: var(--text-muted); margin-top: 4px">${srv.url}</div></div></div><div class="server-info"><span class="server-stats">${sStatus.users_count} users | ${sStatus.media_count} items</span><button class="btn btn-danger" onclick="deleteServer(${idx})">Delete</button></div>`;
+            row.innerHTML = `<div class="server-info"><span class="status-${sStatus.websocket_status}">[ ${sStatus.websocket_status.toUpperCase()} ]</span><div><span style="font-weight:600;color:#fff">${srv.name}</span> <span class="badge">${srv.is_emby ? 'EMBY' : 'JELLYFIN'}</span><div style="font-size:11px;color:var(--text);margin-top:2px">${srv.url}</div></div></div><div class="server-info"><span style="font-size:12px">${sStatus.users_count} USERS | ${sStatus.media_count} CACHED</span><button class="btn" onclick="openServerModal(${idx})">[ EDIT ]</button><button class="btn btn-danger" onclick="deleteServer(${idx})">[ WIPE ]</button></div>`;
             listDiv.appendChild(row);
           });
         }
-        const activeCard = document.getElementById('activeSyncsCard'); const activeDiv = document.getElementById('activeSessions');
+        const activeDiv = document.getElementById('activeSessions');
         if (status.active_sessions && status.active_sessions.length > 0) {
-          activeCard.style.display = 'block'; activeDiv.innerHTML = '';
+          activeDiv.innerHTML = '';
           status.active_sessions.forEach(sess => {
-            const row = document.createElement('div'); row.className = 'server-row'; row.style.background = 'rgba(99, 102, 241, 0.05)';
-            const minutes = Math.floor(sess.position / 60); const seconds = Math.floor(sess.position % 60).toString().padStart(2, '0');
-            row.innerHTML = `<div class="server-info"><div class="status-dot status-Connected"></div><div><div style="font-weight: 600">${sess.item}</div><div style="font-size: 12px; color: var(--text-muted)">User: ${sess.user} | Server: ${sess.server}</div></div></div><div style="display: flex; align-items: center; gap: 12px"><span class="badge">${minutes}:${seconds}</span><span class="server-type">${sess.is_paused ? 'PAUSED' : 'PLAYING'}</span></div>`;
+            const row = document.createElement('div'); row.className = 'server-row'; row.style.borderColor = 'var(--accent)';
+            const mins = Math.floor(sess.position / 60); const secs = Math.floor(sess.position % 60).toString().padStart(2, '0');
+            row.innerHTML = `<div class="server-info"><div><div style="font-weight:600;color:#fff">${sess.item}</div><div style="font-size:11px;color:var(--text)">USER: ${sess.user} | SOURCE: ${sess.server}</div></div></div><div style="display:flex;align-items:center;gap:10px"><span class="badge" style="border-color:var(--accent);color:var(--accent)">${mins}:${secs}</span><span style="font-size:11px;color:${sess.is_paused ? 'var(--accent)' : 'var(--green)'}">[ ${sess.is_paused ? 'PAUSED' : 'PLAYING'} ]</span></div>`;
             activeDiv.appendChild(row);
           });
-        } else { activeCard.style.display = 'none'; }
+        } else { activeDiv.innerHTML = '<div style="color:var(--accent)">NO ACTIVE STREAMS DETECTED</div>'; }
         const usersDiv = document.getElementById('syncedUsers');
         if (status.synced_users && status.synced_users.length > 0) {
           usersDiv.innerHTML = '';
           status.synced_users.forEach(u => {
-            const badge = document.createElement('span'); badge.className = 'badge'; badge.style.borderColor = 'rgba(16, 185, 129, 0.3)'; badge.style.color = '#a7f3d0'; badge.innerText = u; usersDiv.appendChild(badge);
+            const row = document.createElement('div'); row.className = 'server-row'; row.style.padding = '8px 12px'; row.style.margin = '0 0 5px 0';
+            row.innerHTML = `<span style="color:var(--green)">[ MAPPED ]</span> <span style="color:#fff">${u}</span>`;
+            usersDiv.appendChild(row);
           });
-        } else { usersDiv.innerHTML = '<div style="color: var(--text-muted); font-size:14px">No matched LDAP users found.</div>'; }
+        } else { usersDiv.innerHTML = '<div style="color:var(--accent)">NO SYNCD LDAP USERS FOUND</div>'; }
         const logsDiv = document.getElementById('syncLogs');
         if (status.sync_logs && status.sync_logs.length > 0) {
           logsDiv.innerHTML = '';
           status.sync_logs.forEach(log => {
-            const line = document.createElement('div'); line.className = 'log-line'; line.innerText = log; logsDiv.appendChild(line);
+            const line = document.createElement('div'); line.className = 'log-line'; line.innerText = `> ${log.toUpperCase()}`;
+            logsDiv.appendChild(line);
           });
-        } else { logsDiv.innerHTML = '<div style="color: var(--text-muted)">Waiting for sync events...</div>'; }
+        } else { logsDiv.innerHTML = '<div style="color:var(--green)">> LISTENING FOR METRIC EVENTS...</div>'; }
       } catch (err) { console.error(err); }
     }
+    function openServerModal(idx) {
+      editIndex = idx;
+      if (idx === -1) {
+        document.getElementById('modalTitle').innerText = '[ ADD TRANSCEIVER MODULE ]';
+        document.getElementById('serverForm').reset();
+      } else {
+        document.getElementById('modalTitle').innerText = '[ EDIT TRANSCEIVER MODULE ]';
+        const srv = currentConfig.servers[idx];
+        document.getElementById('serverType').value = srv.is_emby ? 'emby' : 'jellyfin';
+        document.getElementById('serverName').value = srv.name;
+        document.getElementById('serverUrl').value = srv.url;
+        document.getElementById('serverKey').value = srv.api_key;
+      }
+      document.getElementById('serverModal').style.display = 'flex';
+    }
+    function openSettingsModal() { document.getElementById('settingsModal').style.display = 'flex'; }
+    function closeModal(id) { document.getElementById(id).style.display = 'none'; }
     async function testConnection() {
       const type = document.getElementById('serverType').value; const url = document.getElementById('serverUrl').value; const api_key = document.getElementById('serverKey').value;
-      if (!url || !api_key) { showToast('Please enter Address and API Key to test connection'); return; }
-      showToast('Testing server connection...');
+      if (!url || !api_key) { showToast('LINK DATA INCOMPLETE'); return; }
+      showToast('PINGING LINK ADDRESS...');
       try {
         const res = await fetch('/api/test_connection', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ url, api_key, is_emby: type === 'emby' }) });
-        const result = await res.json(); showToast(result.message);
-      } catch (err) { showToast('Failed to test connection'); }
+        const result = await res.json(); showToast(result.message.toUpperCase());
+      } catch (err) { showToast('LINK RESPONSE FAILED'); }
     }
     document.getElementById('serverForm').addEventListener('submit', async (e) => {
-      e.preventDefault(); const type = document.getElementById('serverType').value; const name = document.getElementById('serverName').value; const url = document.getElementById('serverUrl').value; const api_key = document.getElementById('serverKey').value;
-      currentConfig.servers.push({ name, url, api_key, is_emby: type === 'emby' });
-      await saveConfig(); document.getElementById('serverForm').reset();
+      e.preventDefault();
+      const type = document.getElementById('serverType').value; const name = document.getElementById('serverName').value; const url = document.getElementById('serverUrl').value; const api_key = document.getElementById('serverKey').value;
+      const data = { name, url, api_key, is_emby: type === 'emby' };
+      if (editIndex === -1) { currentConfig.servers.push(data); } else { currentConfig.servers[editIndex] = data; }
+      closeModal('serverModal'); await saveConfig();
     });
     async function deleteServer(idx) { currentConfig.servers.splice(idx, 1); await saveConfig(); }
-    async function saveSettings() { currentConfig.sync_threshold_seconds = parseInt(document.getElementById('syncThreshold').value); await saveConfig(); }
+    async function saveSettings() { currentConfig.sync_threshold_seconds = parseInt(document.getElementById('syncThreshold').value); closeModal('settingsModal'); await saveConfig(); }
     async function saveConfig() {
       try {
         const res = await fetch('/api/config', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(currentConfig) });
-        const result = await res.json(); showToast(result.message); setTimeout(loadDashboard, 1500);
-      } catch (err) { showToast('Failed to update configuration'); }
+        const result = await res.json(); showToast(result.message.toUpperCase()); setTimeout(loadDashboard, 1200);
+      } catch (err) { showToast('WRITE CONFIG FAILED'); }
     }
-    function showToast(msg) { const toast = document.getElementById('toast'); toast.innerText = msg; toast.style.display = 'block'; setTimeout(() => { toast.style.display = 'none'; }, 4000); }
+    function showToast(msg) { const toast = document.getElementById('toast'); toast.innerText = `> ${msg}`; toast.style.display = 'block'; setTimeout(() => { toast.style.display = 'none'; }, 4000); }
     loadDashboard(); setInterval(loadDashboard, 3000);
   </script>
 </body>
