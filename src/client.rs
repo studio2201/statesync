@@ -125,17 +125,23 @@ impl MediaClient {
     }
 
     pub async fn update_progress(&self, user_id: &str, item_id: &str, position_ticks: i64, is_paused: bool) -> Result<()> {
-        let path = format!("/Users/{}/PlayingItems/{}/Progress?positionTicks={}&isPaused={}", user_id, item_id, position_ticks, is_paused);
+        let path = format!("/Users/{}/PlayingItems/{}/Progress", user_id, item_id);
         let url = self.auth_url(&path);
+        let body = serde_json::json!({
+            "PositionTicks": position_ticks,
+            "IsPaused": is_paused,
+            "IsMuted": false,
+        });
         let resp = self.client.post(&url)
             .header("X-Emby-Token", &self.api_key)
+            .json(&body)
             .send()
             .await
             .context("Failed to send progress update request")?;
         
         if !resp.status().is_success() {
-            let body = resp.text().await.unwrap_or_default();
-            return Err(anyhow!("Progress update failed: {} - {}", url, body));
+            let body_text = resp.text().await.unwrap_or_default();
+            return Err(anyhow!("Progress update failed: {} - {}", url, body_text));
         }
         Ok(())
     }
