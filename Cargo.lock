@@ -137,10 +137,11 @@ dependencies = [
 
 [[package]]
 name = "emby-syncplay"
-version = "0.1.3"
+version = "0.1.5"
 dependencies = [
  "anyhow",
  "futures-util",
+ "percent-encoding",
  "reqwest",
  "serde",
  "serde_json",

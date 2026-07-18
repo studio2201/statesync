@@ -11,6 +11,7 @@ use reqwest::Client;
 use anyhow::{Result, Context, anyhow};
 use tracing::{info, warn, error};
 use tracing_subscriber;
+use percent_encoding::{utf8_percent_encode, NON_ALPHANUMERIC};
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct DeviceConfig {
@@ -129,6 +130,100 @@ impl EmbyClient {
         Ok(sessions)
     }
 
+    pub async fn get_first_user_id(&self) -> Result<String> {
+        let url = self.auth_url("/emby/Users");
+        let resp = self.client.get(&url)
+            .header("X-Emby-Token", &self.api_key)
+            .send()
+            .await
+            .context("Failed to get users")?;
+        
+        let users: serde_json::Value = resp.json()
+            .await
+            .context("Failed to parse users list")?;
+        
+        let first_user = users.as_array()
+            .and_then(|arr| arr.first())
+            .and_then(|u| u.get("Id"))
+            .and_then(|id| id.as_str())
+            .ok_or_else(|| anyhow!("No users found on Emby server"))?;
+        
+        Ok(first_user.to_string())
+    }
+
+    pub async fn create_playlist(&self, user_id: &str, name: &str, item_id: &str) -> Result<String> {
+        let path = "/emby/Playlists";
+        let encoded_name = utf8_percent_encode(name, NON_ALPHANUMERIC).to_string();
+        let url = format!(
+            "{}{}?UserId={}&Name={}&Ids={}&api_key={}",
+            self.base_url, path, user_id, encoded_name, item_id, self.api_key
+        );
+        let resp = self.client.post(&url)
+            .header("X-Emby-Token", &self.api_key)
+            .send()
+            .await
+            .context("Failed to send Create Playlist request")?;
+        
+        if !resp.status().is_success() {
+            let body = resp.text().await.unwrap_or_default();
+            return Err(anyhow!("Create Playlist failed: {} - {}", url, body));
+        }
+
+        let data: serde_json::Value = resp.json()
+            .await
+            .context("Failed to parse Create Playlist response")?;
+        
+        let playlist_id = data.get("Id")
+            .and_then(|id| id.as_str())
+            .ok_or_else(|| anyhow!("Create Playlist response missing Id field: {:?}", data))?;
+        
+        Ok(playlist_id.to_string())
+    }
+
+    pub async fn delete_playlist(&self, playlist_id: &str) -> Result<()> {
+        let path = format!("/emby/Items/{}", playlist_id);
+        let url = self.auth_url(&path);
+        let resp = self.client.delete(&url)
+            .header("X-Emby-Token", &self.api_key)
+            .send()
+            .await
+            .context("Failed to send Delete Playlist request")?;
+        
+        if !resp.status().is_success() {
+            let body = resp.text().await.unwrap_or_default();
+            return Err(anyhow!("Delete Playlist failed: {} - {}", url, body));
+        }
+        Ok(())
+    }
+
+    pub async fn clean_orphaned_playlists(&self) -> Result<()> {
+        let url = format!(
+            "{}/emby/Items?IncludeItemTypes=Playlist&Recursive=true&api_key={}",
+            self.base_url, self.api_key
+        );
+        let resp = self.client.get(&url)
+            .header("X-Emby-Token", &self.api_key)
+            .send()
+            .await
+            .context("Failed to query playlists")?;
+        
+        let data: serde_json::Value = resp.json()
+            .await
+            .context("Failed to parse playlists list")?;
+        
+        if let Some(items) = data.get("Items").and_then(|i| i.as_array()) {
+            for item in items {
+                if let (Some(id), Some(name)) = (item.get("Id").and_then(|id| id.as_str()), item.get("Name").and_then(|n| n.as_str())) {
+                    if name.starts_with("Join ") {
+                        info!("Cleaning up orphaned watch-party playlist: {} ({})", name, id);
+                        let _ = self.delete_playlist(id).await;
+                    }
+                }
+            }
+        }
+        Ok(())
+    }
+
     pub async fn play(&self, session_id: &str, item_id: &str, position_ticks: i64) -> Result<()> {
         let path = format!("/emby/Sessions/{}/Playing", session_id);
         let url = format!(
@@ -232,18 +327,31 @@ pub struct SessionHistoryEntry {
     pub last_updated: Instant,
 }
 
+#[derive(Debug, Clone)]
+pub struct ActiveRoomState {
+    pub device_id: String,
+    pub device_name: String,
+    pub session_id: String,
+    pub playing_item_id: String,
+    pub playlist_id: String,
+}
+
 pub struct AppState {
     pub collective_state: Option<CollectivePlayState>,
     pub session_history: HashMap<String, SessionHistoryEntry>,
     pub cooldowns: HashMap<String, Instant>,
+    pub active_playlists: HashMap<String, ActiveRoomState>,
+    pub user_id: String,
 }
 
 impl AppState {
-    pub fn new() -> Self {
+    pub fn new(user_id: String) -> Self {
         Self {
             collective_state: None,
             session_history: HashMap::new(),
             cooldowns: HashMap::new(),
+            active_playlists: HashMap::new(),
+            user_id,
         }
     }
 
@@ -355,86 +463,165 @@ async fn run_sync_logic(
         return Ok(());
     }
 
-    // Intercept any TV trying to play a "Sync to Room" dummy video
+    // 1. Intercept any TV trying to play one of our active Watch Party Playlists
     for s in &active_sync_sessions {
         if state.is_in_cooldown(&s.id) {
             continue;
         }
 
         if let Some(ref item) = s.now_playing_item {
-            if let Some(ref name) = item.name {
-                if name.starts_with("Sync to ") {
-                    let target_room_name = name.strip_prefix("Sync to ").unwrap().trim();
-                    info!(
-                        "Device '{}' played dummy video '{}' -> Requesting to join room '{}'",
-                        s.device_name.as_deref().unwrap_or(&s.device_id),
-                        name,
-                        target_room_name
-                    );
+            let mut match_room = None;
+            for active_pl in state.active_playlists.values() {
+                if item.id == active_pl.playlist_id {
+                    match_room = Some(active_pl.clone());
+                    break;
+                }
+            }
 
-                    // Find the target device ID from our config
-                    if let Some(target_dev_cfg) = config.sync_devices.iter().find(|d| d.name == target_room_name) {
-                        // Find the active session for the target device
-                        if let Some(target_session) = active_sync_sessions.iter().find(|ts| ts.device_id == target_dev_cfg.id) {
-                            if let Some(ref target_item) = target_session.now_playing_item {
-                                let target_item_name = target_item.name.as_deref().unwrap_or("");
-                                if !target_item_name.starts_with("Sync to ") {
-                                    let target_pos = target_session.play_state.as_ref().and_then(|p| p.position_ticks).unwrap_or(0);
-                                    let target_paused = target_session.play_state.as_ref().and_then(|p| p.is_paused).unwrap_or(false);
+            if let Some(target_pl) = match_room {
+                info!(
+                    "Device '{}' played sync playlist for room '{}' -> Requesting to join!",
+                    s.device_name.as_deref().unwrap_or(&s.device_id),
+                    target_pl.device_name
+                );
 
-                                    info!(
-                                        "Redirecting device '{}' to join room '{}' playing item '{}' at position {}",
-                                        s.device_name.as_deref().unwrap_or(&s.device_id),
-                                        target_room_name,
-                                        target_item.id,
-                                        target_pos
-                                    );
+                // Find the active session for the target device
+                if let Some(target_session) = active_sync_sessions.iter().find(|ts| ts.device_id == target_pl.device_id) {
+                    if let Some(ref target_item) = target_session.now_playing_item {
+                        let target_pos = target_session.play_state.as_ref().and_then(|p| p.position_ticks).unwrap_or(0);
+                        let target_paused = target_session.play_state.as_ref().and_then(|p| p.is_paused).unwrap_or(false);
 
-                                    let client_clone = client.clone();
-                                    let session_id = s.id.clone();
-                                    let item_id = target_item.id.clone();
-                                    let cooldown_dur = Duration::from_secs(config.cooldown_seconds);
+                        info!(
+                            "Redirecting device '{}' to join room '{}' playing item '{}' at position {}",
+                            s.device_name.as_deref().unwrap_or(&s.device_id),
+                            target_pl.device_name,
+                            target_item.id,
+                            target_pos
+                        );
 
-                                    state.set_cooldown(&session_id, cooldown_dur);
+                        let client_clone = client.clone();
+                        let session_id = s.id.clone();
+                        let item_id = target_item.id.clone();
+                        let cooldown_dur = Duration::from_secs(config.cooldown_seconds);
 
-                                    tokio::spawn(async move {
-                                        let act = SyncAction::Play {
-                                            item_id,
-                                            position_ticks: target_pos,
-                                            is_paused: target_paused,
-                                        };
-                                        if let Err(e) = execute_sync_action(&client_clone, &session_id, act).await {
-                                            error!("Error redirecting session {}: {}", session_id, e);
-                                        }
-                                    });
+                        state.set_cooldown(&session_id, cooldown_dur);
 
-                                    return Ok(());
-                                }
+                        tokio::spawn(async move {
+                            let act = SyncAction::Play {
+                                item_id,
+                                position_ticks: target_pos,
+                                is_paused: target_paused,
+                            };
+                            if let Err(e) = execute_sync_action(&client_clone, &session_id, act).await {
+                                error!("Error redirecting session {}: {}", session_id, e);
                             }
-                        }
-                    }
+                        });
 
-                    // If target room is not playing anything, let's stop this TV from playing the dummy video
-                    info!(
-                        "Target room '{}' is not playing anything or not active. Stopping playback.",
-                        target_room_name
-                    );
-                    let client_clone = client.clone();
-                    let session_id = s.id.clone();
-                    state.set_cooldown(&session_id, Duration::from_secs(config.cooldown_seconds));
-                    tokio::spawn(async move {
-                        let _ = execute_sync_action(&client_clone, &session_id, SyncAction::Stop).await;
-                    });
-                    return Ok(());
+                        return Ok(());
+                    }
+                }
+
+                // If target room is not playing anything, let's stop this TV
+                info!(
+                    "Target room '{}' is not playing anything or not active. Stopping playback.",
+                    target_pl.device_name
+                );
+                let client_clone = client.clone();
+                let session_id = s.id.clone();
+                state.set_cooldown(&session_id, Duration::from_secs(config.cooldown_seconds));
+                tokio::spawn(async move {
+                    let _ = execute_sync_action(&client_clone, &session_id, SyncAction::Stop).await;
+                });
+                return Ok(());
+            }
+        }
+    }
+
+    // 2. Manage Dynamic Watch-Party Playlists (Create/Delete)
+    let mut playlists_to_create = Vec::new();
+    for s in &active_sync_sessions {
+        if let Some(ref item) = s.now_playing_item {
+            let item_name = item.name.as_deref().unwrap_or("");
+            // Check that this is a real movie/show, not one of our own playlists
+            if !item_name.starts_with("Join ") {
+                if !state.active_playlists.contains_key(&s.device_id) {
+                    playlists_to_create.push((
+                        s.device_id.clone(),
+                        s.device_name.as_deref().unwrap_or(&s.device_id).to_string(),
+                        s.id.clone(),
+                        item.id.clone(),
+                        item.name.as_deref().unwrap_or("Movie").to_string(),
+                    ));
                 }
             }
         }
     }
 
+    let mut playlists_to_delete = Vec::new();
+    for (dev_id, active_pl) in &state.active_playlists {
+        let is_still_playing_same = active_sync_sessions.iter().any(|s| {
+            s.device_id == *dev_id && s.now_playing_item.as_ref().map(|item| item.id == active_pl.playing_item_id).unwrap_or(false)
+        });
+        if !is_still_playing_same {
+            playlists_to_delete.push((dev_id.clone(), active_pl.playlist_id.clone()));
+        }
+    }
+
+    // Drop lock to perform network requests asynchronously
+    drop(state);
+
+    for (dev_id, playlist_id) in playlists_to_delete {
+        let client_clone = client.clone();
+        let state_lock_clone = state_lock.clone();
+        tokio::spawn(async move {
+            info!("Deleting watch-party playlist ID {}", playlist_id);
+            if let Err(e) = client_clone.delete_playlist(&playlist_id).await {
+                error!("Error deleting playlist: {}", e);
+            }
+            let mut state = state_lock_clone.lock().await;
+            state.active_playlists.remove(&dev_id);
+        });
+    }
+
+    for (dev_id, dev_name, session_id, item_id, item_name) in playlists_to_create {
+        let pl_name = format!("Join {} - {}", dev_name, item_name);
+        let client_clone = client.clone();
+        let user_id = {
+            let state = state_lock.lock().await;
+            state.user_id.clone()
+        };
+        let state_lock_clone = state_lock.clone();
+        
+        tokio::spawn(async move {
+            info!("Creating watch-party playlist: {}", pl_name);
+            match client_clone.create_playlist(&user_id, &pl_name, &item_id).await {
+                Ok(playlist_id) => {
+                    info!("Successfully created playlist ID {} for {}", playlist_id, dev_id);
+                    let mut state = state_lock_clone.lock().await;
+                    state.active_playlists.insert(
+                        dev_id.clone(),
+                        ActiveRoomState {
+                            device_id: dev_id,
+                            device_name: dev_name,
+                            session_id,
+                            playing_item_id: item_id,
+                            playlist_id,
+                        },
+                    );
+                }
+                Err(e) => {
+                    error!("Error creating playlist: {}", e);
+                }
+            }
+        });
+    }
+
+    // Re-acquire lock to run normal sync calculations
+    let mut state = state_lock.lock().await;
     let now = Instant::now();
     let threshold_ticks = (config.sync_threshold_seconds * 10_000_000) as i64;
 
-    // Detect user interactions
+    // Detect user interactions (Play/Pause/Seek)
     let mut detected_interaction = None;
 
     for s in &active_sync_sessions {
@@ -459,32 +646,41 @@ async fn run_sync_logic(
             let mut interacted = false;
             let mut reason = String::new();
 
-            if curr_item != prev.item_id {
-                interacted = true;
-                reason = format!(
-                    "media item changed from {:?} to {:?}",
-                    prev.item_id, curr_item
-                );
-            } else if curr_paused != prev.is_paused {
-                interacted = true;
-                reason = format!(
-                    "paused state changed from {} to {}",
-                    prev.is_paused, curr_paused
-                );
-            } else if curr_item.is_some() {
-                let elapsed_ticks = if prev.is_paused {
-                    0
-                } else {
-                    (now - prev.last_updated).as_nanos() as i64 / 100
-                };
-                let expected_pos = prev.position_ticks + elapsed_ticks;
-                let diff = (curr_pos - expected_pos).abs();
-                if diff > threshold_ticks {
+            // Ignore when changing to/from dummy playlists
+            let curr_item_name = s.now_playing_item.as_ref().and_then(|item| item.name.as_deref()).unwrap_or("");
+            let prev_item_name = prev.item_id.as_ref().and_then(|id| {
+                // Find if the previous item name was a playlist
+                state.active_playlists.values().find(|pl| pl.playing_item_id == *id).map(|pl| pl.device_name.as_str())
+            }).unwrap_or("");
+
+            if !curr_item_name.starts_with("Join ") && !prev_item_name.starts_with("Join ") {
+                if curr_item != prev.item_id {
                     interacted = true;
                     reason = format!(
-                        "position seek detected: prev_pos={}, expected={}, current={}, diff_secs={:.2}",
-                        prev.position_ticks, expected_pos, curr_pos, diff as f64 / 10_000_000.0
+                        "media item changed from {:?} to {:?}",
+                        prev.item_id, curr_item
                     );
+                } else if curr_paused != prev.is_paused {
+                    interacted = true;
+                    reason = format!(
+                        "paused state changed from {} to {}",
+                        prev.is_paused, curr_paused
+                    );
+                } else if curr_item.is_some() {
+                    let elapsed_ticks = if prev.is_paused {
+                        0
+                    } else {
+                        (now - prev.last_updated).as_nanos() as i64 / 100
+                    };
+                    let expected_pos = prev.position_ticks + elapsed_ticks;
+                    let diff = (curr_pos - expected_pos).abs();
+                    if diff > threshold_ticks {
+                        interacted = true;
+                        reason = format!(
+                            "position seek detected: prev_pos={}, expected={}, current={}, diff_secs={:.2}",
+                            prev.position_ticks, expected_pos, curr_pos, diff as f64 / 10_000_000.0
+                        );
+                    }
                 }
             }
 
@@ -588,18 +784,21 @@ async fn run_sync_logic(
                 let position = play_state.and_then(|p| p.position_ticks).unwrap_or(0);
                 let is_paused = play_state.and_then(|p| p.is_paused).unwrap_or(false);
 
-                info!(
-                    "Initializing collective state from active playing session on '{}' (item: {})",
-                    playing_session.device_name.as_deref().unwrap_or(&playing_session.device_id),
-                    item.id
-                );
+                // Ignore dummy items
+                if !item.name.as_deref().unwrap_or("").starts_with("Join ") {
+                    info!(
+                        "Initializing collective state from active playing session on '{}' (item: {})",
+                        playing_session.device_name.as_deref().unwrap_or(&playing_session.device_id),
+                        item.id
+                    );
 
-                state.collective_state = Some(CollectivePlayState {
-                    item_id: item.id.clone(),
-                    position_ticks: position,
-                    is_paused,
-                    last_updated: now,
-                });
+                    state.collective_state = Some(CollectivePlayState {
+                        item_id: item.id.clone(),
+                        position_ticks: position,
+                        is_paused,
+                        last_updated: now,
+                    });
+                }
             }
         }
 
@@ -696,31 +895,6 @@ async fn handle_ws_message(
     Ok(())
 }
 
-fn generate_dummy_videos(devices: &[DeviceConfig]) -> Result<()> {
-    std::fs::create_dir_all("sync_rooms")?;
-    for dev in devices {
-        let filename = format!("sync_rooms/Sync to {}.mp4", dev.name);
-        if !std::path::Path::new(&filename).exists() {
-            info!("Generating dummy video for room: {}", dev.name);
-            let status = std::process::Command::new("ffmpeg")
-                .args(&[
-                    "-y",
-                    "-f", "lavfi",
-                    "-i", "color=c=0x1E1E2E:s=1280x720:d=5",
-                    "-c:v", "libx264",
-                    "-pix_fmt", "yuv420p",
-                    &filename
-                ])
-                .status()
-                .context("Failed to run ffmpeg")?;
-            if !status.success() {
-                warn!("ffmpeg failed to generate dummy video for {}", dev.name);
-            }
-        }
-    }
-    Ok(())
-}
-
 #[tokio::main]
 async fn main() -> Result<()> {
     tracing_subscriber::fmt::init();
@@ -732,10 +906,6 @@ async fn main() -> Result<()> {
     
     let config: Config = serde_json::from_str(&config_data)
         .context("Failed to parse configuration file")?;
-
-    if let Err(e) = generate_dummy_videos(&config.sync_devices) {
-        warn!("Failed to generate dummy videos: {}", e);
-    }
 
     info!("Configuration loaded. Syncing {} devices.", config.sync_devices.len());
     for dev in &config.sync_devices {
@@ -763,7 +933,24 @@ async fn main() -> Result<()> {
         }
     }
 
-    let app_state = Arc::new(Mutex::new(AppState::new()));
+    // Clean up any orphaned watch-party playlists left over from a previous run
+    if let Err(e) = client.clean_orphaned_playlists().await {
+        warn!("Failed to clean up orphaned playlists at startup: {}", e);
+    }
+
+    // Fetch the User ID used to manage playlists
+    let user_id = match client.get_first_user_id().await {
+        Ok(id) => {
+            info!("Using Emby User ID: {} for Playlist management.", id);
+            id
+        }
+        Err(e) => {
+            error!("Critical: Failed to resolve an Emby User ID. Cannot start daemon. Error: {}", e);
+            return Err(e);
+        }
+    };
+
+    let app_state = Arc::new(Mutex::new(AppState::new(user_id)));
     let ws_url = make_ws_url(&config.emby_url, &config.api_key);
 
     let client_clone = client.clone();
@@ -814,6 +1001,17 @@ async fn main() -> Result<()> {
     });
 
     tokio::signal::ctrl_c().await?;
+    
+    // Attempt graceful cleanup of any remaining playlists before exit
+    info!("Cleaning up active watch-party playlists before exit...");
+    let active_playlists_to_clean: Vec<String> = {
+        let state = app_state.lock().await;
+        state.active_playlists.values().map(|pl| pl.playlist_id.clone()).collect()
+    };
+    for pl_id in active_playlists_to_clean {
+        let _ = client.delete_playlist(&pl_id).await;
+    }
+
     info!("Stopping Emby Sync Play daemon.");
     Ok(())
 }
