@@ -108,7 +108,7 @@ async fn get_status(Extension(state): Extension<Arc<WebServerState>>) -> Json<se
     let mut synced_users = Vec::new();
     if let Some(first_cache) = app_state.caches.first() {
         for username in first_cache.users.keys() {
-            if app_state.caches.iter().skip(1).all(|c| c.users.contains_key(username)) {
+            if app_state.caches.iter().skip(1).all(|c| crate::state::find_mapped_user_id(username, &c.users).is_some()) {
                 synced_users.push(username.clone());
             }
         }

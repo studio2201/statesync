@@ -164,7 +164,7 @@ pub async fn handle_websocket_loop(
                                                                 if t_item_id.is_none() && !tmdb_id.is_empty() {
                                                                     t_item_id = target_cache.tmdb_to_id.get(&tmdb_id).cloned();
                                                                 }
-                                                                let t_user_id = target_cache.users.get(&user_lower).cloned();
+                                                                let t_user_id = crate::state::find_mapped_user_id(&user_lower, &target_cache.users);
                                                                 let t_name = target_cache.name.clone();
                                                                 (t_item_id, t_user_id, t_name)
                                                             };

@@ -77,3 +77,26 @@ pub async fn init_server_cache(name: &str, client: &MediaClient) -> Result<Serve
         id_to_providers,
     })
 }
+
+pub fn find_mapped_user_id(
+    source_username: &str,
+    target_users: &HashMap<String, String>,
+) -> Option<String> {
+    let src_lower = source_username.to_lowercase();
+    
+    // 1. Exact match
+    if let Some(id) = target_users.get(&src_lower) {
+        return Some(id.clone());
+    }
+    
+    // 2. First-word/First name match (for differing LDAP display name attributes)
+    let src_first = src_lower.split_whitespace().next().unwrap_or(&src_lower);
+    for (tgt_name, tgt_id) in target_users {
+        let tgt_first = tgt_name.split_whitespace().next().unwrap_or(tgt_name);
+        if src_first == tgt_first {
+            return Some(tgt_id.clone());
+        }
+    }
+    
+    None
+}
