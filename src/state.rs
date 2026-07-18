@@ -18,15 +18,24 @@ pub struct SyncHistoryValue {
     pub timestamp: Instant,
 }
 
+#[derive(Debug, Clone, serde::Serialize)]
+pub struct SyncLogEntry {
+    pub timestamp: String,
+    pub user: String,
+    pub item: String,
+    pub source_name: String,
+    pub source_is_emby: bool,
+    pub target_name: String,
+    pub target_is_emby: bool,
+    pub position_secs: f64,
+    pub is_paused: bool,
+}
+
 pub struct AppState {
     pub caches: Vec<ServerCache>,
-    // Map of (username, provider_id) -> SyncHistoryValue
     pub last_syncs: HashMap<(String, String), SyncHistoryValue>,
-    // Live WebSocket connection statuses aligned with caches
     pub websocket_statuses: Vec<String>,
-    // Rolling sync logs capped at 15 entries
-    pub sync_logs: Vec<String>,
-    // Map of (server_name, session_id) -> (user_name, item_name, position_seconds, is_paused)
+    pub sync_logs: Vec<SyncLogEntry>,
     pub active_sessions: HashMap<(String, String), (String, String, f64, bool)>,
 }
 
@@ -42,8 +51,8 @@ impl AppState {
         }
     }
 
-    pub fn log_sync(&mut self, message: String) {
-        self.sync_logs.insert(0, message);
+    pub fn log_sync(&mut self, entry: SyncLogEntry) {
+        self.sync_logs.insert(0, entry);
         if self.sync_logs.len() > 15 {
             self.sync_logs.truncate(15);
         }
@@ -83,13 +92,9 @@ pub fn find_mapped_user_id(
     target_users: &HashMap<String, String>,
 ) -> Option<String> {
     let src_lower = source_username.to_lowercase();
-    
-    // 1. Exact match
     if let Some(id) = target_users.get(&src_lower) {
         return Some(id.clone());
     }
-    
-    // 2. First-word/First name match (for differing LDAP display name attributes)
     let src_first = src_lower.split_whitespace().next().unwrap_or(&src_lower);
     for (tgt_name, tgt_id) in target_users {
         let tgt_first = tgt_name.split_whitespace().next().unwrap_or(tgt_name);
@@ -97,6 +102,5 @@ pub fn find_mapped_user_id(
             return Some(tgt_id.clone());
         }
     }
-    
     None
 }

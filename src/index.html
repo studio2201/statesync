@@ -144,7 +144,10 @@
         if (status.sync_logs && status.sync_logs.length > 0) {
           logsDiv.innerHTML = '';
           status.sync_logs.forEach(log => {
-            const line = document.createElement('div'); line.className = 'log-line'; line.innerText = `> ${log.toUpperCase()}`;
+            const line = document.createElement('div'); line.className = 'log-line';
+            const sCol = log.source_is_emby ? 'var(--green)' : '#cc00ff'; const tCol = log.target_is_emby ? 'var(--green)' : '#cc00ff';
+            const sBadge = log.source_is_emby ? 'EMBY' : 'JELLYFIN'; const tBadge = log.target_is_emby ? 'EMBY' : 'JELLYFIN';
+            line.innerHTML = `&gt; [${log.timestamp}] SYNCED '${log.item.toUpperCase()}' FOR ${log.user.toUpperCase()} FROM <span style="color:${sCol}">[${sBadge}: ${log.source_name.toUpperCase()}]</span> -&gt; <span style="color:${tCol}">[${tBadge}: ${log.target_name.toUpperCase()}]</span> TO ${log.position_secs.toFixed(1)}S${log.is_paused ? ' (PAUSED)' : ''}`;
             logsDiv.appendChild(line);
           });
         } else { logsDiv.innerHTML = '<div style="color:var(--green)">> LISTENING FOR METRIC EVENTS...</div>'; }

@@ -13,16 +13,8 @@ use crate::state::{AppState, SyncHistoryValue};
 
 pub fn make_ws_url(url: &str, api_key: &str, is_emby: bool) -> String {
     let base = url.trim_end_matches('/');
-    let ws_base = if base.starts_with("https://") {
-        base.replace("https://", "wss://")
-    } else if base.starts_with("http://") {
-        base.replace("http://", "ws://")
-    } else {
-        format!("ws://{}", base)
-    };
-    
-    let path = if is_emby { "/embywebsocket" } else { "/socket" };
-    format!("{}{}?api_key={}&deviceId=statesync", ws_base, path, api_key)
+    let ws_base = if base.starts_with("https://") { base.replace("https://", "wss://") } else if base.starts_with("http://") { base.replace("http://", "ws://") } else { format!("ws://{}", base) };
+    format!("{}{}?api_key={}&deviceId=statesync", ws_base, if is_emby { "/embywebsocket" } else { "/socket" }, api_key)
 }
 
 pub async fn handle_websocket_loop(
@@ -175,18 +167,37 @@ pub async fn handle_websocket_loop(
                                                                     timestamp: now,
                                                                 });
 
-                                                                let log_msg = format!(
-                                                                    "Synced '{}' for {} from '{}' -> '{}' to {:.1}s{}",
-                                                                    item.name.as_deref().unwrap_or(&item.id),
-                                                                    user_name,
-                                                                    source_name,
-                                                                    target_name,
-                                                                    pos_secs,
-                                                                    if is_paused { " (paused)" } else { "" }
-                                                                );
+                                                                let secs = std::time::SystemTime::now()
+                                                                    .duration_since(std::time::UNIX_EPOCH)
+                                                                    .unwrap_or_default()
+                                                                    .as_secs();
+                                                                let hours = (secs / 3600) % 24;
+                                                                let mins = (secs / 60) % 60;
+                                                                let w_secs = secs % 60;
+                                                                let timestamp = format!("{:02}:{:02}:{:02}", hours, mins, w_secs);
+
+                                                                let entry = crate::state::SyncLogEntry {
+                                                                    timestamp,
+                                                                    user: user_name.clone(),
+                                                                    item: item.name.as_deref().unwrap_or(&item.id).to_string(),
+                                                                    source_name: source_name.clone(),
+                                                                    source_is_emby: config.servers[source_index].is_emby,
+                                                                    target_name: target_name.clone(),
+                                                                    target_is_emby: config.servers[target_index].is_emby,
+                                                                    position_secs: pos_secs,
+                                                                    is_paused,
+                                                                };
                                                                 
-                                                                info!("{}", log_msg);
-                                                                state.log_sync(log_msg);
+                                                                info!(
+                                                                    "Synced '{}' for {} from '{}' -> '{}' to {:.1}s{}",
+                                                                    entry.item,
+                                                                    entry.user,
+                                                                    entry.source_name,
+                                                                    entry.target_name,
+                                                                    entry.position_secs,
+                                                                    if entry.is_paused { " (paused)" } else { "" }
+                                                                );
+                                                                state.log_sync(entry);
 
                                                                 let client_target_clone = client_target.clone();
                                                                 tokio::spawn(async move {
