@@ -1,5 +1,5 @@
 use std::sync::Arc;
-use std::time::{Duration, Instant};
+use std::time::Duration;
 use serde_json::json;
 use tokio::sync::{Mutex, broadcast};
 use futures_util::{SinkExt, StreamExt};
@@ -9,7 +9,7 @@ use tracing::{info, warn, error};
 
 use crate::config::Config;
 use crate::client::{WsMessage, SessionInfo, MediaClient};
-use crate::state::{AppState, SyncHistoryValue};
+use crate::state::AppState;
 
 pub fn make_ws_url(url: &str, api_key: &str, is_emby: bool) -> String {
     let base = url.trim_end_matches('/');
@@ -33,18 +33,11 @@ pub async fn handle_websocket_loop(
             state.caches[source_index].name.clone()
         };
 
-        // Report Reconnecting status
-        {
-            let mut state = state_lock.lock().await;
-            if source_index < state.websocket_statuses.len() { state.websocket_statuses[source_index] = "Reconnecting".to_string(); }
-        }
+        state_lock.lock().await.websocket_statuses[source_index] = "Reconnecting".to_string();
 
-        info!("Connecting to '{}' WebSocket: {}", source_name, ws_url);
-        
         let conn_result = tokio::select! {
             _ = shutdown_rx.recv() => {
-                let mut state = state_lock.lock().await;
-                if source_index < state.websocket_statuses.len() { state.websocket_statuses[source_index] = "Offline".to_string(); }
+                state_lock.lock().await.websocket_statuses[source_index] = "Offline".to_string();
                 return;
             }
             res = connect_async(ws_url) => res,
@@ -53,10 +46,9 @@ pub async fn handle_websocket_loop(
         match conn_result {
             Ok((mut ws_stream, _)) => {
                 info!("'{}' WebSocket connected.", source_name);
-                
                 let mut state = state_lock.lock().await;
                 state.log_event("success", &format!("'{}' WebSocket connected.", source_name));
-                if source_index < state.websocket_statuses.len() { state.websocket_statuses[source_index] = "Connected".to_string(); }
+                state.websocket_statuses[source_index] = "Connected".to_string();
                 drop(state);
 
                 let start_msg = json!({ "MessageType": "SessionsStart", "Data": "0,1000" }).to_string();
@@ -72,10 +64,7 @@ pub async fn handle_websocket_loop(
                 loop {
                     let next_msg = tokio::select! {
                         _ = shutdown_rx.recv() => {
-                            let mut state = state_lock.lock().await;
-                            if source_index < state.websocket_statuses.len() {
-                                state.websocket_statuses[source_index] = "Offline".to_string();
-                            }
+                            state_lock.lock().await.websocket_statuses[source_index] = "Offline".to_string();
                             return;
                         }
                         _ = ping_interval.tick() => {
@@ -115,130 +104,84 @@ pub async fn handle_websocket_loop(
                                                 info!("Detected new users {:?} on '{}'. Hot-reloading user list...", missing_users, source_name);
                                                 if let Ok(new_users) = source_client.get_users().await {
                                                     let mut state = state_lock.lock().await;
-                                                    if source_index < state.caches.len() {
-                                                        state.caches[source_index].users = new_users;
-                                                    }
+                                                    if source_index < state.caches.len() { state.caches[source_index].users = new_users; }
                                                 }
                                             }
                                             let mut state = state_lock.lock().await;
-                                            let now = Instant::now();
                                             state.active_sessions.retain(|(srv, _), _| srv != &source_name);
 
                                             for s in &sessions {
                                                 if let (Some(user_name), Some(item), Some(play_state)) = (&s.user_name, &s.now_playing_item, &s.play_state) {
-                                                    let user_lower = user_name.to_lowercase();
                                                     let position = play_state.position_ticks.unwrap_or(0);
                                                     let is_paused = play_state.is_paused.unwrap_or(false);
-
-                                                    // Record currently playing active session
                                                     let pos_secs = position as f64 / 10_000_000.0;
                                                     state.active_sessions.insert(
                                                         (source_name.clone(), s.id.clone()),
                                                         (user_name.clone(), item.name.clone().unwrap_or_default(), pos_secs, is_paused, item.id.clone())
                                                     );
 
-                                                    let source_item_providers = {
-                                                        let source_cache = &state.caches[source_index];
-                                                        source_cache.id_to_providers.get(&item.id).cloned()
-                                                    };
+                                                    if config.servers[source_index].sync_direction == "receive" { continue; }
 
-                                                    if let Some((imdb_id, tmdb_id)) = source_item_providers {
-                                                        let provider_id = if !imdb_id.is_empty() {
-                                                            imdb_id.clone()
-                                                        } else if !tmdb_id.is_empty() {
-                                                            tmdb_id.clone()
-                                                        } else {
-                                                            continue;
-                                                        };
+                                                    let user_name_clone = user_name.clone();
+                                                    let item_id_clone = item.id.clone();
+                                                    let source_name_clone = source_name.clone();
+                                                    let state_lock_clone = state_lock.clone();
+                                                    let target_clients_clone = target_clients.clone();
+                                                    let config_clone = config.clone();
 
-                                                        // Check sync history to prevent loops
-                                                        let history_key = (user_lower.clone(), provider_id.clone());
-                                                        if let Some(history) = state.last_syncs.get(&history_key) {
-                                                            let age = now - history.timestamp;
-                                                            let pos_diff = (position - history.position_ticks).abs();
-                                                            let threshold_ticks = (config.sync_threshold_seconds * 10_000_000) as i64;
-                                                            
-                                                            if age < Duration::from_secs(5) && pos_diff < threshold_ticks {
-                                                                continue;
-                                                            }
-                                                        }
+                                                    tokio::spawn(async move {
+                                                        crate::sync::sync_progress_to_targets(
+                                                            &user_name_clone,
+                                                            &item_id_clone,
+                                                            position,
+                                                            false,
+                                                            &source_name_clone,
+                                                            source_index,
+                                                            &state_lock_clone,
+                                                            &target_clients_clone,
+                                                            &config_clone,
+                                                        ).await;
+                                                    });
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                                if ws_msg.message_type == "UserDataChanged" {
+                                    if let Some(ref data) = ws_msg.data {
+                                        if let Ok(info) = serde_json::from_value::<crate::client::UserDataChangedInfo>(data.clone()) {
+                                            let user_name = {
+                                                let state = state_lock.lock().await;
+                                                state.caches[source_index].users.iter()
+                                                    .find(|(_, id)| *id == &info.user_id)
+                                                    .map(|(name, _)| name.clone())
+                                            };
+                                            if let Some(user_name) = user_name {
+                                                for entry in &info.user_data_list {
+                                                    if config.servers[source_index].sync_direction == "receive" { continue; }
 
-                                                        if config.servers[source_index].sync_direction == "receive" {
-                                                            continue;
-                                                        }
+                                                    let user_name_clone = user_name.clone();
+                                                    let item_id_clone = entry.item_id.clone();
+                                                    let pos = entry.playback_position_ticks.unwrap_or(0);
+                                                    let played = entry.played;
+                                                    let source_name_clone = source_name.clone();
+                                                    let state_lock_clone = state_lock.clone();
+                                                    let target_clients_clone = target_clients.clone();
+                                                    let config_clone = config.clone();
 
-                                                        // Sync to all OTHER target servers
-                                                        for &(target_index, ref client_target) in &target_clients {
-                                                            if config.servers[target_index].sync_direction == "send" {
-                                                                continue;
-                                                            }
-                                                            let (target_item_id, mut target_user_id, target_name) = {
-                                                                let target_cache = &state.caches[target_index];
-                                                                let mut t_item_id = None;
-                                                                if !imdb_id.is_empty() {
-                                                                    t_item_id = target_cache.imdb_to_id.get(&imdb_id).cloned();
-                                                                }
-                                                                if t_item_id.is_none() && !tmdb_id.is_empty() {
-                                                                    t_item_id = target_cache.tmdb_to_id.get(&tmdb_id).cloned();
-                                                                }
-                                                                let t_user_id = crate::state::find_mapped_user_id(&user_lower, &target_cache.users);
-                                                                let t_name = target_cache.name.clone();
-                                                                (t_item_id, t_user_id, t_name)
-                                                            };
-
-                                                            if target_user_id.is_none() {
-                                                                drop(state);
-                                                                if let Ok(new_users) = client_target.get_users().await {
-                                                                    let mut state_write = state_lock.lock().await;
-                                                                    if target_index < state_write.caches.len() {
-                                                                        state_write.caches[target_index].users = new_users;
-                                                                    }
-                                                                }
-                                                                state = state_lock.lock().await;
-                                                                target_user_id = crate::state::find_mapped_user_id(&user_lower, &state.caches[target_index].users);
-                                                            }
-
-                                                            if let (Some(t_item_id), Some(t_user_id)) = (target_item_id, target_user_id) {
-                                                                state.last_syncs.insert(history_key.clone(), SyncHistoryValue {
-                                                                    position_ticks: position,
-                                                                    timestamp: now,
-                                                                });
-
-                                                                let timestamp = chrono::Local::now().format("%H:%M:%S").to_string();
-
-                                                                let message = format!(
-                                                                    "Synced '{}' for {} to {:.1}s{}",
-                                                                    item.name.as_deref().unwrap_or(&item.id),
-                                                                    user_name,
-                                                                    pos_secs,
-                                                                    if is_paused { " (paused)" } else { "" }
-                                                                );
-                                                                let entry = crate::state::SyncLogEntry {
-                                                                    timestamp,
-                                                                    level: "success".to_string(),
-                                                                    message: message.clone(),
-                                                                    source_name: Some(source_name.clone()),
-                                                                    source_is_emby: Some(config.servers[source_index].is_emby),
-                                                                    target_name: Some(target_name.clone()),
-                                                                    target_is_emby: Some(config.servers[target_index].is_emby),
-                                                                };
-                                                                
-                                                                info!("{}", message);
-                                                                state.log_sync(entry);
-
-                                                                let client_target_clone = client_target.clone();
-                                                                let state_lock_clone = state_lock.clone();
-                                                                let target_name_clone = target_name.clone();
-                                                                tokio::spawn(async move {
-                                                                    if let Err(e) = client_target_clone.update_progress(&t_user_id, &t_item_id, position, is_paused).await {
-                                                                        error!("Error updating target playstate progress: {}", e);
-                                                                        let mut state = state_lock_clone.lock().await;
-                                                                        state.log_event("error", &format!("Sync failed to '{}': {}", target_name_clone, e));
-                                                                    }
-                                                                });
-                                                            }
-                                                        }
-                                                    }
+                                                    tokio::spawn(async move {
+                                                        crate::sync::sync_progress_to_targets(
+                                                            &user_name_clone,
+                                                            &item_id_clone,
+                                                            pos,
+                                                            played,
+                                                            &source_name_clone,
+                                                            source_index,
+                                                            &state_lock_clone,
+                                                            &target_clients_clone,
+                                                            &config_clone,
+                                                        ).await;
+                                                    });
                                                 }
                                             }
                                         }
@@ -268,11 +211,9 @@ pub async fn handle_websocket_loop(
             }
         }
         
-        // Wait 5 seconds before retrying, unless shut down
         tokio::select! {
             _ = shutdown_rx.recv() => {
-                let mut state = state_lock.lock().await;
-                if source_index < state.websocket_statuses.len() { state.websocket_statuses[source_index] = "Offline".to_string(); }
+                state_lock.lock().await.websocket_statuses[source_index] = "Offline".to_string();
                 return;
             }
             _ = tokio::time::sleep(Duration::from_secs(5)) => {}

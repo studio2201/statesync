@@ -3,6 +3,7 @@ mod client;
 mod state;
 mod websocket;
 mod web;
+mod sync;
 
 use std::sync::Arc;
 use std::time::Duration;

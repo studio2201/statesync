@@ -12,6 +12,7 @@ pub struct ServerCache {
     pub id_to_providers: HashMap<String, (String, String)>, // ItemId -> (ImdbId, TmdbId)
 }
 
+#[allow(dead_code)]
 #[derive(Debug, Clone)]
 pub struct SyncHistoryValue {
     pub position_ticks: i64,

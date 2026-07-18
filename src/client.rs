@@ -11,6 +11,24 @@ pub struct WsMessage {
     pub data: Option<serde_json::Value>,
 }
 
+#[derive(Debug, Clone, Deserialize)]
+pub struct UserDataChangedInfo {
+    #[serde(alias = "userId", alias = "UserId")]
+    pub user_id: String,
+    #[serde(alias = "userDataList", alias = "UserDataList")]
+    pub user_data_list: Vec<UserDataEntry>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct UserDataEntry {
+    #[serde(alias = "itemId", alias = "ItemId")]
+    pub item_id: String,
+    #[serde(alias = "played", alias = "Played")]
+    pub played: bool,
+    #[serde(alias = "playbackPositionTicks", alias = "PlaybackPositionTicks")]
+    pub playback_position_ticks: Option<i64>,
+}
+
 #[allow(dead_code)]
 #[derive(Debug, Clone, Deserialize)]
 pub struct SessionInfo {
@@ -96,7 +114,7 @@ impl MediaClient {
     }
 
     pub async fn get_library_items(&self, user_id: &str) -> Result<HashMap<String, (String, String)>> {
-        let path = format!("/Users/{}/Items?IncludeItemTypes=Movie,Episode&Recursive=true&Fields=ProviderIds", user_id);
+        let path = format!("/Users/{}/Items?Recursive=true&Fields=ProviderIds&IncludeItemTypes=Movie,Episode", user_id);
         let url = self.auth_url(&path);
         let resp = self.client.get(&url)
             .header("X-Emby-Token", &self.api_key)
@@ -106,21 +124,17 @@ impl MediaClient {
         
         let data: serde_json::Value = resp.json()
             .await
-            .context("Failed to parse library items")?;
+            .context("Failed to parse library response")?;
         
         let mut map = HashMap::new();
-        if let Some(items) = data.get("Items").and_then(|i| i.as_array()) {
-            for item in items {
+        if let Some(arr) = data.get("Items").and_then(|i| i.as_array()) {
+            for item in arr {
                 if let Some(id) = item.get("Id").and_then(|id| id.as_str()) {
                     let mut imdb = String::new();
                     let mut tmdb = String::new();
-                    if let Some(provider_ids) = item.get("ProviderIds") {
-                        if let Some(val) = provider_ids.get("Imdb").and_then(|v| v.as_str()) {
-                            imdb = val.to_string();
-                        }
-                        if let Some(val) = provider_ids.get("Tmdb").and_then(|v| v.as_str()) {
-                            tmdb = val.to_string();
-                        }
+                    if let Some(providers) = item.get("ProviderIds") {
+                        if let Some(val) = providers.get("Imdb").and_then(|v| v.as_str()) { imdb = val.to_string(); }
+                        if let Some(val) = providers.get("Tmdb").and_then(|v| v.as_str()) { tmdb = val.to_string(); }
                     }
                     map.insert(id.to_string(), (imdb, tmdb));
                 }
@@ -129,14 +143,14 @@ impl MediaClient {
         Ok(map)
     }
 
-    pub async fn update_progress(&self, user_id: &str, item_id: &str, position_ticks: i64, _is_paused: bool) -> Result<()> {
+    pub async fn update_progress(&self, user_id: &str, item_id: &str, position_ticks: i64, played: bool) -> Result<()> {
         let path = format!("/Users/{}/Items/{}/UserData", user_id, item_id);
         let url = self.auth_url(&path);
         let body = serde_json::json!({
             "PlaybackPositionTicks": position_ticks,
-            "PlayCount": 0,
+            "PlayCount": if played { 1 } else { 0 },
             "IsFavorite": false,
-            "Played": false,
+            "Played": played,
         });
         let resp = self.client.post(&url)
             .header("X-Emby-Token", &self.api_key)
