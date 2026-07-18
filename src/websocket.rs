@@ -42,11 +42,22 @@ pub async fn handle_websocket_loop(
             state.caches[source_index].name.clone()
         };
 
+        // Report Reconnecting status
+        {
+            let mut state = state_lock.lock().await;
+            if source_index < state.websocket_statuses.len() {
+                state.websocket_statuses[source_index] = "Reconnecting".to_string();
+            }
+        }
+
         info!("Connecting to '{}' WebSocket: {}", source_name, ws_url);
         
         let conn_result = tokio::select! {
             _ = shutdown_rx.recv() => {
-                info!("WebSocket loop for '{}' shut down by orchestrator.", source_name);
+                let mut state = state_lock.lock().await;
+                if source_index < state.websocket_statuses.len() {
+                    state.websocket_statuses[source_index] = "Offline".to_string();
+                }
                 return;
             }
             res = connect_async(ws_url) => res,
@@ -55,6 +66,14 @@ pub async fn handle_websocket_loop(
         match conn_result {
             Ok((mut ws_stream, _)) => {
                 info!("'{}' WebSocket connected.", source_name);
+                
+                // Report Connected status
+                {
+                    let mut state = state_lock.lock().await;
+                    if source_index < state.websocket_statuses.len() {
+                        state.websocket_statuses[source_index] = "Connected".to_string();
+                    }
+                }
 
                 let start_msg = json!({
                     "MessageType": "SessionsStart",
@@ -69,7 +88,10 @@ pub async fn handle_websocket_loop(
                 loop {
                     let next_msg = tokio::select! {
                         _ = shutdown_rx.recv() => {
-                            info!("WebSocket loop for '{}' shut down by orchestrator.", source_name);
+                            let mut state = state_lock.lock().await;
+                            if source_index < state.websocket_statuses.len() {
+                                state.websocket_statuses[source_index] = "Offline".to_string();
+                            }
                             return;
                         }
                         msg = ws_stream.next() => msg,
@@ -89,11 +111,21 @@ pub async fn handle_websocket_loop(
                                             let mut state = state_lock.lock().await;
                                             let now = Instant::now();
                                             
+                                            // Clear old active sessions for this source server
+                                            state.active_sessions.retain(|(srv, _), _| srv != &source_name);
+
                                             for s in &sessions {
                                                 if let (Some(user_name), Some(item), Some(play_state)) = (&s.user_name, &s.now_playing_item, &s.play_state) {
                                                     let user_lower = user_name.to_lowercase();
                                                     let position = play_state.position_ticks.unwrap_or(0);
                                                     let is_paused = play_state.is_paused.unwrap_or(false);
+
+                                                    // Record currently playing active session
+                                                    let pos_secs = position as f64 / 10_000_000.0;
+                                                    state.active_sessions.insert(
+                                                        (source_name.clone(), s.id.clone()),
+                                                        (user_name.clone(), item.name.clone().unwrap_or_default(), pos_secs, is_paused)
+                                                    );
 
                                                     let source_item_providers = {
                                                         let source_cache = &state.caches[source_index];
@@ -143,15 +175,18 @@ pub async fn handle_websocket_loop(
                                                                     timestamp: now,
                                                                 });
 
-                                                                info!(
-                                                                    "Syncing playstate for user '{}' from '{}' -> '{}': '{}' at {:.1}s (paused: {})",
+                                                                let log_msg = format!(
+                                                                    "Synced '{}' for {} from '{}' -> '{}' to {:.1}s{}",
+                                                                    item.name.as_deref().unwrap_or(&item.id),
                                                                     user_name,
                                                                     source_name,
                                                                     target_name,
-                                                                    item.name.as_deref().unwrap_or(&item.id),
-                                                                    position as f64 / 10_000_000.0,
-                                                                    is_paused
+                                                                    pos_secs,
+                                                                    if is_paused { " (paused)" } else { "" }
                                                                 );
+                                                                
+                                                                info!("{}", log_msg);
+                                                                state.log_sync(log_msg);
 
                                                                 let client_target_clone = client_target.clone();
                                                                 tokio::spawn(async move {
@@ -186,7 +221,10 @@ pub async fn handle_websocket_loop(
         // Wait 5 seconds before retrying, unless shut down
         tokio::select! {
             _ = shutdown_rx.recv() => {
-                info!("WebSocket loop for '{}' shut down by orchestrator during retry wait.", source_name);
+                let mut state = state_lock.lock().await;
+                if source_index < state.websocket_statuses.len() {
+                    state.websocket_statuses[source_index] = "Offline".to_string();
+                }
                 return;
             }
             _ = tokio::time::sleep(Duration::from_secs(5)) => {}

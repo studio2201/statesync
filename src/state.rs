@@ -22,13 +22,30 @@ pub struct AppState {
     pub caches: Vec<ServerCache>,
     // Map of (username, provider_id) -> SyncHistoryValue
     pub last_syncs: HashMap<(String, String), SyncHistoryValue>,
+    // Live WebSocket connection statuses aligned with caches
+    pub websocket_statuses: Vec<String>,
+    // Rolling sync logs capped at 15 entries
+    pub sync_logs: Vec<String>,
+    // Map of (server_name, session_id) -> (user_name, item_name, position_seconds, is_paused)
+    pub active_sessions: HashMap<(String, String), (String, String, f64, bool)>,
 }
 
 impl AppState {
     pub fn new(caches: Vec<ServerCache>) -> Self {
+        let count = caches.len();
         Self {
             caches,
             last_syncs: HashMap::new(),
+            websocket_statuses: vec!["Offline".to_string(); count],
+            sync_logs: Vec::new(),
+            active_sessions: HashMap::new(),
+        }
+    }
+
+    pub fn log_sync(&mut self, message: String) {
+        self.sync_logs.insert(0, message);
+        if self.sync_logs.len() > 15 {
+            self.sync_logs.truncate(15);
         }
     }
 }

@@ -2,193 +2,60 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>statesync dashboard</title>
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap" rel="stylesheet">
   <style>
-    :root {
-      --bg: #0b0f19;
-      --panel: rgba(30, 41, 59, 0.7);
-      --border: rgba(255, 255, 255, 0.08);
-      --primary: linear-gradient(135deg, #6366f1, #a855f7);
-      --text: #f8fafc;
-      --text-muted: #94a3b8;
-    }
-    body {
-      background: var(--bg);
-      color: var(--text);
-      font-family: 'Outfit', sans-serif;
-      margin: 0;
-      padding: 40px 20px;
-      display: flex;
-      justify-content: center;
-    }
-    .container {
-      max-width: 800px;
-      width: 100%;
-    }
-    h1 {
-      font-size: 32px;
-      font-weight: 600;
-      background: var(--primary);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      margin: 0 0 10px 0;
-    }
-    .subtitle {
-      color: var(--text-muted);
-      margin-bottom: 40px;
-      font-size: 16px;
-    }
-    .card {
-      background: var(--panel);
-      backdrop-filter: blur(12px);
-      -webkit-backdrop-filter: blur(12px);
-      border: 1px solid var(--border);
-      border-radius: 20px;
-      padding: 30px;
-      margin-bottom: 30px;
-      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
-    }
-    h2 {
-      font-size: 20px;
-      margin-top: 0;
-      margin-bottom: 20px;
-      font-weight: 600;
-    }
-    .server-list {
-      display: flex;
-      flex-direction: column;
-      gap: 15px;
-    }
-    .server-row {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      background: rgba(15, 23, 42, 0.4);
-      padding: 16px 20px;
-      border-radius: 12px;
-      border: 1px solid var(--border);
-      transition: transform 0.2s;
-    }
-    .server-row:hover {
-      transform: translateY(-2px);
-    }
-    .server-info {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-    }
-    .status-dot {
-      width: 10px;
-      height: 10px;
-      border-radius: 50%;
-      background: #10b981;
-      box-shadow: 0 0 10px #10b981;
-    }
-    .server-name {
-      font-weight: 600;
-    }
-    .server-type {
-      background: rgba(99, 102, 241, 0.2);
-      color: #a5b4fc;
-      font-size: 11px;
-      padding: 2px 8px;
-      border-radius: 100px;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-    }
-    .server-stats {
-      font-size: 13px;
-      color: var(--text-muted);
-    }
-    .btn {
-      background: var(--primary);
-      border: none;
-      color: white;
-      padding: 12px 24px;
-      font-size: 14px;
-      font-weight: 600;
-      border-radius: 10px;
-      cursor: pointer;
-      transition: all 0.2s;
-    }
-    .btn:hover {
-      opacity: 0.9;
-      transform: translateY(-1px);
-    }
-    .btn-danger {
-      background: rgba(239, 68, 68, 0.2);
-      color: #fca5a5;
-      border: 1px solid rgba(239, 68, 68, 0.3);
-      padding: 8px 16px;
-      border-radius: 8px;
-    }
-    .btn-danger:hover {
-      background: #ef4444;
-      color: white;
-    }
-    .form-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 20px;
-      margin-bottom: 20px;
-    }
-    .form-group {
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-    }
-    .form-group-full {
-      grid-column: span 2;
-    }
-    label {
-      font-size: 13px;
-      color: var(--text-muted);
-      font-weight: 600;
-    }
-    input, select {
-      background: rgba(15, 23, 42, 0.6);
-      border: 1px solid var(--border);
-      color: white;
-      padding: 12px;
-      border-radius: 10px;
-      font-family: inherit;
-      font-size: 14px;
-      outline: none;
-      transition: border-color 0.2s;
-    }
-    input:focus, select:focus {
-      border-color: #6366f1;
-    }
-    .toast {
-      position: fixed;
-      bottom: 20px;
-      right: 20px;
-      background: #1e293b;
-      border: 1px solid var(--border);
-      padding: 16px 24px;
-      border-radius: 12px;
-      box-shadow: 0 10px 25px rgba(0,0,0,0.3);
-      display: none;
-      animation: slideIn 0.3s ease;
-    }
-    @keyframes slideIn {
-      from { transform: translateY(100px); opacity: 0; }
-      to { transform: translateY(0); opacity: 1; }
-    }
+    :root { --bg: #0b0f19; --panel: rgba(30, 41, 59, 0.7); --border: rgba(255, 255, 255, 0.08); --primary: linear-gradient(135deg, #6366f1, #a855f7); --text: #f8fafc; --text-muted: #94a3b8; }
+    body { background: var(--bg); color: var(--text); font-family: 'Outfit', sans-serif; margin: 0; padding: 40px 20px; display: flex; justify-content: center; }
+    .container { max-width: 900px; width: 100%; }
+    h1 { font-size: 32px; font-weight: 600; background: var(--primary); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin: 0 0 10px 0; }
+    .subtitle { color: var(--text-muted); margin-bottom: 40px; font-size: 16px; }
+    .card { background: var(--panel); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border: 1px solid var(--border); border-radius: 20px; padding: 30px; margin-bottom: 30px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3); }
+    h2 { font-size: 20px; margin-top: 0; margin-bottom: 20px; font-weight: 600; }
+    .server-list { display: flex; flex-direction: column; gap: 15px; }
+    .server-row { display: flex; justify-content: space-between; align-items: center; background: rgba(15, 23, 42, 0.4); padding: 16px 20px; border-radius: 12px; border: 1px solid var(--border); }
+    .server-info { display: flex; align-items: center; gap: 12px; }
+    .status-dot { width: 10px; height: 10px; border-radius: 50%; }
+    .status-Connected { background: #10b981; box-shadow: 0 0 10px #10b981; }
+    .status-Reconnecting { background: #f59e0b; box-shadow: 0 0 10px #f59e0b; }
+    .status-Offline { background: #ef4444; box-shadow: 0 0 10px #ef4444; }
+    .server-name { font-weight: 600; }
+    .server-type { background: rgba(99, 102, 241, 0.2); color: #a5b4fc; font-size: 11px; padding: 2px 8px; border-radius: 100px; text-transform: uppercase; letter-spacing: 0.5px; }
+    .btn { background: var(--primary); border: none; color: white; padding: 12px 24px; font-size: 14px; font-weight: 600; border-radius: 10px; cursor: pointer; transition: all 0.2s; }
+    .btn:hover { opacity: 0.9; transform: translateY(-1px); }
+    .btn-secondary { background: rgba(255,255,255,0.08); color: var(--text); border: 1px solid var(--border); }
+    .btn-secondary:hover { background: rgba(255,255,255,0.15); }
+    .btn-danger { background: rgba(239, 68, 68, 0.2); color: #fca5a5; border: 1px solid rgba(239, 68, 68, 0.3); padding: 8px 16px; border-radius: 8px; }
+    .btn-danger:hover { background: #ef4444; color: white; }
+    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px; }
+    .form-group { display: flex; flex-direction: column; gap: 8px; }
+    .form-group-full { grid-column: span 2; }
+    label { font-size: 13px; color: var(--text-muted); font-weight: 600; }
+    input, select { background: rgba(15, 23, 42, 0.6); border: 1px solid var(--border); color: white; padding: 12px; border-radius: 10px; font-family: inherit; outline: none; }
+    input:focus, select:focus { border-color: #6366f1; }
+    .badge { display: inline-block; padding: 4px 10px; border-radius: 6px; font-size: 12px; background: rgba(255,255,255,0.05); border: 1px solid var(--border); }
+    .log-container { font-family: monospace; font-size: 13px; background: rgba(15, 23, 42, 0.6); border-radius: 12px; border: 1px solid var(--border); padding: 16px; max-height: 250px; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; }
+    .log-line { border-bottom: 1px solid rgba(255,255,255,0.02); padding-bottom: 4px; }
+    .toast { position: fixed; bottom: 20px; right: 20px; background: #1e293b; border: 1px solid var(--border); padding: 16px 24px; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.3); display: none; animation: slideIn 0.3s ease; z-index: 1000; }
+    @keyframes slideIn { from { transform: translateY(100px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
   </style>
 </head>
 <body>
   <div class="container">
     <h1>statesync</h1>
-    <div class="subtitle">Real-time bi-directional playstate synchronization</div>
+    <div class="subtitle">Dynamic multi-server playstate synchronization dashboard</div>
+
+    <!-- Live Active Syncs Card -->
+    <div id="activeSyncsCard" class="card" style="display: none;">
+      <h2>Currently Playing</h2>
+      <div class="server-list" id="activeSessions"></div>
+    </div>
 
     <!-- Active Servers Card -->
     <div class="card">
-      <h2>Active Servers</h2>
+      <h2>Media Servers</h2>
       <div class="server-list" id="serverList">
-        <div style="color: var(--text-muted)">Loading active servers...</div>
+        <div style="color: var(--text-muted)">Loading servers...</div>
       </div>
     </div>
 
@@ -206,30 +73,42 @@
           </div>
           <div class="form-group">
             <label for="serverName">Friendly Name</label>
-            <input type="text" id="serverName" placeholder="e.g. Living Room TV" required>
+            <input type="text" id="serverName" placeholder="e.g. Vacation Home" required>
           </div>
           <div class="form-group form-group-full">
-            <label for="serverUrl">Server URL (IP and Port)</label>
+            <label for="serverUrl">Server Address</label>
             <input type="url" id="serverUrl" placeholder="http://192.168.3.10:8096" required>
           </div>
           <div class="form-group form-group-full">
             <label for="serverKey">API Key</label>
-            <input type="text" id="serverKey" placeholder="Enter server API key" required>
+            <input type="password" id="serverKey" placeholder="Enter server API key" required>
           </div>
         </div>
-        <button type="submit" class="btn">Add Server</button>
+        <div style="display: flex; gap: 12px">
+          <button type="submit" class="btn">Add Server</button>
+          <button type="button" class="btn btn-secondary" onclick="testConnection()">Test Connection</button>
+        </div>
       </form>
     </div>
 
-    <!-- Global settings card -->
-    <div class="card">
-      <h2>Global Settings</h2>
-      <div class="form-grid">
-        <div class="form-group">
-          <label for="syncThreshold">Sync Position Threshold (seconds)</label>
-          <input type="number" id="syncThreshold" value="5" min="1">
+    <!-- Synced Users & Logs Grid -->
+    <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 30px;">
+      <div class="card" style="margin-bottom: 0;">
+        <h2>Synced Users</h2>
+        <div id="syncedUsers" style="display: flex; flex-wrap: wrap; gap: 8px;">
+          <div style="color: var(--text-muted)">Loading users...</div>
         </div>
       </div>
+      <div class="card" style="margin-bottom: 0;">
+        <h2>Recent Sync Activity</h2>
+        <div class="log-container" id="syncLogs"><div style="color: var(--text-muted)">Waiting for sync events...</div></div>
+      </div>
+    </div>
+
+    <!-- Settings Card -->
+    <div class="card" style="margin-top: 30px;">
+      <h2>Settings</h2>
+      <div class="form-grid"><div class="form-group"><label for="syncThreshold">Sync Position Threshold (seconds)</label><input type="number" id="syncThreshold" value="5" min="1"></div></div>
       <button class="btn" onclick="saveSettings()">Save Settings</button>
     </div>
   </div>
@@ -238,103 +117,73 @@
 
   <script>
     let currentConfig = { servers: [], sync_threshold_seconds: 5 };
-
     async function loadDashboard() {
       try {
-        const [configRes, statusRes] = await Promise.all([
-          fetch('/api/config'),
-          fetch('/api/status')
-        ]);
-        currentConfig = await configRes.json();
-        const status = await statusRes.json();
-
+        const [configRes, statusRes] = await Promise.all([fetch('/api/config'), fetch('/api/status')]);
+        currentConfig = await configRes.json(); const status = await statusRes.json();
         document.getElementById('syncThreshold').value = currentConfig.sync_threshold_seconds;
-        
         const listDiv = document.getElementById('serverList');
         if (currentConfig.servers.length === 0) {
           listDiv.innerHTML = '<div style="color: var(--text-muted)">No media servers configured. Add one below!</div>';
-          return;
+        } else {
+          listDiv.innerHTML = '';
+          currentConfig.servers.forEach((srv, idx) => {
+            const sStatus = status.servers.find(s => s.name === srv.name) || { users_count: 0, media_count: 0, websocket_status: 'Offline' };
+            const row = document.createElement('div'); row.className = 'server-row';
+            row.innerHTML = `<div class="server-info"><div class="status-dot status-${sStatus.websocket_status}"></div><div><div style="display: flex; align-items: center; gap: 8px"><span class="server-name">${srv.name}</span><span class="server-type">${srv.is_emby ? 'emby' : 'jellyfin'}</span></div><div style="font-size: 12px; color: var(--text-muted); margin-top: 4px">${srv.url}</div></div></div><div class="server-info"><span class="server-stats">${sStatus.users_count} users | ${sStatus.media_count} items</span><button class="btn btn-danger" onclick="deleteServer(${idx})">Delete</button></div>`;
+            listDiv.appendChild(row);
+          });
         }
-
-        listDiv.innerHTML = '';
-        currentConfig.servers.forEach((srv, idx) => {
-          const sStatus = status.servers.find(s => s.name === srv.name) || { users_count: 0, media_count: 0 };
-          const row = document.createElement('div');
-          row.className = 'server-row';
-          row.innerHTML = `
-            <div class="server-info">
-              <div class="status-dot"></div>
-              <div>
-                <div style="display: flex; align-items: center; gap: 8px">
-                  <span class="server-name">${srv.name}</span>
-                  <span class="server-type">${srv.is_emby ? 'emby' : 'jellyfin'}</span>
-                </div>
-                <div style="font-size: 12px; color: var(--text-muted); margin-top: 4px">${srv.url}</div>
-              </div>
-            </div>
-            <div class="server-info">
-              <span class="server-stats">${sStatus.users_count} users | ${sStatus.media_count} items</span>
-              <button class="btn btn-danger" onclick="deleteServer(${idx})">Delete</button>
-            </div>
-          `;
-          listDiv.appendChild(row);
-        });
-      } catch (err) {
-        showToast('Error loading dashboard data');
-      }
+        const activeCard = document.getElementById('activeSyncsCard'); const activeDiv = document.getElementById('activeSessions');
+        if (status.active_sessions && status.active_sessions.length > 0) {
+          activeCard.style.display = 'block'; activeDiv.innerHTML = '';
+          status.active_sessions.forEach(sess => {
+            const row = document.createElement('div'); row.className = 'server-row'; row.style.background = 'rgba(99, 102, 241, 0.05)';
+            const minutes = Math.floor(sess.position / 60); const seconds = Math.floor(sess.position % 60).toString().padStart(2, '0');
+            row.innerHTML = `<div class="server-info"><div class="status-dot status-Connected"></div><div><div style="font-weight: 600">${sess.item}</div><div style="font-size: 12px; color: var(--text-muted)">User: ${sess.user} | Server: ${sess.server}</div></div></div><div style="display: flex; align-items: center; gap: 12px"><span class="badge">${minutes}:${seconds}</span><span class="server-type">${sess.is_paused ? 'PAUSED' : 'PLAYING'}</span></div>`;
+            activeDiv.appendChild(row);
+          });
+        } else { activeCard.style.display = 'none'; }
+        const usersDiv = document.getElementById('syncedUsers');
+        if (status.synced_users && status.synced_users.length > 0) {
+          usersDiv.innerHTML = '';
+          status.synced_users.forEach(u => {
+            const badge = document.createElement('span'); badge.className = 'badge'; badge.style.borderColor = 'rgba(16, 185, 129, 0.3)'; badge.style.color = '#a7f3d0'; badge.innerText = u; usersDiv.appendChild(badge);
+          });
+        } else { usersDiv.innerHTML = '<div style="color: var(--text-muted); font-size:14px">No matched LDAP users found.</div>'; }
+        const logsDiv = document.getElementById('syncLogs');
+        if (status.sync_logs && status.sync_logs.length > 0) {
+          logsDiv.innerHTML = '';
+          status.sync_logs.forEach(log => {
+            const line = document.createElement('div'); line.className = 'log-line'; line.innerText = log; logsDiv.appendChild(line);
+          });
+        } else { logsDiv.innerHTML = '<div style="color: var(--text-muted)">Waiting for sync events...</div>'; }
+      } catch (err) { console.error(err); }
     }
-
+    async function testConnection() {
+      const type = document.getElementById('serverType').value; const url = document.getElementById('serverUrl').value; const api_key = document.getElementById('serverKey').value;
+      if (!url || !api_key) { showToast('Please enter Address and API Key to test connection'); return; }
+      showToast('Testing server connection...');
+      try {
+        const res = await fetch('/api/test_connection', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ url, api_key, is_emby: type === 'emby' }) });
+        const result = await res.json(); showToast(result.message);
+      } catch (err) { showToast('Failed to test connection'); }
+    }
     document.getElementById('serverForm').addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const type = document.getElementById('serverType').value;
-      const name = document.getElementById('serverName').value;
-      const url = document.getElementById('serverUrl').value;
-      const api_key = document.getElementById('serverKey').value;
-
-      currentConfig.servers.push({
-        name,
-        url,
-        api_key,
-        is_emby: type === 'emby'
-      });
-
-      await saveConfig();
-      document.getElementById('serverForm').reset();
+      e.preventDefault(); const type = document.getElementById('serverType').value; const name = document.getElementById('serverName').value; const url = document.getElementById('serverUrl').value; const api_key = document.getElementById('serverKey').value;
+      currentConfig.servers.push({ name, url, api_key, is_emby: type === 'emby' });
+      await saveConfig(); document.getElementById('serverForm').reset();
     });
-
-    async function deleteServer(idx) {
-      currentConfig.servers.splice(idx, 1);
-      await saveConfig();
-    }
-
-    async function saveSettings() {
-      currentConfig.sync_threshold_seconds = parseInt(document.getElementById('syncThreshold').value);
-      await saveConfig();
-    }
-
+    async function deleteServer(idx) { currentConfig.servers.splice(idx, 1); await saveConfig(); }
+    async function saveSettings() { currentConfig.sync_threshold_seconds = parseInt(document.getElementById('syncThreshold').value); await saveConfig(); }
     async function saveConfig() {
       try {
-        const res = await fetch('/api/config', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(currentConfig)
-        });
-        const result = await res.json();
-        showToast(result.message);
-        setTimeout(loadDashboard, 1500);
-      } catch (err) {
-        showToast('Failed to update configuration');
-      }
+        const res = await fetch('/api/config', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(currentConfig) });
+        const result = await res.json(); showToast(result.message); setTimeout(loadDashboard, 1500);
+      } catch (err) { showToast('Failed to update configuration'); }
     }
-
-    function showToast(msg) {
-      const toast = document.getElementById('toast');
-      toast.innerText = msg;
-      toast.style.display = 'block';
-      setTimeout(() => { toast.style.display = 'none'; }, 4000);
-    }
-
-    loadDashboard();
+    function showToast(msg) { const toast = document.getElementById('toast'); toast.innerText = msg; toast.style.display = 'block'; setTimeout(() => { toast.style.display = 'none'; }, 4000); }
+    loadDashboard(); setInterval(loadDashboard, 3000);
   </script>
 </body>
 </html>
