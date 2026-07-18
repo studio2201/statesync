@@ -94,7 +94,9 @@ async fn main() -> Result<()> {
         // Update shared AppState for the Web UI status report
         {
             let mut state = app_state.lock().await;
+            let count = caches.len();
             state.caches = caches;
+            state.websocket_statuses = vec!["Offline".to_string(); count];
         }
 
         // Create broadcast shutdown channel to terminate the current websocket connection threads
