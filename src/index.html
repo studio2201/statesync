@@ -168,21 +168,21 @@
             let cells = '';
             group.forEach((username, idx) => {
               const align = idx === 0 ? 'left' : (idx === group.length - 1 ? 'right' : 'center');
-              cells += `<div style="color:#fff;font-size:12px;width:120px;text-align:${align}">${username}</div>`;
-              if (idx < group.length - 1) cells += `<div style="flex:1;border-bottom:1px dotted var(--green);margin:0 15px;opacity:0.7"></div>`;
+              cells += username ? `<div style="color:#fff;font-size:12px;width:120px;text-align:${align}">${username}</div>` : `<div style="color:var(--text);opacity:0.3;font-size:12px;width:120px;text-align:${align}">[ UNMAPPED ]</div>`;
+              if (idx < group.length - 1) {
+                const isGreen = username !== null && group.slice(idx + 1).some(u => u !== null);
+                cells += `<div style="flex:1;border-bottom:1px dotted ${isGreen ? 'var(--green)' : 'var(--accent)'};margin:0 15px;opacity:${isGreen ? '0.7' : '0.2'}"></div>`;
+              }
             });
             usersDiv.innerHTML += `<div style="display:flex;align-items:center;padding:6px 0">${cells}</div>`;
           });
           status.servers.forEach((srv, srvIdx) => {
-            if (!srv.users) return;
-            srv.users.forEach(username => {
-              if (!mapped.some(group => group[srvIdx] === username)) {
+            if (srv.users) srv.users.forEach(username => {
+              if (!mapped.some(group => group.some(u => u === username))) {
                 let cells = '';
                 for (let i = 0; i < status.servers.length; i++) {
                   const align = i === 0 ? 'left' : (i === status.servers.length - 1 ? 'right' : 'center');
-                  const col = i === srvIdx ? 'var(--accent)' : 'var(--text);opacity:0.3';
-                  const label = i === srvIdx ? username : '[ UNMAPPED ]';
-                  cells += `<div style="font-size:12px;width:120px;text-align:${align};color:${col}">${label}</div>`;
+                  cells += `<div style="font-size:12px;width:120px;text-align:${align};color:${i === srvIdx ? 'var(--accent)' : 'var(--text);opacity:0.3'}">${i === srvIdx ? username : '[ UNMAPPED ]'}</div>`;
                   if (i < status.servers.length - 1) cells += `<div style="flex:1;border-bottom:1px dotted var(--accent);margin:0 15px;opacity:0.3"></div>`;
                 }
                 usersDiv.innerHTML += `<div style="display:flex;align-items:center;padding:6px 0">${cells}</div>`;

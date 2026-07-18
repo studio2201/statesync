@@ -139,18 +139,30 @@ async fn get_status(Extension(state): Extension<Arc<WebServerState>>) -> Json<se
     }
     
     let mut mapped_users = Vec::new();
-    if let Some(first_cache) = app_state.caches.first() {
-        for username in first_cache.users.keys() {
-            let mut group = vec![username.clone()];
-            for c in app_state.caches.iter().skip(1) {
-                let matched_name = c.users.keys().find(|u| {
+    let mut processed = Vec::new();
+    for (srv_idx, cache) in app_state.caches.iter().enumerate() {
+        for username in cache.users.keys() {
+            if processed.contains(&(srv_idx, username.clone())) {
+                continue;
+            }
+            let mut group = vec![None; app_state.caches.len()];
+            group[srv_idx] = Some(username.clone());
+            processed.push((srv_idx, username.clone()));
+            let mut has_any_match = false;
+            for (other_idx, other_cache) in app_state.caches.iter().enumerate() {
+                if other_idx == srv_idx {
+                    continue;
+                }
+                let matched_name = other_cache.users.keys().find(|u| {
                     u.to_lowercase().contains(&username.to_lowercase()) || username.to_lowercase().contains(&u.to_lowercase())
                 }).cloned();
                 if let Some(name) = matched_name {
-                    group.push(name);
+                    group[other_idx] = Some(name.clone());
+                    processed.push((other_idx, name));
+                    has_any_match = true;
                 }
             }
-            if group.len() == app_state.caches.len() {
+            if has_any_match {
                 mapped_users.push(group);
             }
         }
