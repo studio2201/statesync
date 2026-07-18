@@ -26,6 +26,8 @@ struct TestConnRequest {
 pub fn create_router(web_state: Arc<WebServerState>) -> Router {
     Router::new()
         .route("/", get(serve_index))
+        .route("/manifest.json", get(serve_manifest))
+        .route("/sw.js", get(serve_sw))
         .route("/api/config", get(get_config).post(post_config))
         .route("/api/status", get(get_status))
         .route("/api/test_connection", get(get_config).post(test_connection)) // bind get just to support router routing check
@@ -34,6 +36,36 @@ pub fn create_router(web_state: Arc<WebServerState>) -> Router {
 
 async fn serve_index() -> Html<&'static str> {
     Html(include_str!("index.html"))
+}
+
+async fn serve_manifest() -> impl axum::response::IntoResponse {
+    let manifest = r##"{
+  "name": "StateSync",
+  "short_name": "StateSync",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#03060f",
+  "theme_color": "#03060f",
+  "icons": [
+    {
+      "src": "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='%2303060f'/><circle cx='50' cy='50' r='30' stroke='%2300f0ff' stroke-width='6' fill='none'/></svg>",
+      "sizes": "192x192",
+      "type": "image/svg+xml"
+    },
+    {
+      "src": "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='%2303060f'/><circle cx='50' cy='50' r='30' stroke='%2300f0ff' stroke-width='6' fill='none'/></svg>",
+      "sizes": "512x512",
+      "type": "image/svg+xml"
+    }
+  ]
+}"##;
+    ([("content-type", "application/json")], manifest)
+}
+
+async fn serve_sw() -> impl axum::response::IntoResponse {
+    let sw = r#"self.addEventListener('install', (e) => { self.skipWaiting(); });
+self.addEventListener('fetch', (e) => { e.respondWith(fetch(e.request)); });"#;
+    ([("content-type", "application/javascript")], sw)
 }
 
 fn mask_api_key(key: &str) -> String {

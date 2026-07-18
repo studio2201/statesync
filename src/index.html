@@ -2,7 +2,11 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#03060f">
   <title>StateSync</title>
+  <link rel="manifest" href="/manifest.json">
+  <link rel="apple-touch-icon" href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='%2303060f'/><circle cx='50' cy='50' r='30' stroke='%2300f0ff' stroke-width='6' fill='none'/></svg>">
   <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap" rel="stylesheet">
   <style>
     :root { --bg: #03060f; --panel: rgba(10, 16, 32, 0.85); --border: #00f0ff; --accent: #ff8800; --green: #00ff66; --red: #ff0055; --text: #c0d0e8; }
@@ -32,7 +36,7 @@
     .btn-danger { border-color: var(--red); color: var(--red); }
     .btn-danger:hover { background: var(--red); color: #000; box-shadow: 0 0 10px var(--red); }
     .badge { border: 1px solid rgba(0,240,255,0.4); padding: 2px 6px; font-size: 11px; color: var(--border); }
-    .log-feed { font-size: 12px; background: rgba(5,8,18,0.9); border: 1px solid rgba(0,240,255,0.2); padding: 15px; max-height: 200px; overflow-y: auto; color: var(--green); }
+    .log-feed { font-size: 12px; background: rgba(5,8,18,0.9); border: 1px solid rgba(0,240,255,0.2); padding: 15px; max-height: 450px; overflow-y: auto; color: var(--green); }
     .log-line { border-bottom: 1px solid rgba(0,255,102,0.05); padding: 4px 0; }
     .modal { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.85); display: none; align-items: center; justify-content: center; z-index: 2000; }
     .modal-content { background: var(--bg); border: 2px solid var(--border); box-shadow: 0 0 30px var(--border); width: 450px; padding: 25px; position: relative; }
@@ -114,6 +118,7 @@
   <div class="toast" id="toast"></div>
 
   <script>
+    if ('serviceWorker' in navigator) { navigator.serviceWorker.register('/sw.js').catch(() => {}); }
     let currentConfig = { servers: [], sync_threshold_seconds: 5 }; let editIndex = -1;
     function setTheme(n) { document.body.className = n === 'cyberpunk' ? '' : `theme-${n}`; localStorage.setItem('hud-theme', n); }
     async function loadDashboard() {
