@@ -29,6 +29,7 @@ pub fn create_router(web_state: Arc<WebServerState>) -> Router {
         .route("/manifest.json", get(serve_manifest))
         .route("/sw.js", get(serve_sw))
         .route("/icon.svg", get(serve_icon))
+        .route("/favicon.jpg", get(serve_favicon))
         .route("/api/config", get(get_config).post(post_config))
         .route("/api/status", get(get_status))
         .route("/api/test_connection", get(get_config).post(test_connection)) // bind get just to support router routing check
@@ -66,6 +67,11 @@ async fn serve_manifest() -> impl axum::response::IntoResponse {
 async fn serve_icon() -> impl axum::response::IntoResponse {
     let svg = r##"<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" fill="#03060f"/><circle cx="50" cy="50" r="30" stroke="#00f0ff" stroke-width="6" fill="none"/></svg>"##;
     ([("content-type", "image/svg+xml")], svg)
+}
+
+async fn serve_favicon() -> impl axum::response::IntoResponse {
+    let favicon = include_bytes!("favicon.jpg");
+    ([("content-type", "image/jpeg")], favicon.as_slice())
 }
 
 async fn serve_sw() -> impl axum::response::IntoResponse {

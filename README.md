@@ -1,5 +1,7 @@
 # statesync
 
+![StateSync Header](statesync_header.jpg)
+
 A lightweight, high-performance Rust daemon designed to synchronize playback progress, watch states, and resume points bi-directionally between an arbitrary number of Emby and Jellyfin Media Servers in real-time.
 
 It features a simple, beautiful **Web UI Dashboard** running on port `8754` so you can manage your servers directly from your web browser with zero configuration files to edit!
