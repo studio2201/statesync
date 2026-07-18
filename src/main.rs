@@ -11,12 +11,15 @@ use reqwest::Client;
 use anyhow::{Result, Context, anyhow};
 use tracing::{info, warn, error};
 use tracing_subscriber;
-use percent_encoding::{utf8_percent_encode, NON_ALPHANUMERIC};
+use tokio::net::TcpListener;
+use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct Config {
     pub emby_url: String,
     pub api_key: String,
+    pub daemon_ip: String,
+    pub watchparty_dir: String,
     #[serde(default = "default_threshold_seconds")]
     pub sync_threshold_seconds: u64,
     #[serde(default = "default_cooldown_seconds")]
@@ -62,8 +65,8 @@ pub struct SessionInfo {
     #[serde(alias = "playState", alias = "PlayState")]
     pub play_state: Option<PlayState>,
 
-    #[serde(alias = "playlistItemId", alias = "PlaylistItemId")]
-    pub playlist_item_id: Option<String>,
+    #[serde(alias = "remoteEndPoint", alias = "RemoteEndPoint")]
+    pub remote_end_point: Option<String>,
 }
 
 #[derive(Debug, Clone, Deserialize, PartialEq)]
@@ -91,9 +94,6 @@ pub struct PlayState {
     
     #[serde(alias = "volumeLevel", alias = "VolumeLevel")]
     pub volume_level: Option<i32>,
-
-    #[serde(alias = "playlistItemId", alias = "PlaylistItemId")]
-    pub playlist_item_id: Option<String>,
 }
 
 pub struct EmbyClient {
@@ -129,132 +129,18 @@ impl EmbyClient {
         Ok(sessions)
     }
 
-    pub async fn get_all_users(&self) -> Result<Vec<String>> {
-        let url = self.auth_url("/emby/Users");
-        let resp = self.client.get(&url)
-            .header("X-Emby-Token", &self.api_key)
-            .send()
-            .await
-            .context("Failed to get users list")?;
-        
-        let users: serde_json::Value = resp.json()
-            .await
-            .context("Failed to parse users list")?;
-        
-        let mut user_ids = Vec::new();
-        if let Some(arr) = users.as_array() {
-            for u in arr {
-                if let Some(id) = u.get("Id").and_then(|id| id.as_str()) {
-                    user_ids.push(id.to_string());
-                }
-            }
-        }
-        Ok(user_ids)
-    }
-
-    pub async fn create_playlist(&self, user_id: &str, name: &str, item_id: &str) -> Result<String> {
-        let path = "/emby/Playlists";
-        let encoded_name = utf8_percent_encode(name, NON_ALPHANUMERIC).to_string();
-        let url = format!(
-            "{}{}?UserId={}&Name={}&Ids={}&api_key={}",
-            self.base_url, path, user_id, encoded_name, item_id, self.api_key
-        );
+    pub async fn refresh_library(&self) -> Result<()> {
+        let path = "/emby/Library/Refresh";
+        let url = self.auth_url(path);
         let resp = self.client.post(&url)
             .header("X-Emby-Token", &self.api_key)
             .send()
             .await
-            .context("Failed to send Create Playlist request")?;
+            .context("Failed to send Library Refresh request")?;
         
         if !resp.status().is_success() {
             let body = resp.text().await.unwrap_or_default();
-            return Err(anyhow!("Create Playlist failed: {} - {}", url, body));
-        }
-
-        let data: serde_json::Value = resp.json()
-            .await
-            .context("Failed to parse Create Playlist response")?;
-        
-        let playlist_id = data.get("Id")
-            .and_then(|id| id.as_str())
-            .ok_or_else(|| anyhow!("Create Playlist response missing Id field: {:?}", data))?;
-        
-        Ok(playlist_id.to_string())
-    }
-
-    pub async fn get_playlist_item_ids(&self, playlist_id: &str, user_id: &str) -> Result<Vec<String>> {
-        let url = format!(
-            "{}/Playlists/{}/Items?UserId={}&api_key={}",
-            self.base_url, playlist_id, user_id, self.api_key
-        );
-        let resp = self.client.get(&url)
-            .header("X-Emby-Token", &self.api_key)
-            .send()
-            .await
-            .context("Failed to get playlist items")?;
-        
-        if !resp.status().is_success() {
-            let body = resp.text().await.unwrap_or_default();
-            return Err(anyhow!("Get playlist items failed: {} - {}", url, body));
-        }
-
-        let data: serde_json::Value = resp.json()
-            .await
-            .context("Failed to parse playlist items")?;
-        
-        let mut ids = Vec::new();
-        if let Some(items) = data.get("Items").and_then(|i| i.as_array()) {
-            for item in items {
-                if let Some(pl_item_id) = item.get("PlaylistItemId").and_then(|id| id.as_str()) {
-                    ids.push(pl_item_id.to_string());
-                }
-            }
-        }
-        Ok(ids)
-    }
-
-    pub async fn delete_playlist(&self, playlist_id: &str) -> Result<()> {
-        let path = format!("/emby/Items/{}", playlist_id);
-        let url = self.auth_url(&path);
-        let resp = self.client.delete(&url)
-            .header("X-Emby-Token", &self.api_key)
-            .send()
-            .await
-            .context("Failed to send Delete Playlist request")?;
-        
-        if !resp.status().is_success() {
-            let body = resp.text().await.unwrap_or_default();
-            return Err(anyhow!("Delete Playlist failed: {} - {}", url, body));
-        }
-        Ok(())
-    }
-
-    pub async fn clean_orphaned_playlists(&self) -> Result<()> {
-        let users = self.get_all_users().await?;
-        for user_id in users {
-            let url = format!(
-                "{}/emby/Items?UserId={}&IncludeItemTypes=Playlist&Recursive=true&api_key={}",
-                self.base_url, user_id, self.api_key
-            );
-            let resp = self.client.get(&url)
-                .header("X-Emby-Token", &self.api_key)
-                .send()
-                .await
-                .context("Failed to query playlists")?;
-            
-            let data: serde_json::Value = resp.json()
-                .await
-                .context("Failed to parse playlists list")?;
-            
-            if let Some(items) = data.get("Items").and_then(|i| i.as_array()) {
-                for item in items {
-                    if let (Some(id), Some(name)) = (item.get("Id").and_then(|id| id.as_str()), item.get("Name").and_then(|n| n.as_str())) {
-                        if name.starts_with("Join ") {
-                            info!("Cleaning up orphaned watch-party playlist for user {}: {} ({})", user_id, name, id);
-                            let _ = self.delete_playlist(id).await;
-                        }
-                    }
-                }
-            }
+            return Err(anyhow!("Library Refresh failed: {} - {}", url, body));
         }
         Ok(())
     }
@@ -365,9 +251,7 @@ pub struct SessionHistoryEntry {
 pub struct WatchParty {
     pub item_id: String,
     pub item_name: String,
-    pub user_playlists: HashMap<String, String>, // User ID -> Playlist ID
-    pub playlist_item_ids: HashSet<String>,      // Set of EntryIds (PlaylistItemId)
-    pub members: HashSet<String>,                // session IDs
+    pub members: HashSet<String>, // session IDs
     pub collective_state: CollectivePlayState,
 }
 
@@ -476,6 +360,30 @@ async fn execute_sync_action(
     Ok(())
 }
 
+fn sanitize_filename(name: &str) -> String {
+    name.chars()
+        .map(|c| if c.is_alphanumeric() || c == ' ' || c == '-' || c == '_' { c } else { '_' })
+        .collect()
+}
+
+fn clean_watchparty_dir(dir: &str) {
+    let path = std::path::Path::new(dir);
+    if !path.exists() {
+        if let Err(e) = std::fs::create_dir_all(path) {
+            error!("Failed to create watchparty directory {}: {}", dir, e);
+            return;
+        }
+    }
+    if let Ok(entries) = std::fs::read_dir(path) {
+        for entry in entries.flatten() {
+            let p = entry.path();
+            if p.is_file() && p.extension().map(|ext| ext == "strm").unwrap_or(false) {
+                let _ = std::fs::remove_file(p);
+            }
+        }
+    }
+}
+
 async fn run_sync_logic(
     sessions: &[SessionInfo],
     client: &Arc<EmbyClient>,
@@ -488,76 +396,12 @@ async fn run_sync_logic(
     let now = Instant::now();
     let threshold_ticks = (config.sync_threshold_seconds * 10_000_000) as i64;
 
-    // 1. Intercept joins: Check if any session played one of our active watch-party playlists
-    for s in sessions {
-        if state.is_in_cooldown(&s.id) {
-            continue;
-        }
-
-        // Check if the current session reports a playlist item ID that matches one of our watch-parties
-        let s_playlist_item_id = s.playlist_item_id.as_ref()
-            .or_else(|| s.play_state.as_ref().and_then(|p| p.playlist_item_id.as_ref()));
-
-        if let Some(pl_item_id) = s_playlist_item_id {
-            let mut match_item_id = None;
-            for party in state.active_parties.values() {
-                if party.playlist_item_ids.contains(pl_item_id) {
-                    match_item_id = Some(party.item_id.clone());
-                    break;
-                }
-            }
-
-            if let Some(target_item_id) = match_item_id {
-                info!(
-                    "Session '{}' played sync playlist for '{}' -> Joining watch party!",
-                    s.device_name.as_deref().unwrap_or(&s.device_id),
-                    s.now_playing_item.as_ref().and_then(|i| i.name.as_deref()).unwrap_or("Movie")
-                );
-
-                if let Some(party) = state.active_parties.get_mut(&target_item_id) {
-                    party.members.insert(s.id.clone());
-                }
-
-                let other_member = sessions.iter().find(|os| {
-                    os.id != s.id 
-                    && os.now_playing_item.as_ref().map(|ti| ti.id == target_item_id).unwrap_or(false)
-                });
-
-                let (target_pos, target_paused) = if let Some(os) = other_member {
-                    let pos = os.play_state.as_ref().and_then(|p| p.position_ticks).unwrap_or(0);
-                    let paused = os.play_state.as_ref().and_then(|p| p.is_paused).unwrap_or(false);
-                    (pos, paused)
-                } else {
-                    (0, false)
-                };
-
-                let client_clone = client.clone();
-                let session_id = s.id.clone();
-                let cooldown_dur = Duration::from_secs(config.cooldown_seconds);
-
-                state.set_cooldown(&session_id, cooldown_dur);
-
-                tokio::spawn(async move {
-                    let act = SyncAction::Play {
-                        item_id: target_item_id,
-                        position_ticks: target_pos,
-                        is_paused: target_paused,
-                    };
-                    if let Err(e) = execute_sync_action(&client_clone, &session_id, act).await {
-                        error!("Error redirecting session {}: {}", session_id, e);
-                    }
-                });
-
-                return Ok(());
-            }
-        }
-    }
-
-    // 2. Manage Dynamic Watch-Party Playlists (Create/Delete)
+    // 1. Detect rooms playing movies and manage the .strm files in the watch party library
     let mut parties_to_create = Vec::new();
     for s in sessions {
         if let Some(ref item) = s.now_playing_item {
             let item_name = item.name.as_deref().unwrap_or("");
+            // Exclude our own join card playing to avoid self-referencing
             if !item_name.starts_with("Join ") {
                 if !state.active_parties.contains_key(&item.id) {
                     parties_to_create.push((
@@ -570,6 +414,7 @@ async fn run_sync_logic(
         }
     }
 
+    // Clean up members who stopped playing their party item
     for party in state.active_parties.values_mut() {
         party.members.retain(|member_session_id| {
             sessions.iter().any(|s| {
@@ -579,99 +424,73 @@ async fn run_sync_logic(
         });
     }
 
+    // Find parties that have no active members left
     let mut parties_to_delete = Vec::new();
     for (item_id, party) in &state.active_parties {
-        if party.members.is_empty() {
-            parties_to_delete.push((item_id.clone(), party.user_playlists.clone()));
+        // If the only person playing is the host or if no one is playing the item, delete it
+        let is_any_real_viewer = sessions.iter().any(|s| {
+            s.now_playing_item.as_ref().map(|item| item.id == *item_id).unwrap_or(false)
+        });
+        if !is_any_real_viewer {
+            parties_to_delete.push((item_id.clone(), party.item_name.clone()));
         }
     }
 
-    // Drop lock to perform asynchronous network requests
-    drop(state);
-
-    for (item_id, user_playlists) in parties_to_delete {
-        let client_clone = client.clone();
-        let state_lock_clone = state_lock.clone();
-        tokio::spawn(async move {
-            for (user_id, playlist_id) in user_playlists {
-                info!("Deleting watch-party playlist ID {} for user {}", playlist_id, user_id);
-                if let Err(e) = client_clone.delete_playlist(&playlist_id).await {
-                    error!("Error deleting playlist: {}", e);
-                }
-            }
-            let mut state = state_lock_clone.lock().await;
-            state.active_parties.remove(&item_id);
-        });
-    }
-
-    for (item_id, item_name, host_session_id) in parties_to_create {
-        let pl_name = format!("Join - {}", item_name);
-        let client_clone = client.clone();
-        let state_lock_clone = state_lock.clone();
+    // Perform deletions and file cleanups
+    for (item_id, item_name) in parties_to_delete {
+        state.active_parties.remove(&item_id);
         
-        tokio::spawn(async move {
-            info!("Creating watch-party playlist for all users: {}", pl_name);
-            match client_clone.get_all_users().await {
-                Ok(users) => {
-                    let mut user_playlists = HashMap::new();
-                    let mut playlist_item_ids = HashSet::new();
-                    
-                    for user_id in users {
-                        match client_clone.create_playlist(&user_id, &pl_name, &item_id).await {
-                            Ok(playlist_id) => {
-                                info!("Created playlist ID {} for user {}", playlist_id, user_id);
-                                user_playlists.insert(user_id.clone(), playlist_id.clone());
-                                
-                                // Fetch the PlaylistItemId entries in this playlist
-                                tokio::time::sleep(Duration::from_millis(150)).await;
-                                match client_clone.get_playlist_item_ids(&playlist_id, &user_id).await {
-                                    Ok(ids) => {
-                                        for id in ids {
-                                            playlist_item_ids.insert(id);
-                                        }
-                                    }
-                                    Err(e) => {
-                                        error!("Error fetching items for playlist {}: {}", playlist_id, e);
-                                    }
-                                }
-                            }
-                            Err(e) => {
-                                error!("Error creating playlist for user {}: {}", user_id, e);
-                            }
-                        }
-                    }
-                    
-                    if !user_playlists.is_empty() {
-                        let mut state = state_lock_clone.lock().await;
-                        let mut members = HashSet::new();
-                        members.insert(host_session_id);
-                        state.active_parties.insert(
-                            item_id.clone(),
-                            WatchParty {
-                                item_id,
-                                item_name,
-                                user_playlists,
-                                playlist_item_ids,
-                                members,
-                                collective_state: CollectivePlayState {
-                                    position_ticks: 0,
-                                    is_paused: false,
-                                    last_updated: Instant::now(),
-                                },
-                            },
-                        );
-                    }
+        let filename = format!("Join - {}.strm", sanitize_filename(&item_name));
+        let path = std::path::Path::new(&config.watchparty_dir).join(&filename);
+        if path.exists() {
+            let _ = std::fs::remove_file(&path);
+            info!("Deleted watch-party redirect file: {:?}", path);
+            
+            let client_clone = client.clone();
+            tokio::spawn(async move {
+                if let Err(e) = client_clone.refresh_library().await {
+                    error!("Error triggering library refresh: {}", e);
                 }
-                Err(e) => {
-                    error!("Error fetching user list: {}", e);
-                }
-            }
-        });
+            });
+        }
     }
 
-    let mut state = state_lock.lock().await;
+    // Perform creations
+    for (item_id, item_name, host_session_id) in parties_to_create {
+        let mut members = HashSet::new();
+        members.insert(host_session_id);
+        state.active_parties.insert(
+            item_id.clone(),
+            WatchParty {
+                item_id: item_id.clone(),
+                item_name: item_name.clone(),
+                members,
+                collective_state: CollectivePlayState {
+                    position_ticks: 0,
+                    is_paused: false,
+                    last_updated: Instant::now(),
+                },
+            },
+        );
 
-    // 3. For each active Watch Party, calculate sync actions among members
+        let filename = format!("Join - {}.strm", sanitize_filename(&item_name));
+        let path = std::path::Path::new(&config.watchparty_dir).join(&filename);
+        let file_content = format!("http://{}:8090/join?item_id={}", config.daemon_ip, item_id);
+        if let Err(e) = std::fs::write(&path, file_content) {
+            error!("Failed to create redirect strm file: {}", e);
+        } else {
+            info!("Created watch-party redirect file: {:?}", path);
+            
+            let client_clone = client.clone();
+            tokio::spawn(async move {
+                if let Err(e) = client_clone.refresh_library().await {
+                    error!("Error triggering library refresh: {}", e);
+                }
+            });
+        }
+    }
+
+    // 2. For each active Watch Party, calculate sync actions among members
     let parties: Vec<WatchParty> = state.active_parties.values().cloned().collect();
 
     for party in parties {
@@ -889,6 +708,126 @@ async fn handle_ws_message(
     Ok(())
 }
 
+async fn start_http_server(
+    state_lock: Arc<Mutex<AppState>>,
+    client: Arc<EmbyClient>,
+    config: Config,
+) {
+    let listener = match TcpListener::bind("0.0.0.0:8090").await {
+        Ok(l) => l,
+        Err(e) => {
+            error!("Failed to bind HTTP server to port 8090: {}", e);
+            return;
+        }
+    };
+    info!("HTTP redirector server listening on 0.0.0.0:8090");
+
+    loop {
+        let (mut socket, addr) = match listener.accept().await {
+            Ok(v) => v,
+            Err(_) => continue,
+        };
+
+        let state_clone = state_lock.clone();
+        let client_clone = client.clone();
+        let config_clone = config.clone();
+
+        tokio::spawn(async move {
+            let mut buf = [0; 2048];
+            let n = match socket.read(&mut buf).await {
+                Ok(n) if n > 0 => n,
+                _ => return,
+            };
+
+            let req_text = String::from_utf8_lossy(&buf[..n]);
+            let first_line = req_text.lines().next().unwrap_or("");
+            
+            if first_line.starts_with("GET /join") {
+                let parts: Vec<&str> = first_line.split_whitespace().collect();
+                if parts.len() >= 2 {
+                    let uri = parts[1];
+                    let mut item_id = None;
+                    if let Some(pos) = uri.find("item_id=") {
+                        let val = &uri[pos + 8..];
+                        let end = val.find('&').unwrap_or(val.len());
+                        item_id = Some(val[..end].to_string());
+                    }
+
+                    if let Some(target_item_id) = item_id {
+                        let client_ip = addr.ip().to_string();
+                        info!("Received HTTP join request from IP {} for item {}", client_ip, target_item_id);
+
+                        match client_clone.get_sessions().await {
+                            Ok(sessions) => {
+                                let mut target_session = None;
+                                for s in &sessions {
+                                    if let Some(ref ep) = s.remote_end_point {
+                                        let ep_ip = ep.split(':').next().unwrap_or(ep);
+                                        if ep_ip == client_ip || (client_ip == "127.0.0.1" && (ep_ip == "localhost" || ep_ip == "::1" || ep_ip == "127.0.0.1")) {
+                                            target_session = Some(s.clone());
+                                            break;
+                                        }
+                                    }
+                                }
+
+                                if let Some(s) = target_session {
+                                    {
+                                        let mut state = state_clone.lock().await;
+                                        if let Some(party) = state.active_parties.get_mut(&target_item_id) {
+                                            party.members.insert(s.id.clone());
+                                        }
+                                    }
+
+                                    let other_member = sessions.iter().find(|os| {
+                                        os.id != s.id 
+                                        && os.now_playing_item.as_ref().map(|ti| ti.id == target_item_id).unwrap_or(false)
+                                    });
+
+                                    let (target_pos, target_paused) = if let Some(os) = other_member {
+                                        let pos = os.play_state.as_ref().and_then(|p| p.position_ticks).unwrap_or(0);
+                                        let paused = os.play_state.as_ref().and_then(|p| p.is_paused).unwrap_or(false);
+                                        (pos, paused)
+                                    } else {
+                                        (0, false)
+                                    };
+
+                                    info!("Redirecting session '{}' (IP: {}) to sync play item {}", s.device_name.as_deref().unwrap_or(&s.device_id), client_ip, target_item_id);
+
+                                    {
+                                        let mut state = state_clone.lock().await;
+                                        state.set_cooldown(&s.id, Duration::from_secs(config_clone.cooldown_seconds));
+                                    }
+
+                                    let client_clone2 = client_clone.clone();
+                                    let s_id = s.id.clone();
+                                    tokio::spawn(async move {
+                                        let act = SyncAction::Play {
+                                            item_id: target_item_id,
+                                            position_ticks: target_pos,
+                                            is_paused: target_paused,
+                                        };
+                                        if let Err(e) = execute_sync_action(&client_clone2, &s_id, act).await {
+                                            error!("Error redirecting session {}: {}", s_id, e);
+                                        }
+                                    });
+                                } else {
+                                    warn!("No Emby session found matching client IP: {}", client_ip);
+                                }
+                            }
+                            Err(e) => {
+                                error!("Error fetching sessions for IP match: {}", e);
+                            }
+                        }
+                    }
+                }
+            }
+
+            let resp = "HTTP/1.1 200 OK\r\nContent-Type: video/mp4\r\nContent-Length: 0\r\nConnection: close\r\n\r\n";
+            let _ = socket.write_all(resp.as_bytes()).await;
+        });
+    }
+}
+
 #[tokio::main]
 async fn main() -> Result<()> {
     tracing_subscriber::fmt::init();
@@ -905,17 +844,22 @@ async fn main() -> Result<()> {
 
     let client = Arc::new(EmbyClient::new(config.emby_url.clone(), config.api_key.clone()));
 
+    // Clean up watch party directory
+    info!("Cleaning watch-party strm directory: {}", config.watchparty_dir);
+    clean_watchparty_dir(&config.watchparty_dir);
+
     // Attempt to log active sessions at startup
     match client.get_sessions().await {
         Ok(sessions) => {
             info!("Successfully connected to Emby server. Active sessions found:");
             for s in &sessions {
                 info!(
-                    "  - Device: '{}', Client: '{}', User: '{}', DeviceId: '{}'",
+                    "  - Device: '{}', Client: '{}', User: '{}', DeviceId: '{}', Remote IP: '{:?}'",
                     s.device_name.as_deref().unwrap_or("Unknown Device"),
                     s.client.as_deref().unwrap_or("Unknown Client"),
                     s.user_name.as_deref().unwrap_or("None"),
-                    s.device_id
+                    s.device_id,
+                    s.remote_end_point
                 );
             }
         }
@@ -924,10 +868,8 @@ async fn main() -> Result<()> {
         }
     }
 
-    // Clean up any orphaned watch-party playlists left over from a previous run
-    if let Err(e) = client.clean_orphaned_playlists().await {
-        warn!("Failed to clean up orphaned playlists at startup: {}", e);
-    }
+    // Trigger library scan at start to sync directory cleaning
+    let _ = client.refresh_library().await;
 
     let app_state = Arc::new(Mutex::new(AppState::new()));
     let ws_url = make_ws_url(&config.emby_url, &config.api_key);
@@ -935,6 +877,14 @@ async fn main() -> Result<()> {
     let client_clone = client.clone();
     let state_clone = app_state.clone();
     let config_clone = config.clone();
+
+    // Start TCP HTTP server
+    let state_http = app_state.clone();
+    let client_http = client.clone();
+    let config_http = config.clone();
+    tokio::spawn(async move {
+        start_http_server(state_http, client_http, config_http).await;
+    });
 
     // Start WebSocket reconnection loop
     tokio::spawn(async move {
@@ -981,17 +931,10 @@ async fn main() -> Result<()> {
 
     tokio::signal::ctrl_c().await?;
     
-    // Attempt graceful cleanup of any remaining playlists before exit
-    info!("Cleaning up active watch-party playlists before exit...");
-    let active_playlists_to_clean: Vec<String> = {
-        let state = app_state.lock().await;
-        state.active_parties.values()
-            .flat_map(|pl| pl.user_playlists.values().cloned())
-            .collect()
-    };
-    for pl_id in active_playlists_to_clean {
-        let _ = client.delete_playlist(&pl_id).await;
-    }
+    // Cleanup strm files on exit
+    info!("Cleaning up active watch-party redirect files before exit...");
+    clean_watchparty_dir(&config.watchparty_dir);
+    let _ = client.refresh_library().await;
 
     info!("Stopping Emby Sync Play daemon.");
     Ok(())
