@@ -132,16 +132,26 @@ async fn get_status(Extension(state): Extension<Arc<WebServerState>>) -> Json<se
         servers_status.push(json!({
             "name": cache.name,
             "users_count": cache.users.len(),
+            "users": cache.users.keys().cloned().collect::<Vec<String>>(),
             "media_count": cache.id_to_providers.len(),
             "websocket_status": ws_status
         }));
     }
     
-    let mut synced_users = Vec::new();
+    let mut mapped_users = Vec::new();
     if let Some(first_cache) = app_state.caches.first() {
         for username in first_cache.users.keys() {
-            if app_state.caches.iter().skip(1).all(|c| crate::state::find_mapped_user_id(username, &c.users).is_some()) {
-                synced_users.push(username.clone());
+            let mut group = vec![username.clone()];
+            for c in app_state.caches.iter().skip(1) {
+                let matched_name = c.users.keys().find(|u| {
+                    u.to_lowercase().contains(&username.to_lowercase()) || username.to_lowercase().contains(&u.to_lowercase())
+                }).cloned();
+                if let Some(name) = matched_name {
+                    group.push(name);
+                }
+            }
+            if group.len() == app_state.caches.len() {
+                mapped_users.push(group);
             }
         }
     }
@@ -160,7 +170,7 @@ async fn get_status(Extension(state): Extension<Arc<WebServerState>>) -> Json<se
     Json(json!({
         "status": "active",
         "servers": servers_status,
-        "synced_users": synced_users,
+        "mapped_users": mapped_users,
         "active_sessions": active_sessions,
         "sync_logs": app_state.sync_logs
     }))

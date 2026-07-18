@@ -154,73 +154,82 @@
         if (status.active_sessions && status.active_sessions.length > 0) {
           activeDiv.innerHTML = '';
           status.active_sessions.forEach(sess => {
-            const row = document.createElement('div'); row.className = 'server-row'; row.style.borderColor = 'var(--accent)';
             const mins = Math.floor(sess.position / 60); const secs = Math.floor(sess.position % 60).toString().padStart(2, '0');
-            row.innerHTML = `<div class="server-info"><div><div style="font-weight:600;color:#fff">${sess.item}</div><div style="font-size:11px;color:var(--text)">USER: ${sess.user} | SOURCE: ${sess.server}</div></div></div><div style="display:flex;align-items:center;gap:10px"><span class="badge" style="border-color:var(--accent);color:var(--accent)">${mins}:${secs}</span><span style="font-size:11px;color:${sess.is_paused ? 'var(--accent)' : 'var(--green)'}">[ ${sess.is_paused ? 'PAUSED' : 'PLAYING'} ]</span></div>`;
-            activeDiv.appendChild(row);
+            activeDiv.innerHTML += `<div class="server-row" style="border-color:var(--accent)"><div class="server-info"><div><div style="font-weight:600;color:#fff">${sess.item}</div><div style="font-size:11px;color:var(--text)">USER: ${sess.user} | SOURCE: ${sess.server}</div></div></div><div style="display:flex;align-items:center;gap:10px"><span class="badge" style="border-color:var(--accent);color:var(--accent)">${mins}:${secs}</span><span style="font-size:11px;color:${sess.is_paused ? 'var(--accent)' : 'var(--green)'}">[ ${sess.is_paused ? 'PAUSED' : 'PLAYING'} ]</span></div></div>`;
           });
         } else { activeDiv.innerHTML = '<div style="color:var(--accent)">NO ACTIVE STREAMS DETECTED</div>'; }
         const usersDiv = document.getElementById('syncedUsers');
-        if (status.synced_users && status.synced_users.length > 0) {
+        if (!status.servers || status.servers.length === 0) {
+          usersDiv.innerHTML = '<div style="color: var(--accent)">NO ACTIVE TRANSCEIVERS</div>';
+        } else {
           usersDiv.innerHTML = '';
-          status.synced_users.forEach(u => {
-            const row = document.createElement('div'); row.className = 'server-row'; row.style.padding = '8px 12px'; row.style.margin = '0 0 5px 0';
-            row.innerHTML = `<span style="color:var(--green)">[ MAPPED ]</span> <span style="color:#fff">${u}</span>`;
-            usersDiv.appendChild(row);
+          const flexContainer = document.createElement('div');
+          flexContainer.style.display = 'flex'; flexContainer.style.gap = '20px'; flexContainer.style.width = '100%';
+          status.servers.forEach((srv, srvIdx) => {
+            const col = document.createElement('div'); col.style.flex = '1'; col.style.minWidth = '0';
+            if (srvIdx < status.servers.length - 1) {
+              col.style.borderRight = '1px dashed rgba(0,240,255,0.15)'; col.style.paddingRight = '10px';
+            }
+            const header = document.createElement('div');
+            header.style.fontWeight = '600'; header.style.color = 'var(--border)'; header.style.fontSize = '12px';
+            header.style.borderBottom = '1px solid rgba(0,240,255,0.3)'; header.style.paddingBottom = '6px'; header.style.marginBottom = '10px';
+            header.innerText = srv.name.toUpperCase();
+            col.appendChild(header);
+            if (!srv.users || srv.users.length === 0) {
+              col.innerHTML += `<div style="color:var(--accent);font-size:12px">NO USERS FOUND</div>`;
+            } else {
+              srv.users.forEach(username => {
+                const isMapped = status.mapped_users && status.mapped_users.some(g => g.some(u => u.toLowerCase() === username.toLowerCase()));
+                const border = isMapped ? 'rgba(0,255,102,0.3)' : 'rgba(0,240,255,0.1)';
+                const bg = isMapped ? 'rgba(0,255,102,0.05)' : 'rgba(5,10,25,0.5)';
+                const color = isMapped ? '#fff' : 'var(--text);opacity:0.8';
+                const tag = isMapped ? `<span style="color:var(--green);font-size:10px;">[ SYNCED ]</span>` : `<span style="color:var(--accent);font-size:10px;">[ SINGLE ]</span>`;
+                col.innerHTML += `<div style="padding:5px 8px;margin-bottom:6px;background:${bg};border:1px solid ${border};font-size:12px;display:flex;justify-content:space-between;align-items:center;"><span style="color:${color}">${username}</span>${tag}</div>`;
+              });
+            }
+            flexContainer.appendChild(col);
           });
-        } else { usersDiv.innerHTML = '<div style="color:var(--accent)">NO MAPPED USERS FOUND</div>'; }
+          usersDiv.appendChild(flexContainer);
+        }
         const logsDiv = document.getElementById('syncLogs');
         if (status.sync_logs && status.sync_logs.length > 0) {
           logsDiv.innerHTML = '';
           status.sync_logs.forEach(log => {
-            const line = document.createElement('div'); line.className = 'log-line';
             if (log.level === 'success' && log.source_name) {
               const sCol = log.source_is_emby ? 'var(--green)' : '#cc00ff'; const tCol = log.target_is_emby ? 'var(--green)' : '#cc00ff';
               const sBadge = log.source_is_emby ? 'EMBY' : 'JELLYFIN'; const tBadge = log.target_is_emby ? 'EMBY' : 'JELLYFIN';
-              line.innerHTML = `&gt; [${log.timestamp}] ${log.message.toUpperCase()} FROM <span style="color:${sCol}">[${sBadge}: ${log.source_name.toUpperCase()}]</span> -&gt; <span style="color:${tCol}">[${tBadge}: ${log.target_name.toUpperCase()}]</span>`;
+              logsDiv.innerHTML += `<div class="log-line">&gt; [${log.timestamp}] ${log.message.toUpperCase()} FROM <span style="color:${sCol}">[${sBadge}: ${log.source_name.toUpperCase()}]</span> -&gt; <span style="color:${tCol}">[${tBadge}: ${log.target_name.toUpperCase()}]</span></div>`;
             } else {
               const color = log.level === 'error' ? 'var(--red)' : (log.level === 'warn' ? 'var(--accent)' : 'var(--border)');
-              line.innerHTML = `&gt; [${log.timestamp}] <span style="color:${color}">[${log.level.toUpperCase()}] ${log.message.toUpperCase()}</span>`;
+              logsDiv.innerHTML += `<div class="log-line">&gt; [${log.timestamp}] <span style="color:${color}">[${log.level.toUpperCase()}] ${log.message.toUpperCase()}</span></div>`;
             }
-            logsDiv.appendChild(line);
           });
+          logsDiv.scrollTop = logsDiv.scrollHeight;
         } else { logsDiv.innerHTML = '<div style="color:var(--green)">> LISTENING FOR METRIC EVENTS...</div>'; }
       } catch (err) { console.error(err); }
     }
-    function openServerModal(idx) {
-      editIndex = idx;
-      if (idx === -1) {
-        document.getElementById('modalTitle').innerText = '[ ADD TRANSCEIVER MODULE ]';
-        document.getElementById('serverForm').reset();
-        document.getElementById('serverDirection').value = 'both';
-      } else {
-        document.getElementById('modalTitle').innerText = '[ EDIT TRANSCEIVER MODULE ]';
-        const srv = currentConfig.servers[idx];
-        document.getElementById('serverType').value = srv.is_emby ? 'emby' : 'jellyfin';
-        document.getElementById('serverName').value = srv.name;
-        document.getElementById('serverUrl').value = srv.url;
-        document.getElementById('serverKey').value = srv.api_key;
-        document.getElementById('serverDirection').value = srv.sync_direction || 'both';
+    function openServerModal(idx) { editIndex = idx; const isAdd = idx === -1;
+      document.getElementById('modalTitle').innerText = isAdd ? '[ ADD TRANSCEIVER MODULE ]' : '[ EDIT TRANSCEIVER MODULE ]';
+      if (isAdd) { document.getElementById('serverForm').reset(); document.getElementById('serverDirection').value = 'both'; } else {
+        const srv = currentConfig.servers[idx]; document.getElementById('serverType').value = srv.is_emby ? 'emby' : 'jellyfin';
+        document.getElementById('serverName').value = srv.name; document.getElementById('serverUrl').value = srv.url;
+        document.getElementById('serverKey').value = srv.api_key; document.getElementById('serverDirection').value = srv.sync_direction || 'both';
       }
       document.getElementById('serverModal').style.display = 'flex';
     }
     function openSettingsModal() { document.getElementById('settingsModal').style.display = 'flex'; }
     function closeModal(id) { document.getElementById(id).style.display = 'none'; }
-    async function testConnection() {
-      const type = document.getElementById('serverType').value; const url = document.getElementById('serverUrl').value; const api_key = document.getElementById('serverKey').value;
-      if (!url || !api_key) { showToast('LINK DATA INCOMPLETE'); return; }
+    function testConnection() {
+      const type = document.getElementById('serverType').value, url = document.getElementById('serverUrl').value, api_key = document.getElementById('serverKey').value;
+      if (!url || !api_key) return showToast('LINK DATA INCOMPLETE');
       showToast('PINGING LINK ADDRESS...');
-      try {
-        const res = await fetch('/api/test_connection', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ url, api_key, is_emby: type === 'emby' }) });
-        const result = await res.json(); showToast(result.message.toUpperCase());
-      } catch (err) { showToast('LINK RESPONSE FAILED'); }
+      fetch('/api/test_connection', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ url, api_key, is_emby: type === 'emby' }) })
+        .then(async r => showToast((await r.json()).message.toUpperCase())).catch(() => showToast('LINK RESPONSE FAILED'));
     }
     document.getElementById('serverForm').addEventListener('submit', async (e) => {
       e.preventDefault();
-      const type = document.getElementById('serverType').value;
-      const name = document.getElementById('serverName').value;
-      const url = document.getElementById('serverUrl').value;
-      const api_key = document.getElementById('serverKey').value;
+      const type = document.getElementById('serverType').value; const name = document.getElementById('serverName').value;
+      const url = document.getElementById('serverUrl').value; const api_key = document.getElementById('serverKey').value;
       const direction = document.getElementById('serverDirection').value;
       const data = { name, url, api_key, is_emby: type === 'emby', sync_direction: direction };
       if (editIndex === -1) { currentConfig.servers.push(data); } else { currentConfig.servers[editIndex] = data; }
@@ -231,12 +240,11 @@
     async function saveConfig() {
       try {
         const res = await fetch('/api/config', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(currentConfig) });
-        const result = await res.json(); showToast(result.message.toUpperCase()); setTimeout(loadDashboard, 1200);
+        showToast((await res.json()).message.toUpperCase()); setTimeout(loadDashboard, 1200);
       } catch (err) { showToast('WRITE CONFIG FAILED'); }
     }
     function showToast(msg) { const toast = document.getElementById('toast'); toast.innerText = `> ${msg}`; toast.style.display = 'block'; setTimeout(() => { toast.style.display = 'none'; }, 4000); }
-    const savedTheme = localStorage.getItem('hud-theme') || 'cyberpunk'; setTheme(savedTheme); document.getElementById('themeSelector').value = savedTheme;
-    loadDashboard(); setInterval(loadDashboard, 3000);
+    const savedTheme = localStorage.getItem('hud-theme') || 'cyberpunk'; setTheme(savedTheme); document.getElementById('themeSelector').value = savedTheme; loadDashboard(); setInterval(loadDashboard, 3000);
   </script>
 </body>
 </html>
