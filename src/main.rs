@@ -13,10 +13,16 @@ use tracing::{info, warn, error};
 use tracing_subscriber;
 
 #[derive(Debug, Clone, Deserialize)]
+pub struct DeviceConfig {
+    pub id: String,
+    pub name: String,
+}
+
+#[derive(Debug, Clone, Deserialize)]
 pub struct Config {
     pub emby_url: String,
     pub api_key: String,
-    pub sync_devices: Vec<String>,
+    pub sync_devices: Vec<DeviceConfig>,
     #[serde(default = "default_threshold_seconds")]
     pub sync_threshold_seconds: u64,
     #[serde(default = "default_cooldown_seconds")]
@@ -339,13 +345,90 @@ async fn run_sync_logic(
     let mut state = state_lock.lock().await;
     state.clean_cooldowns();
 
+    let device_ids: Vec<&str> = config.sync_devices.iter().map(|d| d.id.as_str()).collect();
     let active_sync_sessions: Vec<&SessionInfo> = sessions
         .iter()
-        .filter(|s| config.sync_devices.contains(&s.device_id))
+        .filter(|s| device_ids.contains(&s.device_id.as_str()))
         .collect();
 
     if active_sync_sessions.is_empty() {
         return Ok(());
+    }
+
+    // Intercept any TV trying to play a "Sync to Room" dummy video
+    for s in &active_sync_sessions {
+        if state.is_in_cooldown(&s.id) {
+            continue;
+        }
+
+        if let Some(ref item) = s.now_playing_item {
+            if let Some(ref name) = item.name {
+                if name.starts_with("Sync to ") {
+                    let target_room_name = name.strip_prefix("Sync to ").unwrap().trim();
+                    info!(
+                        "Device '{}' played dummy video '{}' -> Requesting to join room '{}'",
+                        s.device_name.as_deref().unwrap_or(&s.device_id),
+                        name,
+                        target_room_name
+                    );
+
+                    // Find the target device ID from our config
+                    if let Some(target_dev_cfg) = config.sync_devices.iter().find(|d| d.name == target_room_name) {
+                        // Find the active session for the target device
+                        if let Some(target_session) = active_sync_sessions.iter().find(|ts| ts.device_id == target_dev_cfg.id) {
+                            if let Some(ref target_item) = target_session.now_playing_item {
+                                let target_item_name = target_item.name.as_deref().unwrap_or("");
+                                if !target_item_name.starts_with("Sync to ") {
+                                    let target_pos = target_session.play_state.as_ref().and_then(|p| p.position_ticks).unwrap_or(0);
+                                    let target_paused = target_session.play_state.as_ref().and_then(|p| p.is_paused).unwrap_or(false);
+
+                                    info!(
+                                        "Redirecting device '{}' to join room '{}' playing item '{}' at position {}",
+                                        s.device_name.as_deref().unwrap_or(&s.device_id),
+                                        target_room_name,
+                                        target_item.id,
+                                        target_pos
+                                    );
+
+                                    let client_clone = client.clone();
+                                    let session_id = s.id.clone();
+                                    let item_id = target_item.id.clone();
+                                    let cooldown_dur = Duration::from_secs(config.cooldown_seconds);
+
+                                    state.set_cooldown(&session_id, cooldown_dur);
+
+                                    tokio::spawn(async move {
+                                        let act = SyncAction::Play {
+                                            item_id,
+                                            position_ticks: target_pos,
+                                            is_paused: target_paused,
+                                        };
+                                        if let Err(e) = execute_sync_action(&client_clone, &session_id, act).await {
+                                            error!("Error redirecting session {}: {}", session_id, e);
+                                        }
+                                    });
+
+                                    return Ok(());
+                                }
+                            }
+                        }
+                    }
+
+                    // If target room is not playing anything, let's stop this TV from playing the dummy video
+                    info!(
+                        "Target room '{}' is not playing anything or not active. Stopping playback.",
+                        target_room_name
+                    );
+                    let client_clone = client.clone();
+                    let session_id = s.id.clone();
+                    state.set_cooldown(&session_id, Duration::from_secs(config.cooldown_seconds));
+                    tokio::spawn(async move {
+                        let _ = execute_sync_action(&client_clone, &session_id, SyncAction::Stop).await;
+                    });
+                    return Ok(());
+                }
+            }
+        }
     }
 
     let now = Instant::now();
@@ -613,6 +696,31 @@ async fn handle_ws_message(
     Ok(())
 }
 
+fn generate_dummy_videos(devices: &[DeviceConfig]) -> Result<()> {
+    std::fs::create_dir_all("sync_rooms")?;
+    for dev in devices {
+        let filename = format!("sync_rooms/Sync to {}.mp4", dev.name);
+        if !std::path::Path::new(&filename).exists() {
+            info!("Generating dummy video for room: {}", dev.name);
+            let status = std::process::Command::new("ffmpeg")
+                .args(&[
+                    "-y",
+                    "-f", "lavfi",
+                    "-i", "color=c=0x1E1E2E:s=1280x720:d=5",
+                    "-c:v", "libx264",
+                    "-pix_fmt", "yuv420p",
+                    &filename
+                ])
+                .status()
+                .context("Failed to run ffmpeg")?;
+            if !status.success() {
+                warn!("ffmpeg failed to generate dummy video for {}", dev.name);
+            }
+        }
+    }
+    Ok(())
+}
+
 #[tokio::main]
 async fn main() -> Result<()> {
     tracing_subscriber::fmt::init();
@@ -625,9 +733,13 @@ async fn main() -> Result<()> {
     let config: Config = serde_json::from_str(&config_data)
         .context("Failed to parse configuration file")?;
 
+    if let Err(e) = generate_dummy_videos(&config.sync_devices) {
+        warn!("Failed to generate dummy videos: {}", e);
+    }
+
     info!("Configuration loaded. Syncing {} devices.", config.sync_devices.len());
     for dev in &config.sync_devices {
-        info!("  - {}", dev);
+        info!("  - {} (ID: {})", dev.name, dev.id);
     }
 
     let client = Arc::new(EmbyClient::new(config.emby_url.clone(), config.api_key.clone()));
