@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>[ STATESYNC: HUD TERMINAL ]</title>
+  <title>StateSync</title>
   <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap" rel="stylesheet">
   <style>
     :root { --bg: #03060f; --panel: rgba(10, 16, 32, 0.85); --border: #00f0ff; --accent: #ff8800; --green: #00ff66; --red: #ff0055; --text: #c0d0e8; }
@@ -46,7 +46,7 @@
 <body>
   <div class="container">
     <h1>
-      <span>[ SYSTEM STATUS: ONLINE ]</span>
+      <span id="systemStatusText">[ SYSTEM STATUS: ONLINE ]</span>
       <div style="display: flex; gap: 10px; align-items: center;">
         <select id="themeSelector" class="btn" style="background:#000;padding:7px 10px;" onchange="setTheme(this.value)">
           <option value="cyberpunk">CYBERPUNK</option><option value="matrix">MATRIX</option><option value="outrun">SYNTHWAVE</option><option value="crimson">CRIMSON</option>
@@ -119,6 +119,19 @@
         const [configRes, statusRes] = await Promise.all([fetch('/api/config'), fetch('/api/status')]);
         currentConfig = await configRes.json(); const status = await statusRes.json();
         document.getElementById('syncThreshold').value = currentConfig.sync_threshold_seconds;
+        const statusSpan = document.getElementById('systemStatusText');
+        if (currentConfig.servers.length === 0) {
+          statusSpan.innerText = '[ SYSTEM STATUS: IDLE ]'; statusSpan.style.color = 'var(--border)'; statusSpan.style.textShadow = '0 0 8px var(--border)';
+        } else {
+          const statuses = status.servers.map(s => s.websocket_status);
+          if (statuses.length === 0 || statuses.every(s => s === 'Offline')) {
+            statusSpan.innerText = '[ SYSTEM STATUS: OFFLINE ]'; statusSpan.style.color = 'var(--red)'; statusSpan.style.textShadow = '0 0 8px var(--red)';
+          } else if (statuses.some(s => s === 'Offline' || s === 'Reconnecting')) {
+            statusSpan.innerText = '[ SYSTEM STATUS: DEGRADED ]'; statusSpan.style.color = 'var(--accent)'; statusSpan.style.textShadow = '0 0 8px var(--accent)';
+          } else {
+            statusSpan.innerText = '[ SYSTEM STATUS: ONLINE ]'; statusSpan.style.color = 'var(--green)'; statusSpan.style.textShadow = '0 0 8px var(--green)';
+          }
+        }
         const listDiv = document.getElementById('serverList');
         if (currentConfig.servers.length === 0) { listDiv.innerHTML = '<div style="color: var(--accent)">NO CONFIGURED TRANSCEIVERS</div>'; } else {
           listDiv.innerHTML = '';
