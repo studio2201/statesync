@@ -141,7 +141,12 @@
             }
           });
           usersDiv.appendChild(header);
-          const mapped = status.mapped_users || [];
+          const mapped = (status.mapped_users || []).slice();
+          mapped.sort((a, b) => {
+            const nameA = a.find(u => u !== null) || '';
+            const nameB = b.find(u => u !== null) || '';
+            return nameA.localeCompare(nameB, undefined, { sensitivity: 'base', numeric: true });
+          });
           mapped.forEach(group => {
             let cells = '';
             group.forEach((username, idx) => {
@@ -154,18 +159,23 @@
             });
             usersDiv.innerHTML += `<div style="display:flex;align-items:center;padding:6px 0">${cells}</div>`;
           });
+          const unmapped = [];
           status.servers.forEach((srv, srvIdx) => {
             if (srv.users) srv.users.forEach(username => {
               if (!mapped.some(group => group.some(u => u === username))) {
-                let cells = '';
-                for (let i = 0; i < status.servers.length; i++) {
-                  const align = i === 0 ? 'left' : (i === status.servers.length - 1 ? 'right' : 'center');
-                  cells += `<div style="font-size:12px;width:120px;text-align:${align};color:${i === srvIdx ? 'var(--accent)' : 'var(--text);opacity:0.3'}">${i === srvIdx ? username : '[ UNMAPPED ]'}</div>`;
-                  if (i < status.servers.length - 1) cells += `<div style="flex:1;border-bottom:1px dotted var(--accent);margin:0 15px;opacity:0.3"></div>`;
-                }
-                usersDiv.innerHTML += `<div style="display:flex;align-items:center;padding:6px 0">${cells}</div>`;
+                unmapped.push({ username, srvIdx });
               }
             });
+          });
+          unmapped.sort((a, b) => a.username.localeCompare(b.username, undefined, { sensitivity: 'base', numeric: true }));
+          unmapped.forEach(({ username, srvIdx }) => {
+            let cells = '';
+            for (let i = 0; i < status.servers.length; i++) {
+              const align = i === 0 ? 'left' : (i === status.servers.length - 1 ? 'right' : 'center');
+              cells += `<div style="font-size:12px;width:120px;text-align:${align};color:${i === srvIdx ? 'var(--accent)' : 'var(--text);opacity:0.3'}">${i === srvIdx ? username : '[ UNMAPPED ]'}</div>`;
+              if (i < status.servers.length - 1) cells += `<div style="flex:1;border-bottom:1px dotted var(--accent);margin:0 15px;opacity:0.3"></div>`;
+            }
+            usersDiv.innerHTML += `<div style="display:flex;align-items:center;padding:6px 0">${cells}</div>`;
           });
         }
         const logsDiv = $('syncLogs');
