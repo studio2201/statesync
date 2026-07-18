@@ -1,0 +1,43 @@
+<?xml version="1.0"?>
+<Container version="2">
+  <Name>statesync</Name>
+  <Repository>ubermetroid/statesync:latest</Repository>
+  <Registry>https://hub.docker.com/r/ubermetroid/statesync</Registry>
+  <Network>bridge</Network>
+  <Shell>sh</Shell>
+  <Privileged>false</Privileged>
+  <Support>https://github.com/UberMetroid/statesync/issues</Support>
+  <Project>https://github.com/UberMetroid/statesync</Project>
+  <Overview>Lightweight, real-time playstate sync bridge between your Emby and Jellyfin servers.</Overview>
+  <Category>MediaApp:Video MediaApp:Other</Category>
+  <Icon>https://raw.githubusercontent.com/UberMetroid/statesync/master/icon.png</Icon>
+  <TemplateURL>https://raw.githubusercontent.com/UberMetroid/statesync/master/unraid-template.xml</TemplateURL>
+  
+  <!-- Server 0 (Required - e.g. Emby) -->
+  <Config Name="Server 0 Name" Target="STATESYNC_SERVER_0_NAME" Default="Emby Main" Mode="" Description="Friendly name for Server 0" Type="Variable" Display="always" Required="true" Mask="false"/>
+  <Config Name="Server 0 URL" Target="STATESYNC_SERVER_0_URL" Default="http://192.168.3.3:8096" Mode="" Description="URL of Server 0" Type="Variable" Display="always" Required="true" Mask="false"/>
+  <Config Name="Server 0 API Key" Target="STATESYNC_SERVER_0_API_KEY" Default="364ac7c91b5348c3a2b15fbf5b2601ad" Mode="" Description="API Key for Server 0" Type="Variable" Display="always" Required="true" Mask="true"/>
+  <Config Name="Server 0 Type (emby/jellyfin)" Target="STATESYNC_SERVER_0_TYPE" Default="emby" Mode="" Description="Type of Server 0 (enter: emby or jellyfin)" Type="Variable" Display="always" Required="true" Mask="false"/>
+
+  <!-- Server 1 (Required - e.g. Jellyfin 1) -->
+  <Config Name="Server 1 Name" Target="STATESYNC_SERVER_1_NAME" Default="Jellyfin Primary" Mode="" Description="Friendly name for Server 1" Type="Variable" Display="always" Required="true" Mask="false"/>
+  <Config Name="Server 1 URL" Target="STATESYNC_SERVER_1_URL" Default="http://192.168.3.10:8096" Mode="" Description="URL of Server 1" Type="Variable" Display="always" Required="true" Mask="false"/>
+  <Config Name="Server 1 API Key" Target="STATESYNC_SERVER_1_API_KEY" Default="e9f0c48ceaa94742a69b8263d4773b2f" Mode="" Description="API Key for Server 1" Type="Variable" Display="always" Required="true" Mask="true"/>
+  <Config Name="Server 1 Type (emby/jellyfin)" Target="STATESYNC_SERVER_1_TYPE" Default="jellyfin" Mode="" Description="Type of Server 1 (enter: emby or jellyfin)" Type="Variable" Display="always" Required="true" Mask="false"/>
+
+  <!-- Server 2 (Optional - e.g. Jellyfin 2) -->
+  <Config Name="Server 2 Name" Target="STATESYNC_SERVER_2_NAME" Default="Jellyfin Secondary" Mode="" Description="Friendly name for Server 2 (optional)" Type="Variable" Display="always" Required="false" Mask="false"/>
+  <Config Name="Server 2 URL" Target="STATESYNC_SERVER_2_URL" Default="" Mode="" Description="URL of Server 2 (optional)" Type="Variable" Display="always" Required="false" Mask="false"/>
+  <Config Name="Server 2 API Key" Target="STATESYNC_SERVER_2_API_KEY" Default="" Mode="" Description="API Key for Server 2 (optional)" Type="Variable" Display="always" Required="false" Mask="true"/>
+  <Config Name="Server 2 Type (emby/jellyfin)" Target="STATESYNC_SERVER_2_TYPE" Default="jellyfin" Mode="" Description="Type of Server 2 (optional)" Type="Variable" Display="always" Required="false" Mask="false"/>
+
+  <!-- Server 3 (Optional - e.g. Jellyfin 3) -->
+  <Config Name="Server 3 Name" Target="STATESYNC_SERVER_3_NAME" Default="Jellyfin Tertiary" Mode="" Description="Friendly name for Server 3 (optional)" Type="Variable" Display="always" Required="false" Mask="false"/>
+  <Config Name="Server 3 URL" Target="STATESYNC_SERVER_3_URL" Default="" Mode="" Description="URL of Server 3 (optional)" Type="Variable" Display="always" Required="false" Mask="false"/>
+  <Config Name="Server 3 API Key" Target="STATESYNC_SERVER_3_API_KEY" Default="" Mode="" Description="API Key for Server 3 (optional)" Type="Variable" Display="always" Required="false" Mask="true"/>
+  <Config Name="Server 3 Type (emby/jellyfin)" Target="STATESYNC_SERVER_3_TYPE" Default="jellyfin" Mode="" Description="Type of Server 3 (optional)" Type="Variable" Display="always" Required="false" Mask="false"/>
+
+  <!-- Global Settings -->
+  <Config Name="Sync Threshold (seconds)" Target="STATESYNC_SYNC_THRESHOLD_SECONDS" Default="5" Mode="" Description="Maximum allowed sync position difference in seconds." Type="Variable" Display="advanced" Required="false" Mask="false"/>
+  <Config Name="Log Level" Target="RUST_LOG" Default="info" Mode="" Description="Logging level (info, warn, error, debug)" Type="Variable" Display="advanced" Required="false" Mask="false"/>
+</Container>

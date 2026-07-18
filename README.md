@@ -14,13 +14,40 @@ A lightweight, high-performance Rust daemon designed to synchronize playback pro
 
 ---
 
-## Configuration
+## Unraid Deployment (No Config Files)
 
-`statesync` can be configured using either a **`config.json`** file or **Environment Variables**.
+`statesync` is fully compatible with Unraid Community Applications and includes a native **[unraid-template.xml](unraid-template.xml)** file. 
 
-### Option A: `config.json` File (Highly Recommended for 3+ Servers)
+This allows you to add, edit, and configure your Emby and Jellyfin servers directly in the **Unraid Web GUI form fields** without ever touching configuration files:
 
-Create a file named `config.json` at either `/etc/statesync/config.json`, `/app/config.json`, or in the daemon's working directory. Define your servers in an array:
+1. **Add Template**: Copy the raw URL of `unraid-template.xml` from your repository and add it to your Unraid templates path.
+2. **Fill in the Fields**: Enter the URL and API key for each of your servers (supports up to 4 servers out-of-the-box).
+3. **Click Apply**: Unraid builds the container and runs it with flat environment variables automatically!
+
+---
+
+## Alternative Configuration Options
+
+For non-Unraid deployments, you can choose from these options:
+
+### Option A: Flat Environment Variables (Recommended for CLI)
+
+Set these environment variables directly on the container (supports up to 20 servers):
+
+- `STATESYNC_SERVER_0_NAME`: Friendly name for Server 0.
+- `STATESYNC_SERVER_0_URL`: URL of Server 0.
+- `STATESYNC_SERVER_0_API_KEY`: API Key for Server 0.
+- `STATESYNC_SERVER_0_TYPE`: Type of Server 0 (`emby` or `jellyfin`).
+- `STATESYNC_SERVER_1_NAME`: Friendly name for Server 1.
+- `STATESYNC_SERVER_1_URL`: URL of Server 1.
+- `STATESYNC_SERVER_1_API_KEY`: API Key for Server 1.
+- `STATESYNC_SERVER_1_TYPE`: Type of Server 1 (`emby` or `jellyfin`).
+- *(repeat for `SERVER_2`, `SERVER_3`, etc.)*
+- `STATESYNC_SYNC_THRESHOLD_SECONDS`: Optional. Sync threshold in seconds. Default: `5`.
+
+### Option B: `config.json` File Volume Mount
+
+Create a `config.json` file and mount it to `/etc/statesync/config.json`:
 
 ```json
 {
@@ -36,40 +63,17 @@ Create a file named `config.json` at either `/etc/statesync/config.json`, `/app/
       "url": "http://192.168.3.10:8096",
       "api_key": "YOUR_JELLYFIN_API_KEY",
       "is_emby": false
-    },
-    {
-      "name": "Jellyfin Remote",
-      "url": "http://192.168.3.20:8096",
-      "api_key": "YOUR_JELLYFIN_API_KEY_2",
-      "is_emby": false
     }
   ],
   "sync_threshold_seconds": 5
 }
 ```
 
-### Option B: Environment Variables
-
-For simple two-server configurations, you can use these env variables:
-
-- `STATESYNC_EMBY_URL`: Emby server URL.
-- `STATESYNC_EMBY_API_KEY`: Emby API key.
-- `STATESYNC_JELLYFIN_URL`: Jellyfin server URL.
-- `STATESYNC_JELLYFIN_API_KEY`: Jellyfin API key.
-
-For multi-server configurations, set `STATESYNC_SERVERS_JSON` to a JSON array of server configs:
-
-```bash
-STATESYNC_SERVERS_JSON='[{"name":"Emby","url":"http://192.168.3.3:8096","api_key":"...","is_emby":true},{"name":"Jellyfin 1","url":"http://192.168.3.10:8096","api_key":"...","is_emby":false},{"name":"Jellyfin 2","url":"http://192.168.3.20:8096","api_key":"...","is_emby":false}]'
-```
-
 ---
 
-## Container Deployment
+## Container Deployment (Docker Compose)
 
 We package `statesync` as a lightweight container using **RedHat UBI-minimal (`ubi9/ubi-minimal`)** as the secure base runtime image.
-
-### 1. Run with Docker Compose (Recommended)
 
 1. Create a `docker-compose.yml` file:
    ```yaml
@@ -79,25 +83,21 @@ We package `statesync` as a lightweight container using **RedHat UBI-minimal (`u
        build: .
        container_name: statesync
        restart: unless-stopped
-       volumes:
-         - ./config.json:/etc/statesync/config.json:ro
        environment:
+         - STATESYNC_SERVER_0_NAME=Emby
+         - STATESYNC_SERVER_0_URL=http://192.168.3.3:8096
+         - STATESYNC_SERVER_0_API_KEY=YOUR_EMBY_API_KEY
+         - STATESYNC_SERVER_0_TYPE=emby
+         - STATESYNC_SERVER_1_NAME=Jellyfin
+         - STATESYNC_SERVER_1_URL=http://192.168.3.10:8096
+         - STATESYNC_SERVER_1_API_KEY=YOUR_JELLYFIN_API_KEY
+         - STATESYNC_SERVER_1_TYPE=jellyfin
          - RUST_LOG=info
    ```
 2. Build and start the container:
    ```bash
    docker compose up -d --build
    ```
-
-### 2. Run with Docker Volume Mounts
-
-```bash
-docker run -d \
-  --name statesync \
-  -v /path/to/config.json:/etc/statesync/config.json:ro \
-  -e RUST_LOG=info \
-  statesync:latest
-```
 
 ---
 
