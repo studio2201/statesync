@@ -52,9 +52,11 @@ This document outlines the design decisions, coding standards, and architectural
   - `WARN`: Recoverable network disconnects, retry intervals.
   - `ERROR`: Failures in API progress updates or configuration parsing.
 
----
+## 5. Code Style, File Limits & RFC Compliance
 
-## 5. Code Style & Warnings
+- **100% Rust Codebase**: The core service and all associated logic MUST be written entirely in Rust.
+- **Code File Line Limits**: All source code files MUST be strictly limited to a maximum of **250 lines**. If any source file grows beyond this threshold, it MUST be refactored and split out into smaller, logical sub-modules.
+- **RFC 2119 Keyword Compliance**: When writing documentation, specifications, or protocols, follow standard RFC 2119 keyword definitions (MUST, MUST NOT, REQUIRED, SHALL, SHALL NOT, SHOULD, SHOULD NOT, RECOMMENDED, MAY, and OPTIONAL) to define conformance.
+- **Warning-Free Compilation**: The codebase MUST compile cleanly without any warnings. Clean up unused imports, unused variables, and dead code before committing.
+- **Rust API Guidelines**: Code style, naming, and architectural conventions SHOULD adhere to official Rust API Guidelines (e.g., proper error types, naming conventions, and idiomatic borrowing).
 
-- The codebase must compile cleanly with `cargo check` and `cargo build`.
-- Avoid unused imports, unused variables, or dead code. Silence intentional dead code with `#[allow(dead_code)]` explicitly.
