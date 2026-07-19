@@ -294,35 +294,68 @@ pub fn default_config() -> Config {
 }
 
 pub fn write_default_config_to_disk() -> Result<Config> {
-    use std::io::Write;
     let config = default_config();
-    let path = get_config_path();
     let serialized = serde_json::to_string_pretty(&config)?;
+    let primary = get_config_path();
+
+    match atomic_write(primary, serialized.as_bytes()) {
+        Ok(()) => {
+            eprintln!(
+                "No configuration found. Wrote a default config to {} with no servers. \
+                 Add servers via the web UI or by editing this file.",
+                primary
+            );
+            Ok(config)
+        }
+        Err(primary_err) if primary.starts_with("/config/") => {
+            eprintln!(
+                "WARN: could not write default config to {}: {}. \
+                 /config is likely owned by root (volume-mount ownership mismatch).",
+                primary, primary_err
+            );
+            let fallback = "/app/config.json";
+            match atomic_write(fallback, serialized.as_bytes()) {
+                Ok(()) => {
+                    eprintln!(
+                        "WARN: falling back to {} (in-container; not persisted across restart). \
+                         Fix /config ownership on the host and restart to persist.",
+                        fallback
+                    );
+                    Ok(config)
+                }
+                Err(fb_err) => {
+                    eprintln!(
+                        "WARN: fallback to {} also failed ({}). \
+                         Starting with in-memory default config; changes via the web UI will NOT persist. \
+                         Fix host permissions: chown -R <uid>:1000 /your/config/path",
+                        fallback, fb_err
+                    );
+                    Ok(config)
+                }
+            }
+        }
+        Err(other) => Err(other),
+    }
+}
+
+fn atomic_write(path: &str, bytes: &[u8]) -> anyhow::Result<()> {
+    use std::io::Write;
     let tmp = format!("{}.tmp", path);
     {
         let mut f = std::fs::File::create(&tmp)
             .with_context(|| format!("Failed to create temporary config file at {}", tmp))?;
-        f.write_all(serialized.as_bytes())?;
+        f.write_all(bytes)?;
         f.sync_all()?;
     }
     std::fs::rename(&tmp, path)
         .with_context(|| format!("Failed to install default config at {}", path))?;
-    Ok(config)
+    Ok(())
 }
 
 pub fn load_or_create_default() -> Result<Config> {
     match Config::load() {
         Ok(c) => Ok(c),
-        Err(_) => {
-            let path = get_config_path();
-            let cfg = write_default_config_to_disk()?;
-            eprintln!(
-                "No configuration found. Wrote a default config to {} with no servers. \
-                 Add servers via the web UI or by editing this file.",
-                path
-            );
-            Ok(cfg)
-        }
+        Err(_) => write_default_config_to_disk(),
     }
 }
 
