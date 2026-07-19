@@ -1,10 +1,16 @@
-# statesync
+# <img src="graphics/statesync_icon.jpg" width="48" height="48" valign="middle" /> StateSync
 
 ![StateSync Header](graphics/statesync_header.jpg)
 
-A lightweight, high-performance Rust daemon designed to synchronize playback progress, watch states, and resume points bi-directionally between an arbitrary number of Emby and Jellyfin Media Servers in real-time.
+A lightweight, high-performance Rust sidecar daemon designed to synchronize playback progress, watch states, and resume points bi-directionally between an arbitrary number of Emby and Jellyfin Media Servers in real-time.
 
 It features a simple, beautiful **Web UI Dashboard** running on port `8754` so you can manage your servers directly from your web browser with zero configuration files to edit!
+
+---
+
+## Dashboard Interface Screenshot
+
+![StateSync Dashboard Mockup](graphics/statesync_screenshot.jpg)
 
 ---
 
@@ -14,25 +20,25 @@ It features a simple, beautiful **Web UI Dashboard** running on port `8754` so y
 - **Bi-directional Real-Time Sync**: Syncs playback positions, play states, and paused/resumed statuses between all configured servers instantly.
 - **Support for N-Servers**: Syncs across 2, 3, or more servers seamlessly.
 - **IMDb & TMDb Matching**: Uses global identifiers (IMDb ID and TMDb ID) from the metadata of your media files to link items. Works perfectly even if database IDs, filenames, or library structures differ between your servers.
-- **LDAP-Friendly User Mapping**: Matches users across servers automatically by matching their usernames (case-insensitive). Perfect for setups synced via LDAP or Active Directory.
+- **LDAP-Friendly User Mapping**: Matches users across servers automatically by matching their usernames (case-insensitive) or via manual configuration groups.
 - **Intelligent Feedback Loop Prevention**: Caches and tracks the last synchronized positions per user/movie to prevent endless "ping-pong" update loops between servers.
 - **Robust Connection Recovery**: Connects to the WebSockets of all servers concurrently and automatically reconnects in case of connection dropouts or server restarts.
 - **Zero Server Modification**: Requires no plugins, DLLs, or restarts on your servers. Connects purely via standard REST APIs and WebSockets.
 
 ---
 
-## Container Deployment (Docker / Unraid)
+## Container Deployment
 
-We package `statesync` as a lightweight container using **RedHat UBI-minimal (`ubi9/ubi-minimal`)** as the secure base runtime image.
+StateSync is packaged as a secure, zero-attack-surface **Distroless Scratch** container built statically using Rust's Musl target compilation. It has no OS libraries, package managers, or shells, making it highly secure.
 
 ### 1. Run with Docker Compose (Recommended)
 
-1. Create a `docker-compose.yml` file:
+1. Create a `docker-compose.yml` file using our layout under the `container/` directory:
    ```yaml
    version: '3.8'
    services:
      statesync:
-       build: .
+       image: ubermetroid/statesync:latest
        container_name: statesync
        restart: unless-stopped
        ports:
@@ -41,10 +47,11 @@ We package `statesync` as a lightweight container using **RedHat UBI-minimal (`u
          - ./config:/config
        environment:
          - RUST_LOG=info
+         - TZ=UTC
    ```
-2. Build and start the container:
+2. Start the container:
    ```bash
-   docker compose up -d --build
+   docker compose up -d
    ```
 
 ### 2. Run with Docker CLI
@@ -54,18 +61,21 @@ docker run -d \
   -p 8754:8754 \
   -v /path/to/config:/config \
   -e RUST_LOG=info \
-  statesync:latest
+  -e TZ=UTC \
+  ubermetroid/statesync:latest
 ```
 
-Once the container starts, open **`http://<your-ip>:8754`** in your browser to add your servers and configure settings!
+Once the container starts, open **`http://<your-ip>:8754`** in your browser to configure your servers!
 
 ---
 
-## Technical Details
+## Unraid Setup
 
-- **Web Port**: `8754` (configurable inside container).
-- **Persistent Data**: The service automatically saves your configurations to `/config/config.json`.
-- **Dynamic Reloader**: When you add or delete a server in the Web UI, the synchronization loops are gracefully stopped, caches are rebuilt, and the sync tasks are restarted dynamically in the background without needing to restart the container!
+We maintain a dedicated Unraid application XML template under the **`unraid/`** directory:
+
+1. **Relocated Template**: The template is located at [unraid/unraid-template.xml](unraid/unraid-template.xml).
+2. **Timezone Support**: Out of the box, the container supports custom timezone configurations via the `TZ` environment variable. You can specify your local timezone directly in Unraid's deployment interface.
+3. **Persistent Volume**: Map the container `/config` directory to your preferred path on disk (e.g. `/mnt/user/appdata/statesync`).
 
 ---
 
