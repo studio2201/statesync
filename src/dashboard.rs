@@ -76,7 +76,7 @@ pub fn render_dashboard() -> Markup {
                             }
                             div class="form-group" {
                                 label { "TRANSCEIVER IP:PORT" }
-                                input type="url" id="serverUrl" placeholder="http://192.168.3.10:8096" required="" {}
+                                input type="url" id="serverUrl" placeholder="http://emby.local:8096" required="" {}
                             }
                             div class="form-group" {
                                 label { "ACCESS KEY (API)" }

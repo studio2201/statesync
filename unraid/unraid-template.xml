@@ -1,5 +1,14 @@
 <?xml version="1.0"?>
+<!--
+  StateSync — real-time Emby/Jellyfin watch-state sync.
+  After install, open the web UI (port 8754) and add your Emby and
+  Jellyfin servers. Their API keys live in /config/config.json.
+-->
 <Container version="2">
+
+  <!-- ============================================================ -->
+  <!-- Static metadata (Unraid reads these once, shows in the app UI) -->
+  <!-- ============================================================ -->
   <Name>statesync</Name>
   <Repository>ghcr.io/ubermetroid/statesync:latest</Repository>
   <Registry>https://github.com/UberMetroid/statesync/pkgs/container/statesync</Registry>
@@ -8,17 +17,46 @@
   <Privileged>false</Privileged>
   <Support>https://github.com/UberMetroid/statesync/issues</Support>
   <Project>https://github.com/UberMetroid/statesync</Project>
-  <Overview>Real-time bi-directional Emby/Jellyfin watch-state sync. Web UI on port 8754.</Overview>
+
+  <Overview>Keeps Emby and Jellyfin watch states in sync.</Overview>
+  <Description>StateSync connects to your Emby and Jellyfin servers via their HTTP and WebSocket APIs. When a user pauses, resumes, or finishes a show on one server, the change is pushed to the other within a few seconds. Supports any number of Emby and Jellyfin servers (the daemon discovers new users automatically).
+
+Open the web UI on port 8754 after install to add servers. API keys are stored in the config volume and masked in the UI.</Description>
+
   <Category>MediaApp:Video MediaApp:Other</Category>
   <Icon>https://raw.githubusercontent.com/UberMetroid/statesync/master/graphics/statesync_icon.jpg</Icon>
   <WebUI>http://[IP]:[PORT:8754]</WebUI>
   <TemplateURL>https://raw.githubusercontent.com/UberMetroid/statesync/master/unraid/unraid-template.xml</TemplateURL>
 
-  <Config Name="WebUI Port" Target="8754" Default="8754" Mode="tcp" Description="Web interface port." Type="Port" Display="always" Required="true" Mask="false"/>
-  <Config Name="Config Volume" Target="/config" Default="/mnt/user/appdata/statesync" Mode="rw" Description="Persistent directory for config.json." Type="Path" Display="always" Required="true" Mask="false"/>
+  <!-- ============================================================ -->
+  <!-- Required settings (always visible, can't skip) -->
+  <!-- ============================================================ -->
 
-  <Config Name="Log Level" Target="RUST_LOG" Default="info" Mode="" Description="Log level (info, warn, error, debug)" Type="Variable" Display="advanced" Required="false" Mask="false"/>
-  <Config Name="Timezone" Target="TZ" Default="UTC" Mode="" Description="Container timezone (e.g. America/New_York)" Type="Variable" Display="always" Required="false" Mask="false"/>
-  <Config Name="Allow Insecure HTTP" Target="STATESYNC_ALLOW_INSECURE_HTTP" Default="true" Mode="" Description="Allow plain http:// URLs to upstream Emby/Jellyfin servers. Default true (LAN). Set false to force https:// only." Type="Variable" Display="advanced" Required="false" Mask="false"/>
-  <Config Name="Web UI Bearer Token" Target="STATESYNC_WEB_AUTH" Default="" Mode="" Description="Optional. Format: bearer:&lt;token&gt;. Generate with: openssl rand -hex 32. Leave blank for open LAN access." Type="Variable" Display="advanced" Required="false" Mask="true"/>
+  <!-- Port the dashboard listens on. The WebUI URL above uses this. -->
+  <Config Name="Web UI Port" Target="8754" Default="8754" Mode="tcp" Description="Port the dashboard listens on. Open this in your browser after the container starts." Type="Port" Display="always" Required="true" Mask="false"/>
+
+  <!-- Where config.json (and your server list / API keys) live. -->
+  <Config Name="Config Volume" Target="/config" Default="/mnt/user/appdata/statesync" Mode="rw" Description="Folder on the array where config.json is stored. Persists across container updates." Type="Path" Display="always" Required="true" Mask="false"/>
+
+  <!-- ============================================================ -->
+  <!-- Common settings (always visible, sensible defaults) -->
+  <!-- ============================================================ -->
+
+  <!-- Affects log timestamps only. Has no effect on sync behavior. -->
+  <Config Name="Timezone" Target="TZ" Default="UTC" Mode="" Description="Your local timezone, e.g. America/New_York or Europe/Berlin. Used only for log timestamps." Type="Variable" Display="always" Required="false" Mask="false"/>
+
+  <!-- ============================================================ -->
+  <!-- Advanced settings (hidden by default; click 'Advanced View') -->
+  <!-- ============================================================ -->
+
+  <!-- One of: trace, debug, info, warn, error. Default 'info' is right for normal use. -->
+  <Config Name="Log Verbosity" Target="RUST_LOG" Default="info" Mode="" Description="How chatty the logs are. info is normal. Use debug for troubleshooting (very chatty)." Type="Variable" Display="advanced" Required="false" Mask="false"/>
+
+  <!-- Whether to allow http:// (not https://) URLs to your Emby/Jellyfin servers. -->
+  <!-- Default true because most homelab servers don't use HTTPS. Set false to require HTTPS. -->
+  <Config Name="Allow HTTP to Servers" Target="STATESYNC_ALLOW_INSECURE_HTTP" Default="true" Mode="" Description="Allow plain http:// URLs when talking to your Emby/Jellyfin servers. Default true (LAN-friendly). Set false if your servers use HTTPS." Type="Variable" Display="advanced" Required="false" Mask="false"/>
+
+  <!-- Optional bearer-token auth. Leave blank for open LAN access. -->
+  <Config Name="Dashboard Password" Target="STATESYNC_WEB_AUTH" Default="" Mode="" Description="OPTIONAL. Leave blank to let anyone on your LAN use the dashboard. To require a password, paste a token in the format: bearer:YOURTOKEN (generate with: openssl rand -hex 32)" Type="Variable" Display="advanced" Required="false" Mask="true"/>
+
 </Container>

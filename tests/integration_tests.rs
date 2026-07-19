@@ -141,8 +141,7 @@ async fn test_api_protected_with_bearer_auth() {
 // 2. RFC Test: WebSocket keep-alive URL query string structure
 #[test]
 fn test_rfc_websocket_url_structure() {
-    let ws_url =
-        statesync::websocket::make_ws_url("http://192.168.3.10:8096", "secret_key_123", true);
+    let ws_url = statesync::websocket::make_ws_url("http://192.0.2.1:8096", "secret_key_123", true);
     assert!(ws_url.contains("ws://"));
     assert!(ws_url.contains("api_key=secret%5Fkey%5F123"));
     assert!(ws_url.contains("deviceId=statesync"));
