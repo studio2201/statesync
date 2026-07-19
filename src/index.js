@@ -105,7 +105,7 @@ async function loadDashboard() {
           const sBadge = log.source_is_emby ? 'EMBY' : 'JELLYFIN'; const tBadge = log.target_is_emby ? 'EMBY' : 'JELLYFIN';
           logsDiv.innerHTML += `<div class="log-line">&gt; [${log.timestamp}] ${log.message.toUpperCase()} FROM <span style="color:${sCol}">[${sBadge}: ${log.source_name.toUpperCase()}]</span> -&gt; <span style="color:${tCol}">[${tBadge}: ${log.target_name.toUpperCase()}]</span></div>`;
         } else {
-          const color = log.level === 'error' ? 'var(--red)' : (log.level === 'warn' ? 'var(--accent)' : 'var(--border)');
+          const color = log.level === 'error' ? 'var(--red)' : (log.level === 'warn' ? 'var(--accent)' : 'var(--text)');
           logsDiv.innerHTML += `<div class="log-line">&gt; [${log.timestamp}] <span style="color:${color}">[${log.level.toUpperCase()}] ${log.message.toUpperCase()}</span></div>`;
         }
       });
