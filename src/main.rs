@@ -29,7 +29,6 @@ use crate::websocket::{handle_websocket_loop, make_ws_url};
 #[tokio::main]
 async fn main() -> Result<()> {
     let args: Vec<String> = std::env::args().collect();
-    let mut tui_mode = false;
 
     if args.len() > 1 {
         let cmd = &args[1];
@@ -49,7 +48,7 @@ async fn main() -> Result<()> {
                 return trigger_reload().await;
             }
             "--tui" => {
-                tui_mode = true;
+                return run_tui().await;
             }
             _ => {
                 eprintln!(
@@ -61,10 +60,8 @@ async fn main() -> Result<()> {
         }
     }
 
-    if !tui_mode {
-        tracing_subscriber::fmt::init();
-        info!("Starting statesync Sidecar...");
-    }
+    tracing_subscriber::fmt::init();
+    info!("Starting statesync Sidecar...");
 
     // Shared thread-safe state container. Starts empty.
     let app_state = Arc::new(Mutex::new(AppState::new(vec![])));
@@ -84,52 +81,26 @@ async fn main() -> Result<()> {
         .await
         .context("Failed to bind web UI server to port 8754")?;
 
-    if !tui_mode {
-        info!("Web UI Dashboard listening on http://0.0.0.0:8754");
-    }
+    info!("Web UI Dashboard listening on http://0.0.0.0:8754");
 
     tokio::spawn(async move {
         if let Err(e) = axum::serve(listener, app).await {
-            if !tui_mode {
-                error!("Web server error: {}", e);
-            }
+            error!("Web server error: {}", e);
         }
     });
 
-    if tui_mode {
-        let state_clone = app_state.clone();
-        tokio::spawn(async move {
-            loop {
-                draw_tui(&state_clone).await;
-                tokio::time::sleep(Duration::from_secs(1)).await;
-            }
-        });
-    }
-
     // Orchestrator loop
     loop {
-        if !tui_mode {
-            info!("Loading configuration...");
-        }
+        info!("Loading configuration...");
         let config_res = Config::load();
 
         let config = match config_res {
             Ok(cfg) => cfg,
             Err(e) => {
-                if !tui_mode {
-                    warn!(
-                        "Configuration load warning: {}. Web UI is active. Waiting for settings updates...",
-                        e
-                    );
-                } else {
-                    app_state.lock().await.log_event(
-                        "warn",
-                        &format!(
-                            "Configuration load warning: {}. Waiting for settings updates...",
-                            e
-                        ),
-                    );
-                }
+                warn!(
+                    "Configuration load warning: {}. Web UI is active. Waiting for settings updates...",
+                    e
+                );
                 // Wait for a reload signal from the Web UI before trying again
                 let _ = reload_rx.recv().await;
                 continue;
@@ -152,10 +123,8 @@ async fn main() -> Result<()> {
                     &format!("Initializing metadata cache for '{}'...", s.name),
                 );
             }
-            if !tui_mode {
-                info!("Connecting to server '{}' ({})", s.name, s.url);
-                info!("Initializing metadata cache for '{}'...", s.name);
-            }
+            info!("Connecting to server '{}' ({})", s.name, s.url);
+            info!("Initializing metadata cache for '{}'...", s.name);
             let client = Arc::new(MediaClient::new(
                 s.url.clone(),
                 s.api_key.clone(),
@@ -164,14 +133,12 @@ async fn main() -> Result<()> {
 
             match init_server_cache(&s.name, &client).await {
                 Ok(cache) => {
-                    if !tui_mode {
-                        info!(
-                            "Cache loaded for '{}': {} users, {} matched media items.",
-                            s.name,
-                            cache.users.len(),
-                            cache.id_to_providers.len()
-                        );
-                    }
+                    info!(
+                        "Cache loaded for '{}': {} users, {} matched media items.",
+                        s.name,
+                        cache.users.len(),
+                        cache.id_to_providers.len()
+                    );
                     app_state.lock().await.log_event(
                         "success",
                         &format!(
@@ -185,12 +152,10 @@ async fn main() -> Result<()> {
                     caches.push(cache);
                 }
                 Err(e) => {
-                    if !tui_mode {
-                        warn!(
-                            "Failed to initialize cache for server '{}' on startup: {}. Retrying in background...",
-                            s.name, e
-                        );
-                    }
+                    warn!(
+                        "Failed to initialize cache for server '{}' on startup: {}. Retrying in background...",
+                        s.name, e
+                    );
                     app_state.lock().await.log_event(
                         "warn",
                         &format!(
@@ -250,20 +215,11 @@ async fn main() -> Result<()> {
             });
         }
 
-        if !tui_mode {
-            info!("All synchronization loops started.");
-        } else {
-            app_state
-                .lock()
-                .await
-                .log_event("success", "All synchronization loops started.");
-        }
+        info!("All synchronization loops started.");
 
         // Block here until a reload signal is sent from the Web UI
         let _ = reload_rx.recv().await;
-        if !tui_mode {
-            info!("Reload signal received. Shutting down active synchronization loops...");
-        }
+        info!("Reload signal received. Shutting down active synchronization loops...");
 
         // Terminate all current websocket tasks
         let _ = shutdown_tx.send(());
@@ -357,9 +313,33 @@ async fn validate_config() -> Result<()> {
     }
 }
 
-async fn draw_tui(app_state: &Arc<Mutex<AppState>>) {
-    let state = app_state.lock().await;
+async fn run_tui() -> Result<()> {
+    let client = reqwest::Client::new();
+    let url = "http://127.0.0.1:8754/api/status";
 
+    loop {
+        match client.get(url).send().await {
+            Ok(resp) => {
+                if resp.status() == reqwest::StatusCode::OK {
+                    if let Ok(status) = resp.json::<serde_json::Value>().await {
+                        draw_tui_from_json(&status);
+                    }
+                }
+            }
+            Err(e) => {
+                print!("\x1B[2J\x1B[H");
+                println!(
+                    "✗ Cannot connect to statesync background service on port 8754: {}",
+                    e
+                );
+                println!("Make sure the statesync background container is running.");
+            }
+        }
+        tokio::time::sleep(Duration::from_secs(1)).await;
+    }
+}
+
+fn draw_tui_from_json(status: &serde_json::Value) {
     // Clear screen and move cursor to top-left
     print!("\x1B[2J\x1B[H");
 
@@ -378,63 +358,102 @@ async fn draw_tui(app_state: &Arc<Mutex<AppState>>) {
     );
 
     println!("\x1B[1m\x1B[33m[ SERVERS AND STATUS ]\x1B[0m");
-    if state.caches.is_empty() {
-        println!("  Connecting and loading server caches...");
-    } else {
-        for (i, cache) in state.caches.iter().enumerate() {
-            let ws_status = state
-                .websocket_statuses
-                .get(i)
-                .cloned()
-                .unwrap_or_else(|| "Offline".to_string());
-            let status_color = if ws_status == "Connected" {
-                "\x1B[32m"
-            } else {
-                "\x1B[31m"
-            };
-            println!(
-                "  • \x1B[1m{:<12}\x1B[0m: {}{:<10}\x1B[0m ({} Users | {} Cached Media Items)",
-                cache.name,
-                status_color,
-                ws_status,
-                cache.users.len(),
-                cache.id_to_providers.len()
-            );
+    if let Some(servers) = status.get("servers").and_then(|v| v.as_array()) {
+        if servers.is_empty() {
+            println!("  No servers configured or loading caches...");
+        } else {
+            for s in servers {
+                let name = s.get("name").and_then(|v| v.as_str()).unwrap_or("Unknown");
+                let ws_status = s
+                    .get("websocket_status")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("Offline");
+                let users_count = s.get("users_count").and_then(|v| v.as_u64()).unwrap_or(0);
+                let media_count = s.get("media_count").and_then(|v| v.as_u64()).unwrap_or(0);
+
+                let status_color = if ws_status == "Connected" {
+                    "\x1B[32m"
+                } else {
+                    "\x1B[31m"
+                };
+                println!(
+                    "  • \x1B[1m{:<12}\x1B[0m: {}{:<10}\x1B[0m ({} Users | {} Cached Media Items)",
+                    name, status_color, ws_status, users_count, media_count
+                );
+            }
         }
+    } else {
+        println!("  Loading server status details...");
     }
     println!();
 
     println!("\x1B[1m\x1B[33m[ ACTIVE SESSIONS ]\x1B[0m");
-    if state.active_sessions.is_empty() {
-        println!("  No active playback streams detected.");
-    } else {
-        for ((srv, user), (title, _, pct, playing, ts)) in &state.active_sessions {
-            let play_icon = if *playing {
-                "\x1B[32m▶ Playing\x1B[0m"
-            } else {
-                "\x1B[33m⏸ Paused\x1B[0m"
-            };
-            println!(
-                "  • \x1B[1m{:<8}\x1B[0m - User \x1B[1m{:<12}\x1B[0m: {} - {:.1}% ({}) [{}]",
-                srv, user, title, pct, play_icon, ts
-            );
+    if let Some(sessions) = status.get("active_sessions").and_then(|v| v.as_array()) {
+        if sessions.is_empty() {
+            println!("  No active playback streams detected.");
+        } else {
+            for sess in sessions {
+                let server = sess
+                    .get("server")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("Unknown");
+                let user = sess
+                    .get("user")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("Unknown");
+                let item = sess
+                    .get("item")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("Unknown");
+                let position = sess.get("position").and_then(|v| v.as_f64()).unwrap_or(0.0);
+                let is_paused = sess
+                    .get("is_paused")
+                    .and_then(|v| v.as_bool())
+                    .unwrap_or(true);
+
+                let play_icon = if !is_paused {
+                    "\x1B[32m▶ Playing\x1B[0m"
+                } else {
+                    "\x1B[33m⏸ Paused\x1B[0m"
+                };
+                println!(
+                    "  • \x1B[1m{:<8}\x1B[0m - User \x1B[1m{:<12}\x1B[0m: {} - progress: {:.1}s ({})",
+                    server, user, item, position, play_icon
+                );
+            }
         }
+    } else {
+        println!("  Reading active sessions...");
     }
     println!();
 
     println!("\x1B[1m\x1B[33m[ RECENT ACTIVITY LOGS ]\x1B[0m");
-    if state.sync_logs.is_empty() {
-        println!("  No logs recorded yet.");
-    } else {
-        for entry in state.sync_logs.iter().take(12) {
-            let color = match entry.level.as_str() {
-                "success" => "\x1B[32m", // Green
-                "warn" => "\x1B[33m",    // Yellow
-                "error" => "\x1B[31m",   // Red
-                _ => "\x1B[37m",         // White
-            };
-            println!("  [{}] {}{}\x1B[0m", entry.timestamp, color, entry.message);
+    if let Some(logs) = status.get("sync_logs").and_then(|v| v.as_array()) {
+        if logs.is_empty() {
+            println!("  No logs recorded yet.");
+        } else {
+            for entry in logs.iter().take(12) {
+                let timestamp = entry
+                    .get("timestamp")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("");
+                let level = entry
+                    .get("level")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("info");
+                let message = entry.get("message").and_then(|v| v.as_str()).unwrap_or("");
+
+                let color = match level {
+                    "success" => "\x1B[32m", // Green
+                    "warn" => "\x1B[33m",    // Yellow
+                    "error" => "\x1B[31m",   // Red
+                    _ => "\x1B[37m",         // White
+                };
+                println!("  [{}] {}{}\x1B[0m", timestamp, color, message);
+            }
         }
+    } else {
+        println!("  Reading activity logs...");
     }
     println!("\n\x1B[90m(Press Ctrl+C to close and exit dashboard)\x1B[0m");
 
