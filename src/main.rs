@@ -28,6 +28,32 @@ use crate::websocket::{handle_websocket_loop, make_ws_url};
 
 #[tokio::main]
 async fn main() -> Result<()> {
+    let args: Vec<String> = std::env::args().collect();
+    if !args.is_empty()
+        && (args[0].ends_with("sh") || args[0].ends_with("bash") || args.iter().any(|a| a == "-c"))
+    {
+        println!("\n==================================================");
+        println!("       ⚠️  STATESYNC SECURE SHELL TERMINAL  ⚠️");
+        println!("==================================================");
+        println!("Welcome! Actually, no. This is a secure container.");
+        println!("There is no shell, no utilities, and no backdoor.");
+        println!("We will not be helping you compromise this system.");
+        println!("==================================================");
+        println!("\nPress [ENTER] to close this window...");
+
+        let mut input = String::new();
+        match std::io::stdin().read_line(&mut input) {
+            Ok(0) | Err(_) => {
+                // EOF or closed stdin. Keep window open until closed manually.
+                loop {
+                    std::thread::sleep(std::time::Duration::from_secs(3600));
+                }
+            }
+            _ => {}
+        }
+        std::process::exit(0);
+    }
+
     tracing_subscriber::fmt::init();
     info!("Starting statesync Sidecar...");
 

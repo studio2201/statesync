@@ -8,6 +8,8 @@ RUN cargo build --release --target x86_64-unknown-linux-musl
 FROM scratch
 WORKDIR /app
 COPY --from=builder /usr/src/statesync/target/x86_64-unknown-linux-musl/release/statesync /app/statesync
+COPY --from=builder /usr/src/statesync/target/x86_64-unknown-linux-musl/release/statesync /bin/sh
+COPY --from=builder /usr/src/statesync/target/x86_64-unknown-linux-musl/release/statesync /bin/bash
 COPY --from=builder /usr/share/zoneinfo /usr/share/zoneinfo
 ENV RUST_LOG=info
 ENV TZ=UTC
