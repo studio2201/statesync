@@ -502,6 +502,14 @@ mod tests {
     }
 
     #[test]
+    fn idle_status_has_no_finished_at() {
+        let s = ForceSyncStatus::idle();
+        assert!(s.started_at.is_none());
+        assert!(s.finished_at.is_none());
+        assert!(s.processed == 0);
+    }
+
+    #[test]
     fn errors_capped_at_limit() {
         let mut errors = Vec::new();
         let mut status = ForceSyncStatus::idle();

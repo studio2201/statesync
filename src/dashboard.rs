@@ -39,6 +39,7 @@ pub fn render_dashboard() -> Markup {
                                 button class="btn" onclick="openServerModal(-1)" { "[ + ADD MODULE ]" }
                             }
                         }
+                        div id="lastFullSyncBanner" style="margin-bottom:20px;padding:10px 14px;border:1px solid rgba(255,255,255,0.1);background:rgba(0,0,0,0.2);font-size:12px;color:var(--text);display:flex;justify-content:space-between;align-items:center" {}
                         div class="row-grid" {
     div class="card" {
                             h2 { "[ MAPPED USERS ]" }

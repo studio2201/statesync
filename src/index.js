@@ -149,7 +149,7 @@ async function loadDashboard() {
           const cell = document.createElement('div');
           const filled = u.servers.includes(i);
           cell.className = 'user-cell' + (filled ? ' filled' : ' empty');
-          cell.textContent = filled ? '@' + u.name : '·';
+          cell.textContent = filled ? u.name : '·';
           cell.title = filled
             ? 'user: ' + u.name + (u.servers.length > 1 ? ' (mapped across ' + u.servers.length + ' servers)' : '')
             : (status.servers[i] ? 'server: ' + status.servers[i].name + ' (no user here)' : '');
@@ -200,6 +200,31 @@ async function loadDashboard() {
       logsDiv.textContent = '';
       const empty = document.createElement('div'); empty.style.color = 'var(--green)'; empty.textContent = '> LISTENING FOR METRIC EVENTS...';
       logsDiv.appendChild(empty);
+    }
+    // Last full sync banner
+    const banner = $('lastFullSyncBanner');
+    if (banner && status.last_full_sync) {
+      const fs = status.last_full_sync;
+      banner.textContent = '';
+      const left = document.createElement('span');
+      if (fs.finished_at && (fs.state === 'completed' || fs.state === 'failed')) {
+        const age = Date.now() - new Date(fs.finished_at).getTime();
+        const ago = formatAgo(age);
+        const statusColor = fs.state === 'completed' ? 'var(--green)' : 'var(--red)';
+        left.innerHTML = 'Last full sync: <span style="color:' + statusColor + '">' + fs.state.toUpperCase() + '</span> · ' + ago +
+          ' · ' + fs.processed + ' items (ok=' + fs.succeeded + ' skip=' + fs.skipped + ' fail=' + fs.failed + ')';
+      } else if (fs.started_at) {
+        const age = Date.now() - new Date(fs.started_at).getTime();
+        left.innerHTML = 'Full sync in progress · started ' + formatAgo(age) + ' ago · ' + fs.processed + ' items so far';
+      } else {
+        left.textContent = 'No force sync has been run yet. Click FORCE SYNC to push historical played state across all servers.';
+      }
+      banner.appendChild(left);
+      const right = document.createElement('span');
+      right.style.cssText = 'color:var(--border);cursor:pointer;text-decoration:underline';
+      right.textContent = 'run now';
+      right.onclick = forceSync;
+      banner.appendChild(right);
     }
     const footer = $('versionFooter');
     if (footer && status.version) {
@@ -311,6 +336,17 @@ async function saveConfig() {
   } catch (err) { showToast('WRITE CONFIG FAILED'); }
 }
 function showToast(msg) { const toast = $('toast'); toast.innerText = `> ${msg}`; toast.style.display = 'block'; setTimeout(() => { toast.style.display = 'none'; }, 4000); }
+function formatAgo(ms) {
+  if (ms < 0) return 'just now';
+  const s = Math.floor(ms / 1000);
+  if (s < 60) return s + 's ago';
+  const m = Math.floor(s / 60);
+  if (m < 60) return m + ' min ago';
+  const h = Math.floor(m / 60);
+  if (h < 24) return h + ' hr ago';
+  const d = Math.floor(h / 24);
+  return d + ' day' + (d === 1 ? '' : 's') + ' ago';
+}
 async function refreshUsers() {
   const btn = $('refreshUsersBtn');
   if (btn) btn.disabled = true;

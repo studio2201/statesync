@@ -332,6 +332,19 @@ pub async fn get_status(
         }));
     }
 
+    let last_full_sync = {
+        let st = app_state.sync_force.status.lock().await.clone();
+        json!({
+            "state": st.state,
+            "started_at": st.started_at,
+            "finished_at": st.finished_at,
+            "processed": st.processed,
+            "succeeded": st.succeeded,
+            "skipped": st.skipped,
+            "failed": st.failed,
+        })
+    };
+
     Json(json!({
         "status": "active",
         "version": state.version,
@@ -340,7 +353,8 @@ pub async fn get_status(
         "servers": servers_status,
         "users": users,
         "active_sessions": active_sessions,
-        "sync_logs": app_state.sync_logs
+        "sync_logs": app_state.sync_logs,
+        "last_full_sync": last_full_sync
     }))
 }
 
