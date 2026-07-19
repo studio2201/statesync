@@ -19,22 +19,25 @@ pub fn render_dashboard() -> Markup {
                 }
                 body {
                     div class="container" {
-                        div style="display: flex; gap: 10px; align-items: center; justify-content: flex-end; margin-bottom: 30px; padding-bottom: 10px; border-bottom: 2px solid var(--border);" {
-                            select id="themeSelector" class="btn" style="background:#000;padding:7px 10px;" onchange="setTheme(this.value)" {
-                                option value="cyberpunk" { "CYBERPUNK" }
-                                option value="matrix" { "MATRIX" }
-                                option value="outrun" { "SYNTHWAVE" }
-                                option value="crimson" { "CRIMSON" }
-                                option value="solarized" { "SOLARIZED" }
-                                option value="nordic" { "NORDIC" }
-                                option value="mono" { "MONOCHROME" }
-                                option value="military" { "MILITARY" }
-                                option value="royal" { "ROYAL" }
+                        h1 {
+                            span { "StateSync" }
+                            div style="display: flex; gap: 10px; align-items: center;" {
+                                select id="themeSelector" class="btn" style="background:#000;padding:7px 10px;" onchange="setTheme(this.value)" {
+                                    option value="cyberpunk" { "CYBERPUNK" }
+                                    option value="matrix" { "MATRIX" }
+                                    option value="outrun" { "SYNTHWAVE" }
+                                    option value="crimson" { "CRIMSON" }
+                                    option value="solarized" { "SOLARIZED" }
+                                    option value="nordic" { "NORDIC" }
+                                    option value="mono" { "MONOCHROME" }
+                                    option value="military" { "MILITARY" }
+                                    option value="royal" { "ROYAL" }
+                                }
+                                button class="btn" id="refreshUsersBtn" onclick="refreshUsers()" { "[ REFRESH USERS ]" }
+                                button class="btn btn-accent" id="forceSyncBtn" onclick="forceSync()" { "[ FORCE SYNC ]" }
+                                button class="btn btn-accent" onclick="openSettingsModal()" { "[ SETTINGS ]" }
+                                button class="btn" onclick="openServerModal(-1)" { "[ + ADD MODULE ]" }
                             }
-                            button class="btn" id="refreshUsersBtn" onclick="refreshUsers()" { "[ REFRESH USERS ]" }
-                            button class="btn btn-accent" id="forceSyncBtn" onclick="forceSync()" { "[ FORCE SYNC ]" }
-                            button class="btn btn-accent" onclick="openSettingsModal()" { "[ SETTINGS ]" }
-                            button class="btn" onclick="openServerModal(-1)" { "[ + ADD MODULE ]" }
                         }
                         div class="row-grid" {
     div class="card" {
