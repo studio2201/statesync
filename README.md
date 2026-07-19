@@ -95,13 +95,7 @@ You can also configure everything in the web UI — changes save to this file.
 |---|---|---|
 | `STATESYNC_BIND` | `0.0.0.0:8754` | Listen address |
 | `STATESYNC_WEB_AUTH` | _(unset)_ | Optional. `bearer:<token>` to require auth on `/api/*`. Generate with `openssl rand -hex 32` |
-| `STATESYNC_SERVER_<N>_URL` | — | Per-server env-var config (alternative to config.json) |
-| `STATESYNC_SERVER_<N>_NAME` | — | |
-| `STATESYNC_SERVER_<N>_API_KEY` | — | |
-| `STATESYNC_SERVER_<N>_TYPE` | — | `emby` or `jellyfin` |
-| `STATESYNC_SERVER_<N>_DIRECTION` | — | `both`, `send`, or `receive` |
-| `STATESYNC_SERVER_<N>_INSECURE` | — | `true` / `false` (default `true`) |
-| `STATESYNC_SYNC_THRESHOLD_SECONDS` | `5` | |
+| `STATESYNC_SYNC_THRESHOLD_SECONDS` | `5` | Skip redundant updates within this window |
 | `STATESYNC_ALLOW_INSECURE_HTTP` | `true` | Permits plain `http://` URLs to upstream Emby/Jellyfin servers (LAN-friendly default). Plain HTTP means the API key travels unencrypted between containers — fine on a home LAN, not fine if your media servers are exposed beyond it (e.g. behind a reverse proxy with TLS). Set `false` to require `https://`. |
 | `STATESYNC_HTTP_RETRY` | `on` | Set `off` to disable HTTP retry on transient errors |
 | `STATESYNC_LOG_RETENTION` | `30` | Number of log entries kept in memory |
@@ -123,7 +117,7 @@ statesync --version
 statesync --help
 ```
 
-The TUI shows live server status, active sessions, and recent sync events. Same data as the web UI, in your terminal.
+The TUI shows live server status, active streams, and recent sync events. Same data as the web UI, in your terminal.
 
 ## Dashboard
 
