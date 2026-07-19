@@ -252,4 +252,50 @@ mod tests {
         let mapped = find_mapped_user_id("alice", &target_users, &[]);
         assert_eq!(mapped, Some("id_short".to_string()));
     }
+
+    #[test]
+    fn merge_users_preserves_existing_entries() {
+        // Regression: a transient /Users call returning fewer users
+        // should not shrink the cache. Existing entries win.
+        let mut cache = ServerCache {
+            name: "emby".to_string(),
+            users: HashMap::new(),
+            imdb_to_id: HashMap::new(),
+            tmdb_to_id: HashMap::new(),
+            id_to_providers: HashMap::new(),
+        };
+        cache.users.insert("alice".to_string(), "u1".to_string());
+        cache.users.insert("bob".to_string(), "u2".to_string());
+        cache.users.insert("carol".to_string(), "u3".to_string());
+
+        // Simulate a refresh that returns only alice and dave (a new user)
+        let mut fresh = HashMap::new();
+        fresh.insert("alice".to_string(), "u1".to_string());
+        fresh.insert("dave".to_string(), "u4".to_string());
+        cache.merge_users(fresh);
+
+        // All original users still present
+        assert!(cache.users.contains_key("alice"));
+        assert!(cache.users.contains_key("bob"));
+        assert!(cache.users.contains_key("carol"));
+        // New user added
+        assert!(cache.users.contains_key("dave"));
+        // Total: 4
+        assert_eq!(cache.users.len(), 4);
+    }
+
+    #[test]
+    fn merge_users_empty_fresh_is_noop() {
+        let mut cache = ServerCache {
+            name: "emby".to_string(),
+            users: HashMap::new(),
+            imdb_to_id: HashMap::new(),
+            tmdb_to_id: HashMap::new(),
+            id_to_providers: HashMap::new(),
+        };
+        cache.users.insert("alice".to_string(), "u1".to_string());
+        cache.merge_users(HashMap::new());
+        assert_eq!(cache.users.len(), 1);
+        assert!(cache.users.contains_key("alice"));
+    }
 }

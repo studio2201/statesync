@@ -35,9 +35,9 @@ h2 { font-size: 16px; margin: 0 0 15px 0; color: var(--border); border-left: 3px
 .radio-row { display: flex; gap: 8px; }
 .user-grid { display: grid; gap: 6px 12px; padding: 10px 0; }
 .user-row { display: flex; align-items: center; gap: 8px; min-height: 22px; }
-.user-cell { font-size: 12px; padding: 4px 8px; border: 1px solid rgba(255,255,255,0.08); background: rgba(0,0,0,0.2); min-width: 120px; text-align: center; color: var(--text); }
+.user-cell { font-size: 11px; padding: 4px 8px; border: 1px solid rgba(255,255,255,0.08); background: rgba(0,0,0,0.2); min-width: 120px; text-align: center; color: var(--text); font-family: monospace; }
 .user-cell.empty { opacity: 0.25; background: transparent; border-color: transparent; }
-.user-cell.filled { color: var(--border); border-color: var(--border); background: rgba(0,240,255,0.06); }
+.user-cell.filled { color: #ffffff; border-color: rgba(255,255,255,0.25); background: rgba(0,0,0,0.4); }
 .user-line { flex: 1; height: 1px; border-top: 1px dotted var(--border); opacity: 0.5; }
 .user-line.empty { border-top-style: dashed; opacity: 0.15; }
 .log-feed { font-size: 12px; background: rgba(5,8,18,0.9); border: 1px solid rgba(0,240,255,0.2); padding: 15px; max-height: 220px; overflow-y: auto; color: var(--green); }

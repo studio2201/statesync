@@ -149,10 +149,10 @@ async function loadDashboard() {
           const cell = document.createElement('div');
           const filled = u.servers.includes(i);
           cell.className = 'user-cell' + (filled ? ' filled' : ' empty');
-          cell.textContent = filled ? u.name : '·';
+          cell.textContent = filled ? '@' + u.name : '·';
           cell.title = filled
-            ? u.name + (u.servers.length > 1 ? ' (mapped across ' + u.servers.length + ' servers)' : '')
-            : (status.servers[i] ? status.servers[i].name + ' (no user here)' : '');
+            ? 'user: ' + u.name + (u.servers.length > 1 ? ' (mapped across ' + u.servers.length + ' servers)' : '')
+            : (status.servers[i] ? 'server: ' + status.servers[i].name + ' (no user here)' : '');
           row.appendChild(cell);
         }
         grid.appendChild(row);

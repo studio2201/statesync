@@ -1,6 +1,6 @@
 [package]
 name = "statesync"
-version = "0.26.0"
+version = "0.26.1"
 edition = "2024"
 
 [dependencies]
@@ -20,3 +20,5 @@ maud = "0.26"
 
 [dev-dependencies]
 tower = { version = "0.5", features = ["util"] }
+mockito = "1.5"
+tempfile = "3"
