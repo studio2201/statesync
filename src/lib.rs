@@ -7,7 +7,9 @@
 
 pub mod client;
 pub mod config;
+pub mod dashboard;
 pub mod state;
 pub mod sync;
 pub mod web;
+pub mod web_api;
 pub mod websocket;

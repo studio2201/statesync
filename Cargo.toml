@@ -1,6 +1,6 @@
 [package]
 name = "statesync"
-version = "0.15.9"
+version = "0.16.0"
 edition = "2024"
 
 [dependencies]
@@ -16,6 +16,7 @@ tracing-subscriber = "0.3"
 axum = "0.7"
 percent-encoding = "2.3"
 chrono = "0.4"
+maud = "0.26"
 
 [dev-dependencies]
 tower = { version = "0.5", features = ["util"] }

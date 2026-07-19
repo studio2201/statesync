@@ -7,9 +7,11 @@
 
 mod client;
 mod config;
+mod dashboard;
 mod state;
 mod sync;
 mod web;
+mod web_api;
 mod websocket;
 
 use anyhow::{Context, Result};
