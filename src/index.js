@@ -472,8 +472,34 @@ function renderForceSync(s) {
   const base = `[${s.state.toUpperCase()}] processed=${s.processed} ok=${s.succeeded} skip=${s.skipped} fail=${s.failed} (${elapsed}s)`;
   div.textContent = base + (s.last_error ? ` | last: ${s.last_error}` : '');
 }
+function toggleLogs() {
+  const logsDiv = $('syncLogs');
+  const btn = $('toggleLogsBtn');
+  if (!logsDiv || !btn) return;
+  const collapsed = logsDiv.style.display === 'none';
+  if (collapsed) {
+    logsDiv.style.display = 'block';
+    btn.textContent = '[ COLLAPSE ]';
+    logsDiv.scrollTop = logsDiv.scrollHeight;
+    localStorage.setItem('logs-expanded', 'true');
+  } else {
+    logsDiv.style.display = 'none';
+    btn.textContent = '[ EXPAND ]';
+    localStorage.setItem('logs-expanded', 'false');
+  }
+}
+function initLogsToggle() {
+  const expanded = localStorage.getItem('logs-expanded') === 'true';
+  const logsDiv = $('syncLogs');
+  const btn = $('toggleLogsBtn');
+  if (logsDiv && btn) {
+    logsDiv.style.display = expanded ? 'block' : 'none';
+    btn.textContent = expanded ? '[ COLLAPSE ]' : '[ EXPAND ]';
+  }
+}
 document.addEventListener('keydown', (e) => { if (e.key === 'Escape') { ['serverModal','settingsModal','authModal'].forEach(id => { const m=$(id); if (m && m.style.display === 'flex') m.style.display='none'; }); } });
 const savedTheme = localStorage.getItem('hud-theme') || 'cyberpunk'; setTheme(savedTheme); $('themeSelector').value = savedTheme;
+initLogsToggle();
 document.addEventListener('DOMContentLoaded', () => {
   const b = $('authSubmitBtn'); if (b) b.addEventListener('click', submitAuth);
   const t = $('authToken'); if (t) t.addEventListener('keydown', (e) => { if (e.key === 'Enter') submitAuth(); });

@@ -69,8 +69,11 @@ pub fn render_dashboard() -> Markup {
                             div class="server-list" id="serverList" {}
                         }
                         div class="card" {
-                            h2 { "[ TERMINAL LOG FEED ]" }
-                            div class="log-feed" id="syncLogs" {}
+                            h2 style="display:flex;justify-content:space-between;align-items:center" {
+                                span { "[ TERMINAL LOG FEED ]" }
+                                button class="btn-small" id="toggleLogsBtn" onclick="toggleLogs()" { "[ EXPAND ]" }
+                            }
+                            div class="log-feed" id="syncLogs" style="display:none" {}
                         }
                         div id="versionFooter" class="version-footer" {}
                     }
