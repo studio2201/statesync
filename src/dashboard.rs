@@ -41,28 +41,30 @@ pub fn render_dashboard() -> Markup {
                             }
                         }
                         div class="row-grid" {
-    div class="card" {
-                            h2 { "[ MAPPED USERS ]" }
-                            div id="syncedUsers" style="display: flex; flex-direction: column; gap: 8px;" {}
-                            div id="forceSyncStatus" style="margin-top:10px;font-size:11px;color:var(--text);opacity:0.7" {}
-                        }
-                            div class="card" {
-                                h2 { "[ ACTIVE STREAMS ]" }
-                                div id="activeSessions" style="display: flex; flex-direction: column; gap: 10px;" {
-                                    div style="color: var(--accent)" { "NO ACTIVE STREAMS DETECTED" }
+                            div class="card" style="display:flex; flex-direction:column; height: 100%; box-sizing: border-box;" {
+                                h2 { "[ MAPPED USERS ]" }
+                                div id="syncedUsers" style="display: flex; flex-direction: column; gap: 8px; flex-grow: 1;" {}
+                                div id="forceSyncStatus" style="margin-top:10px;font-size:11px;color:var(--text);opacity:0.7" {}
+                            }
+                            div style="display: flex; flex-direction: column; gap: 25px;" {
+                                div class="card" {
+                                    h2 { "[ ACTIVE STREAMS ]" }
+                                    div id="activeSessions" style="display: flex; flex-direction: column; gap: 10px;" {
+                                        div style="color: var(--accent)" { "NO ACTIVE STREAMS DETECTED" }
+                                    }
+                                }
+                                div class="card" {
+                                    h2 { "[ MEDIA SERVERS ]" }
+                                    div class="server-list" id="serverList" {}
+                                }
+                                div class="card" {
+                                    h2 style="display:flex;justify-content:space-between;align-items:center" {
+                                        span { "[ TERMINAL LOG FEED ]" }
+                                        button class="btn-small" id="toggleLogsBtn" onclick="toggleLogs()" { "[ EXPAND ]" }
+                                    }
+                                    div class="log-feed" id="syncLogs" style="display:none" {}
                                 }
                             }
-                        }
-                        div class="card" {
-                            h2 { "[ MEDIA SERVERS ]" }
-                            div class="server-list" id="serverList" {}
-                        }
-                        div class="card" {
-                            h2 style="display:flex;justify-content:space-between;align-items:center" {
-                                span { "[ TERMINAL LOG FEED ]" }
-                                button class="btn-small" id="toggleLogsBtn" onclick="toggleLogs()" { "[ EXPAND ]" }
-                            }
-                            div class="log-feed" id="syncLogs" style="display:none" {}
                         }
                         div id="versionFooter" class="version-footer" {}
                     }
