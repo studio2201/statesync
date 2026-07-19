@@ -1,8 +1,8 @@
 <?xml version="1.0"?>
 <Container version="2">
   <Name>statesync</Name>
-  <Repository>ubermetroid/statesync:latest</Repository>
-  <Registry>https://hub.docker.com/r/ubermetroid/statesync</Registry>
+  <Repository>ghcr.io/ubermetroid/statesync:latest</Repository>
+  <Registry>https://github.com/UberMetroid/statesync/pkgs/container/statesync</Registry>
   <Network>bridge</Network>
   <Shell>sh</Shell>
   <Privileged>false</Privileged>

@@ -32,7 +32,7 @@ Create a `docker-compose.yml` file:
 version: '3.8'
 services:
   statesync:
-    image: ubermetroid/statesync:latest
+    image: ghcr.io/ubermetroid/statesync:latest
     container_name: statesync
     restart: unless-stopped
     ports:
@@ -56,7 +56,7 @@ docker run -d \
   -v /path/to/config:/config \
   -e RUST_LOG=info \
   -e TZ=UTC \
-  ubermetroid/statesync:latest
+  ghcr.io/ubermetroid/statesync:latest
 ```
 
 ---
