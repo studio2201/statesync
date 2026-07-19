@@ -33,19 +33,15 @@ pub fn render_dashboard() -> Markup {
                                     option value="military" { "MILITARY" }
                                     option value="royal" { "ROYAL" }
                                 }
+                                button class="btn" id="refreshUsersBtn" onclick="refreshUsers()" { "[ REFRESH USERS ]" }
+                                button class="btn btn-accent" id="forceSyncBtn" onclick="forceSync()" { "[ FORCE SYNC ]" }
                                 button class="btn btn-accent" onclick="openSettingsModal()" { "[ SETTINGS ]" }
                                 button class="btn" onclick="openServerModal(-1)" { "[ + ADD MODULE ]" }
                             }
                         }
                         div class="row-grid" {
     div class="card" {
-                            div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:15px;flex-wrap:wrap;gap:8px" {
-                                h2 style="margin:0" { "[ MAPPED USERS ]" }
-                                div style="display:flex;gap:6px" {
-                                    button class="btn-small" id="refreshUsersBtn" onclick="refreshUsers()" { "REFRESH" }
-                                    button class="btn-small btn-accent-small" id="forceSyncBtn" onclick="forceSync()" { "FORCE SYNC" }
-                                }
-                            }
+                            h2 { "[ MAPPED USERS ]" }
                             div id="syncedUsers" style="display: flex; flex-direction: column; gap: 8px;" {}
                             div id="forceSyncStatus" style="margin-top:10px;font-size:11px;color:var(--text);opacity:0.7" {}
                         }
