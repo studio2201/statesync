@@ -253,13 +253,14 @@ pub async fn handle_websocket_loop(
 
                                                     let user_name_clone = user_name.clone();
                                                     let item_id_clone = item.id.clone();
+                                                    let item_name_opt = item.name.clone();
                                                     let source_name_clone = source_name.clone();
                                                     let state_lock_clone = state_lock.clone();
                                                     let target_clients_clone =
                                                         target_clients.clone();
                                                     let config_clone = config.clone();
                                                     let source_client_clone = source_client.clone();
-
+ 
                                                     tokio::spawn(async move {
                                                         crate::sync::sync_progress_to_targets(
                                                             &user_name_clone,
@@ -272,6 +273,7 @@ pub async fn handle_websocket_loop(
                                                             &target_clients_clone,
                                                             &config_clone,
                                                             &source_client_clone,
+                                                            item_name_opt,
                                                         )
                                                         .await;
                                                     });
@@ -415,6 +417,7 @@ fn spawn_userdata_sync(
             &target_clients_clone,
             &config_clone,
             &source_client_clone,
+            None,
         )
         .await;
     });

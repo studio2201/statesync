@@ -29,6 +29,7 @@ pub async fn sync_progress_to_targets(
     target_clients: &[(usize, Arc<MediaClient>)],
     config: &Config,
     source_client: &Arc<MediaClient>,
+    item_name: Option<String>,
 ) {
     {
         let st = state_lock.lock().await;
@@ -47,6 +48,38 @@ pub async fn sync_progress_to_targets(
     }
     let _permit = sync_semaphore().acquire().await;
     let user_lower = user_name.to_lowercase();
+
+    let item_title = match item_name {
+        Some(ref name) if !name.is_empty() => name.clone(),
+        _ => {
+            let mut found_name = None;
+            {
+                let st = state_lock.lock().await;
+                for (_, name, _, _, id) in st.active_sessions.values() {
+                    if id == source_item_id {
+                        found_name = Some(name.clone());
+                        break;
+                    }
+                }
+            }
+            if let Some(name) = found_name {
+                name
+            } else {
+                let src_user_id = {
+                    let st = state_lock.lock().await;
+                    st.caches[source_index].users.get(&user_lower).cloned()
+                };
+                if let Some(uid) = src_user_id {
+                    match source_client.get_item_name(&uid, source_item_id).await {
+                        Ok(name) => name,
+                        Err(_) => format!("item ID '{}'", source_item_id),
+                    }
+                } else {
+                    format!("item ID '{}'", source_item_id)
+                }
+            }
+        }
+    };
 
     let (imdb_id, tmdb_id) = {
         let state = state_lock.lock().await;
@@ -231,11 +264,22 @@ pub async fn sync_progress_to_targets(
             let pos_secs = position as f64 / 10_000_000.0;
             let message = if played {
                 format!(
-                    "Synced watch state (watched) for {} to '{}'",
-                    user_name, t_item_id
+                    "{} finished watching '{}'",
+                    user_name, item_title
                 )
             } else {
-                format!("Synced progress for {} to {:.1}s", user_name, pos_secs)
+                let h = (pos_secs / 3600.0).floor() as u32;
+                let m = ((pos_secs % 3600.0) / 60.0).floor() as u32;
+                let s = (pos_secs % 60.0).floor() as u32;
+                let duration_str = if h > 0 {
+                    format!("{:02}:{:02}:{:02}", h, m, s)
+                } else {
+                    format!("{:02}:{:02}", m, s)
+                };
+                format!(
+                    "{} synced progress on '{}' to {}",
+                    user_name, item_title, duration_str
+                )
             };
 
             let log_entry = crate::state::SyncLogEntry {

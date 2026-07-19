@@ -466,6 +466,19 @@ impl MediaClient {
         let count = data.get("TotalRecordCount").and_then(|v| v.as_u64()).unwrap_or(0);
         Ok(count)
     }
+
+    pub async fn get_item_name(&self, user_id: &str, item_id: &str) -> Result<String> {
+        let path = format!("/Users/{}/Items/{}", user_id, item_id);
+        let url = self.url_path(&path);
+        let resp = send_with_retry(
+            self.add_auth_headers(self.client.get(&url)),
+            "get_item_name",
+        )
+        .await?;
+        let data: serde_json::Value = resp.json().await?;
+        let name = data.get("Name").and_then(|v| v.as_str()).unwrap_or("Unknown Item").to_string();
+        Ok(name)
+    }
 }
 
 #[derive(Debug, Clone, serde::Deserialize)]
