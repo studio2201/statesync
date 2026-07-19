@@ -63,17 +63,24 @@ docker run -d \
 
 ## Unraid Setup
 
-The template is located in the repository under **[`unraid/unraid-template.xml`](unraid/unraid-template.xml)**.
+To install StateSync on Unraid:
 
-- **Port**: `8754`
-- **Volume**: Map `/config` to save `config.json`.
-- **Environment**: Set `TZ` (Timezone) to match your local timezone (e.g., `America/New_York`).
+### 1. Add the Template Repository
+1. Navigate to the **Docker** tab in the Unraid WebUI.
+2. Scroll to the bottom of the page and locate the **Template Repositories** field.
+3. Paste the following URL:
+   ```text
+   https://github.com/UberMetroid/statesync
+   ```
+4. Click **Save**.
 
----
-
-## Local Development
-
-```bash
-RUST_LOG=info cargo run
-```
-Open `http://localhost:8754` in your browser.
+### 2. Configure and Install Container
+1. Click **Add Container** on the Docker page.
+2. In the **Template** dropdown, select **statesync**.
+3. Verify or configure the default parameters:
+   - **Name**: `statesync`
+   - **Repository**: `ghcr.io/ubermetroid/statesync:latest`
+   - **WebUI Port**: `8754` (mapped to port 8754 on host).
+   - **Config Volume**: Map `/config` to `/mnt/user/appdata/statesync` (to persist `config.json`).
+   - **Timezone (TZ)**: Change from `UTC` to your local timezone (e.g., `America/New_York`) to align log times.
+4. Click **Apply** to download and start the container.
