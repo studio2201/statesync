@@ -130,7 +130,7 @@ async fn main() -> Result<()> {
 
     loop {
         info!("Loading configuration...");
-        let config_res = Config::load();
+        let config_res = statesync::config::load_or_create_default();
 
         let config = match config_res {
             Ok(cfg) => cfg,
@@ -148,6 +148,14 @@ async fn main() -> Result<()> {
                 }
             }
         };
+
+        if config.servers.is_empty() {
+            info!(
+                "No servers configured. Add one via the web UI at http://{}/ or by editing {}",
+                bind_addr,
+                statesync::config::get_config_path()
+            );
+        }
 
         for s in &config.servers {
             if s.url.starts_with("http://") && !s.allow_insecure_http {

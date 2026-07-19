@@ -271,6 +271,8 @@ impl Config {
     }
 }
 
+pub const DEFAULT_BIND_FOR_BANNER: &str = "127.0.0.1:8754";
+
 pub fn get_config_path() -> &'static str {
     if std::path::Path::new("/config").exists() {
         "/config/config.json"
@@ -280,6 +282,47 @@ pub fn get_config_path() -> &'static str {
         "/app/config.json"
     } else {
         "config.json"
+    }
+}
+
+pub fn default_config() -> Config {
+    Config {
+        servers: Vec::new(),
+        sync_threshold_seconds: default_threshold_seconds(),
+        user_mappings: Vec::new(),
+    }
+}
+
+pub fn write_default_config_to_disk() -> Result<Config> {
+    use std::io::Write;
+    let config = default_config();
+    let path = get_config_path();
+    let serialized = serde_json::to_string_pretty(&config)?;
+    let tmp = format!("{}.tmp", path);
+    {
+        let mut f = std::fs::File::create(&tmp)
+            .with_context(|| format!("Failed to create temporary config file at {}", tmp))?;
+        f.write_all(serialized.as_bytes())?;
+        f.sync_all()?;
+    }
+    std::fs::rename(&tmp, path)
+        .with_context(|| format!("Failed to install default config at {}", path))?;
+    Ok(config)
+}
+
+pub fn load_or_create_default() -> Result<Config> {
+    match Config::load() {
+        Ok(c) => Ok(c),
+        Err(_) => {
+            let path = get_config_path();
+            let cfg = write_default_config_to_disk()?;
+            eprintln!(
+                "No configuration found. Wrote a default config to {} with no servers. \
+                 Add servers via the web UI or by editing this file.",
+                path
+            );
+            Ok(cfg)
+        }
     }
 }
 
@@ -371,5 +414,26 @@ mod tests {
         assert_eq!(config.sync_threshold_seconds, 10);
         assert_eq!(config.user_mappings.len(), 2);
         assert_eq!(config.user_mappings[0], vec!["john doe", "john"]);
+    }
+
+    #[test]
+    fn test_default_config_is_empty() {
+        let c = default_config();
+        assert!(c.servers.is_empty());
+        assert_eq!(c.sync_threshold_seconds, 5);
+        assert!(c.user_mappings.is_empty());
+    }
+
+    #[test]
+    fn test_write_default_then_load_roundtrips() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("config.json");
+        let serialized =
+            serde_json::to_string_pretty(&default_config()).unwrap();
+        std::fs::write(&path, &serialized).unwrap();
+        let data = std::fs::read_to_string(&path).unwrap();
+        let c: Config = serde_json::from_str(&data).unwrap();
+        assert!(c.servers.is_empty());
+        assert!(validate_config(&c).is_ok());
     }
 }
