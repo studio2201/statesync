@@ -8,7 +8,7 @@
   <Privileged>false</Privileged>
   <Support>https://github.com/UberMetroid/statesync/issues</Support>
   <Project>https://github.com/UberMetroid/statesync</Project>
-  <Overview>Lightweight, real-time playstate sync bridge between your Emby and Jellyfin servers with a Web UI dashboard on port 8754.</Overview>
+  <Overview>Lightweight, Alpine-based container providing a real-time playstate sync bridge between your Emby and Jellyfin servers with a Web UI dashboard on port 8754.</Overview>
   <Category>MediaApp:Video MediaApp:Other</Category>
   <Icon>https://raw.githubusercontent.com/UberMetroid/statesync/master/graphics/statesync_icon.jpg</Icon>
   <WebUI>http://[IP]:[PORT:8754]</WebUI>

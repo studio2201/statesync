@@ -26,6 +26,10 @@ pub fn create_router(web_state: Arc<WebServerState>) -> Router {
             "/api/test_connection",
             get(crate::web_api::get_config).post(crate::web_api::test_connection),
         )
+        .route(
+            "/api/reload",
+            axum::routing::post(crate::web_api::post_reload),
+        )
         .layer(Extension(web_state))
 }
 

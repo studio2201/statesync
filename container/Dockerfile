@@ -8,8 +8,8 @@ RUN cargo build --release --target x86_64-unknown-linux-musl
 FROM alpine:3.20
 RUN apk add --no-cache tzdata
 WORKDIR /app
-COPY --from=builder /usr/src/statesync/target/x86_64-unknown-linux-musl/release/statesync /app/statesync
+COPY --from=builder /usr/src/statesync/target/x86_64-unknown-linux-musl/release/statesync /usr/local/bin/statesync
 ENV RUST_LOG=info
 ENV TZ=UTC
 EXPOSE 8754
-ENTRYPOINT ["/app/statesync"]
+ENTRYPOINT ["/usr/local/bin/statesync"]

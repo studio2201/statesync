@@ -233,6 +233,20 @@ pub async fn get_status(
     }))
 }
 
+pub async fn post_reload(Extension(state): Extension<Arc<WebServerState>>) -> impl IntoResponse {
+    if let Err(e) = state.reload_tx.send(()).await {
+        tracing::error!("Failed to trigger config reload: {}", e);
+        return Response::builder()
+            .status(StatusCode::INTERNAL_SERVER_ERROR)
+            .body(Body::from("Failed to trigger reload"))
+            .unwrap();
+    }
+    Response::builder()
+        .status(StatusCode::OK)
+        .body(Body::from("Reload triggered successfully"))
+        .unwrap()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
