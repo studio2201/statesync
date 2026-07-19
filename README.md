@@ -1,6 +1,8 @@
 # <img src="graphics/statesync_icon.jpg" width="48" height="48" valign="middle" /> StateSync
 
-![StateSync Header](graphics/statesync_header.jpg)
+<p align="center">
+  <img src="graphics/statesync_header.jpg" width="100%" height="180" style="object-fit: cover; border-radius: 8px;" alt="StateSync Header" />
+</p>
 
 A lightweight, high-performance Rust sidecar daemon designed to synchronize playback progress, watch states, and resume points bi-directionally between an arbitrary number of Emby and Jellyfin Media Servers in real-time.
 
@@ -10,7 +12,7 @@ It features a simple, beautiful **Web UI Dashboard** running on port `8754` so y
 
 ## Dashboard Interface Screenshot
 
-![StateSync Dashboard Mockup](graphics/statesync_screenshot.jpg)
+![StateSync Dashboard](graphics/bgL4h.jpg)
 
 ---
 
