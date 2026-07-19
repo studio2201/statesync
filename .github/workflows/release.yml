@@ -1,0 +1,71 @@
+name: Release
+
+on:
+  push:
+    branches: [ master ]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Tag & Release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Read version from Cargo.toml
+        id: read_version
+        run: |
+          VERSION=$(grep '^version = ' Cargo.toml | head -1 | sed -E 's/^version = "([^"]+)".*/\1/')
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "tag=v$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Check tag does not already exist
+        id: check
+        run: |
+          TAG="${{ steps.read_version.outputs.tag }}"
+          echo "Checking if $TAG exists..."
+          if git ls-remote --tags origin "$TAG" | grep -q "$TAG"; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+            echo "Tag $TAG already exists; skipping."
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+            echo "Tag $TAG does not exist; will create."
+          fi
+
+      - name: Create git tag and push
+        if: steps.check.outputs.exists == 'false'
+        run: |
+          TAG="${{ steps.read_version.outputs.tag }}"
+          VERSION="${{ steps.read_version.outputs.version }}"
+          git config user.name "statesync-bot"
+          git config user.email "statesync@users.noreply.github.com"
+          git tag -a "$TAG" -m "Release v$VERSION"
+          git push origin "$TAG"
+
+      - name: Create GitHub Release
+        if: steps.check.outputs.exists == 'false'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSION: ${{ steps.read_version.outputs.version }}
+          TAG: ${{ steps.read_version.outputs.tag }}
+        run: |
+          NOTES=$(cat <<EOF
+          ## statesync v${VERSION}
+
+          Container image:
+          \`\`\`
+          docker pull ghcr.io/ubermetroid/statesync:${TAG}
+          docker pull ghcr.io/ubermetroid/statesync:latest
+          \`\`\`
+
+          See the [README](https://github.com/UberMetroid/statesync#readme) and the
+          [commits in this release](https://github.com/UberMetroid/statesync/commits/${TAG}).
+          EOF
+          )
+          gh release create "$TAG" \
+            --title "statesync v${VERSION}" \
+            --notes "$NOTES" \
+            --target master

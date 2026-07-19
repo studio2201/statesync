@@ -428,8 +428,7 @@ mod tests {
     fn test_write_default_then_load_roundtrips() {
         let dir = tempfile::tempdir().unwrap();
         let path = dir.path().join("config.json");
-        let serialized =
-            serde_json::to_string_pretty(&default_config()).unwrap();
+        let serialized = serde_json::to_string_pretty(&default_config()).unwrap();
         std::fs::write(&path, &serialized).unwrap();
         let data = std::fs::read_to_string(&path).unwrap();
         let c: Config = serde_json::from_str(&data).unwrap();
