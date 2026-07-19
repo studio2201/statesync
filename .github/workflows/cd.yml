@@ -59,19 +59,12 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           sbom: true
           provenance: mode=max
-          outputs: type=image,name=target,annotation-index.sbom.description=SBOM,oci-mediatypes=true
-
-      - name: Generate SBOM attestation
-        uses: actions/attest-sbom@v1
-        with:
-          subject-name: ${{ steps.build.outputs.imageName }}
-          sbom-path: ${{ steps.build.outputs.sbomPath }}
 
       - name: Trivy vulnerability scan
-        uses: aquasecurity/trivy-action@master
+        uses: aquasecurity/trivy-action@0.24.0
         continue-on-error: true
         with:
-          image-ref: ${{ steps.build.outputs.imageName }}
+          image-ref: ${{ steps.meta.outputs.tags }}
           format: sarif
           output: trivy-results.sarif
           severity: HIGH,CRITICAL

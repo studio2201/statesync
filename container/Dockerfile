@@ -1,5 +1,5 @@
 # Stage 1: Build the static Rust application using Musl target
-FROM docker.io/clux/muslrust:stable as builder
+FROM docker.io/clux/muslrust:stable AS builder
 WORKDIR /usr/src/statesync
 COPY . .
 RUN cargo build --release --target x86_64-unknown-linux-musl
