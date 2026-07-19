@@ -210,7 +210,17 @@ async function loadDashboard() {
       logsDiv.appendChild(empty);
     }
     const footer = $('versionFooter');
-    if (footer && status.version) footer.textContent = 'v' + status.version + ' | uptime ' + Math.floor(status.uptime_seconds / 60) + 'm';
+    if (footer && status.version) {
+      footer.textContent = '';
+      const link = document.createElement('a');
+      link.href = 'https://github.com/UberMetroid/statesync/releases/tag/v' + status.version;
+      link.target = '_blank';
+      link.rel = 'noopener noreferrer';
+      link.textContent = 'v' + status.version;
+      link.style.cssText = 'color: var(--accent); text-decoration: none; border-bottom: 1px dotted var(--accent);';
+      footer.appendChild(link);
+      footer.appendChild(document.createTextNode(' | uptime ' + Math.floor(status.uptime_seconds / 60) + 'm'));
+    }
   } catch (err) { console.error(err); }
 }
 function openServerModal(idx) {
