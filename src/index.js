@@ -37,19 +37,6 @@ async function loadDashboard() {
     currentConfig = await configRes.json(); const status = await statusRes.json();
     $('syncThreshold').value = currentConfig.sync_threshold_seconds;
     $('cfgUserMappings').value = (currentConfig.user_mappings || []).map(group => group.join(', ')).join('\n');
-    const statusSpan = $('systemStatusText');
-    if (currentConfig.servers.length === 0) {
-      statusSpan.innerText = '[ SYNC ENGINE: IDLE ]'; statusSpan.style.color = 'var(--border)';
-    } else {
-      const statuses = status.servers.map(s => s.websocket_status);
-      if (statuses.length === 0 || statuses.every(s => s === 'Offline')) {
-        statusSpan.innerText = '[ SYNC ENGINE: OFFLINE ]'; statusSpan.style.color = 'var(--red)';
-      } else if (statuses.some(s => s === 'Offline' || s === 'Reconnecting')) {
-        statusSpan.innerText = '[ SYNC ENGINE: DEGRADED ]'; statusSpan.style.color = 'var(--accent)';
-      } else {
-        statusSpan.innerText = '[ SYNC ENGINE: ONLINE ]'; statusSpan.style.color = 'var(--green)';
-      }
-    }
     const listDiv = $('serverList');
     if (currentConfig.servers.length === 0) {
       listDiv.textContent = '';

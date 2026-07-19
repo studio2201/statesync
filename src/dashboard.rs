@@ -20,7 +20,7 @@ pub fn render_dashboard() -> Markup {
                 body {
                     div class="container" {
                         h1 {
-                            span id="systemStatusText" { "[ SYNC ENGINE: ONLINE ]" }
+                            span { "StateSync" }
                             div style="display: flex; gap: 10px; align-items: center;" {
                                 select id="themeSelector" class="btn" style="background:#000;padding:7px 10px;" onchange="setTheme(this.value)" {
                                     option value="cyberpunk" { "CYBERPUNK" }
@@ -39,11 +39,11 @@ pub fn render_dashboard() -> Markup {
                         }
                         div class="row-grid" {
     div class="card" {
-                            div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:15px" {
+                            div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:15px;flex-wrap:wrap;gap:8px" {
                                 h2 style="margin:0" { "[ MAPPED USERS ]" }
-                                div style="display:flex;gap:8px" {
-                                    button class="btn" id="refreshUsersBtn" onclick="refreshUsers()" { "[ REFRESH ]" }
-                                    button class="btn btn-accent" id="forceSyncBtn" onclick="forceSync()" { "[ FORCE SYNC ]" }
+                                div style="display:flex;gap:6px" {
+                                    button class="btn-small" id="refreshUsersBtn" onclick="refreshUsers()" { "REFRESH" }
+                                    button class="btn-small btn-accent-small" id="forceSyncBtn" onclick="forceSync()" { "FORCE SYNC" }
                                 }
                             }
                             div id="syncedUsers" style="display: flex; flex-direction: column; gap: 8px;" {}

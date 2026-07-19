@@ -19,6 +19,8 @@ h2 { font-size: 16px; margin: 0 0 15px 0; color: var(--border); border-left: 3px
 .status-Reconnecting { color: var(--accent); }
 .status-Offline { color: var(--red); }
 .btn { background: transparent; border: 1px solid var(--border); color: var(--border); padding: 8px 16px; font-family: inherit; font-size: 12px; cursor: pointer; transition: all 0.2s; }
+.btn-small { background: transparent; border: 1px solid var(--border); color: var(--border); padding: 3px 8px; font-family: inherit; font-size: 10px; cursor: pointer; transition: all 0.2s; line-height: 1.2; }
+.btn-accent-small { border-color: var(--accent); color: var(--accent); }
 .btn:hover { background: var(--border); color: #000; box-shadow: 0 0 10px var(--border); }
 .btn-accent { border-color: var(--accent); color: var(--accent); }
 .btn-accent:hover { background: var(--accent); color: #000; box-shadow: 0 0 10px var(--accent); }
