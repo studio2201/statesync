@@ -94,7 +94,7 @@ You can also configure everything in the web UI — changes save to this file.
 | `STATESYNC_SERVER_<N>_TYPE` | — | `emby` or `jellyfin` |
 | `STATESYNC_SERVER_<N>_DIRECTION` | — | `both`, `send`, or `receive` |
 | `STATESYNC_SYNC_THRESHOLD_SECONDS` | `5` | |
-| `STATESYNC_ALLOW_INSECURE_HTTP` | `true` | Permits plain `http://` URLs to upstream servers (LAN-friendly default). Set `false` to require `https://`. |
+| `STATESYNC_ALLOW_INSECURE_HTTP` | `true` | Permits plain `http://` URLs to upstream Emby/Jellyfin servers (LAN-friendly default). StateSync calls your media servers to read user lists and push play-state updates. Plain HTTP means the API key travels unencrypted between containers — fine on a home LAN, not fine if your media servers are exposed beyond it (e.g. behind a reverse proxy with TLS). Set `false` to require `https://`. |
 | `STATESYNC_HTTP_RETRY` | `on` | Set `off` to disable HTTP retry on transient errors |
 | `STATESYNC_LOG_RETENTION` | `30` | Number of log entries kept in memory |
 | `RUST_LOG` | `info` | tracing-subscriber filter |

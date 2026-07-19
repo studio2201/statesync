@@ -64,9 +64,8 @@ Use the REFRESH and FORCE SYNC buttons in the dashboard (top of the MAPPED USERS
   <!-- One of: trace, debug, info, warn, error. Default 'info' is right for normal use. -->
   <Config Name="Log Verbosity" Target="RUST_LOG" Default="info" Mode="" Description="How chatty the logs are. info is normal. Use debug for troubleshooting (very chatty)." Type="Variable" Display="advanced" Required="false" Mask="false"/>
 
-  <!-- Whether to allow http:// (not https://) URLs to your Emby/Jellyfin servers. -->
-  <!-- Default true because most homelab servers don't use HTTPS. Set false to require HTTPS. -->
-  <Config Name="Allow HTTP to Servers" Target="STATESYNC_ALLOW_INSECURE_HTTP" Default="true" Mode="" Description="Allow plain http:// URLs when talking to your Emby/Jellyfin servers. Default true (LAN-friendly). Set false if your servers use HTTPS." Type="Variable" Display="advanced" Required="false" Mask="false"/>
+  <!-- Plain HTTP to media servers. See README for the full explanation. -->
+  <Config Name="Plain HTTP to Emby/Jellyfin" Target="STATESYNC_ALLOW_INSECURE_HTTP" Default="true" Mode="" Description="Whether StateSync is allowed to talk to your Emby/Jellyfin servers over plain HTTP (no TLS). Default 'true' because most homelab servers use HTTP. Set 'false' to require HTTPS — only needed if your media servers are exposed beyond the LAN (e.g. behind a reverse proxy with TLS) and you don't want the API key crossing an unencrypted link." Type="Variable" Display="advanced" Required="false" Mask="false"/>
 
   <!-- Optional bearer-token auth. Leave blank for open LAN access. -->
   <Config Name="Dashboard Password" Target="STATESYNC_WEB_AUTH" Default="" Mode="" Description="OPTIONAL. Leave blank to let anyone on your LAN use the dashboard. To require a password, paste a token in the format: bearer:YOURTOKEN (generate with: openssl rand -hex 32)" Type="Variable" Display="advanced" Required="false" Mask="false"/>
