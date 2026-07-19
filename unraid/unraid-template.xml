@@ -21,7 +21,9 @@
   <Overview>Keeps Emby and Jellyfin watch states in sync.</Overview>
   <Description>StateSync connects to your Emby and Jellyfin servers via their HTTP and WebSocket APIs. When a user pauses, resumes, or finishes a show on one server, the change is pushed to the other within a few seconds. Supports any number of Emby and Jellyfin servers (the daemon discovers new users automatically).
 
-Open the web UI on port 8754 after install to add servers. API keys are stored in the config volume and masked in the UI.</Description>
+Open the web UI on port 8754 after install to add servers. API keys are stored in the config volume and masked in the UI.
+
+The container runs as the system 'nobody' user (uid 65534) which is Unraid's appdata convention. The entrypoint chowns the config volume to nobody on startup so config.json persists across container updates without permission errors.</Description>
 
   <Category>MediaApp:Video MediaApp:Other</Category>
   <Icon>https://raw.githubusercontent.com/UberMetroid/statesync/master/graphics/statesync_icon.jpg</Icon>
@@ -36,7 +38,7 @@ Open the web UI on port 8754 after install to add servers. API keys are stored i
   <Config Name="Web UI Port" Target="8754" Default="8754" Mode="tcp" Description="Port the dashboard listens on. Open this in your browser after the container starts." Type="Port" Display="always" Required="true" Mask="false"/>
 
   <!-- Where config.json (and your server list / API keys) live. -->
-  <Config Name="Config Volume" Target="/config" Default="/mnt/user/appdata/statesync" Mode="rw" Description="Folder on the array where config.json is stored. Persists across container updates." Type="Path" Display="always" Required="true" Mask="false"/>
+  <Config Name="Config Volume" Target="/config" Default="/mnt/user/appdata/statesync" Mode="rw" Description="Folder on the array where config.json is stored. Persists across container updates. The entrypoint chowns this folder to nobody on first start." Type="Path" Display="always" Required="true" Mask="false"/>
 
   <!-- ============================================================ -->
   <!-- Common settings (always visible, sensible defaults) -->
