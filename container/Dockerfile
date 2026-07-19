@@ -1,7 +1,6 @@
 # Stage 1: Build the static Rust application using Musl target
-FROM docker.io/clux/muslrust:stable-2025-04-01 as builder
+FROM docker.io/clux/muslrust:stable as builder
 WORKDIR /usr/src/statesync
-RUN apt-get update && apt-get install -y --no-install-recommends protobuf-compiler 2>/dev/null || true
 COPY . .
 RUN cargo build --release --target x86_64-unknown-linux-musl
 
