@@ -5,6 +5,7 @@
     clippy::single_match
 )]
 
+pub mod backfill;
 pub mod client;
 pub mod config;
 pub mod dashboard;

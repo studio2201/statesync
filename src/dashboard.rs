@@ -34,6 +34,7 @@ pub fn render_dashboard() -> Markup {
                                 option value="royal" { "ROYAL" }
                             }
                             button class="btn btn-accent" onclick="openSettingsModal()" { "[ SETTINGS ]" }
+                            button class="btn btn-accent" onclick="openBackfillModal()" { "[ BACKFILL ]" }
                             button class="btn" onclick="openServerModal(-1)" { "[ + ADD MODULE ]" }
                         }
                     }
@@ -112,6 +113,53 @@ pub fn render_dashboard() -> Markup {
                         div style="display:flex;gap:12px;margin-top:20px;" {
                             button class="btn" onclick="saveSettings()" { "[ SAVE ]" }
                             button class="btn btn-danger" onclick="closeModal('settingsModal')" { "[ ABORT ]" }
+                        }
+                    }
+                }
+                div class="modal" id="backfillModal" style="display:none" {
+                    div class="modal-content" style="width: 520px" {
+                        h2 { "[ BACKFILL HISTORY ]" }
+                        div class="form-group" {
+                            label { "DIRECTION" }
+                            select id="bfDirection" {
+                                option value="emby-to-jellyfin" { "EMBY -> JELLYFIN" }
+                                option value="jellyfin-to-emby" { "JELLYFIN -> EMBY" }
+                                option value="both" { "BOTH" }
+                            }
+                        }
+                        div class="form-group" {
+                            label { "MERGE POLICY" }
+                            select id="bfMerge" {
+                                option value="max" { "MAX POSITION (DEFAULT)" }
+                                option value="source-wins" { "SOURCE WINS" }
+                                option value="newest" { "NEWEST LAST PLAYED" }
+                            }
+                        }
+                        div class="form-group" {
+                            label { "SCOPE" }
+                            select id="bfScope" {
+                                option value="all" { "PLAYED + RESUMABLE (DEFAULT)" }
+                                option value="played" { "PLAYED ONLY" }
+                                option value="resumable" { "RESUMABLE ONLY" }
+                            }
+                        }
+                        div class="form-group" {
+                            label { "RATE (ITEMS/SEC, 1-50)" }
+                            input type="number" id="bfRate" min="1" max="50" value="5" {}
+                        }
+                        div class="form-group" {
+                            label style="display:flex;align-items:center;gap:8px" {
+                                input type="checkbox" id="bfForce" {}
+                                span { "FORCE: RE-SYNC ALL (IGNORE LAST_SYNCS CACHE)" }
+                            }
+                        }
+                        div id="bfProgress" style="margin-top:15px;padding:10px;border:1px solid var(--border);min-height:60px;font-size:12px;color:var(--text)" {
+                            div { "IDLE" }
+                        }
+                        div style="display:flex;gap:12px;margin-top:20px" {
+                            button class="btn" id="bfStartBtn" onclick="startBackfill()" { "[ START ]" }
+                            button class="btn btn-danger" id="bfCancelBtn" onclick="cancelBackfill()" disabled="" { "[ CANCEL ]" }
+                            button class="btn" onclick="closeModal('backfillModal')" { "[ CLOSE ]" }
                         }
                     }
                 }

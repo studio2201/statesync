@@ -1,6 +1,8 @@
+use crate::backfill::BackfillTracker;
 use crate::client::MediaClient;
 use anyhow::Result;
 use std::collections::HashMap;
+use std::sync::Arc;
 use std::time::Instant;
 
 #[derive(Debug, Clone)]
@@ -38,6 +40,7 @@ pub struct AppState {
     pub sync_logs: Vec<SyncLogEntry>,
     pub active_sessions: HashMap<(String, String), (String, String, f64, bool, String)>,
     pub log_retention: usize,
+    pub backfill: Arc<BackfillTracker>,
 }
 
 fn default_log_retention() -> usize {
@@ -59,6 +62,7 @@ impl AppState {
             sync_logs: Vec::new(),
             active_sessions: HashMap::new(),
             log_retention: retention,
+            backfill: Arc::new(BackfillTracker::default()),
         }
     }
 

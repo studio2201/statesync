@@ -58,6 +58,40 @@ pub struct PlayState {
     pub is_paused: Option<bool>,
 }
 
+#[derive(Debug, Clone, Deserialize)]
+pub struct UserItem {
+    #[serde(alias = "id", alias = "Id")]
+    pub id: String,
+    #[serde(default, alias = "Played", alias = "played")]
+    pub played: bool,
+    #[serde(
+        default,
+        alias = "PlaybackPositionTicks",
+        alias = "playbackPositionTicks"
+    )]
+    pub playback_position_ticks: Option<i64>,
+    #[serde(default, alias = "LastPlayedDate", alias = "lastPlayedDate")]
+    pub last_played_date: Option<String>,
+    #[serde(default)]
+    pub imdb_id: Option<String>,
+    #[serde(default)]
+    pub tmdb_id: Option<String>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct UserDataSnapshot {
+    #[serde(default, alias = "Played", alias = "played")]
+    pub played: bool,
+    #[serde(
+        default,
+        alias = "PlaybackPositionTicks",
+        alias = "playbackPositionTicks"
+    )]
+    pub playback_position_ticks: Option<i64>,
+    #[serde(default, alias = "LastPlayedDate", alias = "lastPlayedDate")]
+    pub last_played_date: Option<String>,
+}
+
 pub struct MediaClient {
     pub client: Client,
     pub url: String,
@@ -339,5 +373,116 @@ impl MediaClient {
             ));
         }
         Ok(())
+    }
+
+    pub async fn get_user_played_items(
+        &self,
+        user_id: &str,
+        filter: &str,
+        start_index: usize,
+        limit: usize,
+    ) -> Result<Vec<UserItem>> {
+        let path = if self.is_emby {
+            format!(
+                "/Users/{}/Items?Recursive=true&Fields=ProviderIds&{}&StartIndex={}&Limit={}",
+                user_id, filter, start_index, limit
+            )
+        } else {
+            format!(
+                "/Users/{}/Items?Recursive=true&Fields=ProviderIds&Filters={}&StartIndex={}&Limit={}",
+                user_id, filter, start_index, limit
+            )
+        };
+        let url = self.url_path(&path);
+        let resp = send_with_retry(
+            self.add_auth_headers(self.client.get(&url)),
+            "get_user_played_items",
+        )
+        .await
+        .with_context(|| {
+            format!(
+                "Failed to list user items (user={}, filter={}, page={})",
+                user_id, filter, start_index
+            )
+        })?;
+        let data: serde_json::Value = resp
+            .json()
+            .await
+            .context("Failed to parse user items response")?;
+        let arr = data
+            .get("Items")
+            .and_then(|i| i.as_array())
+            .cloned()
+            .unwrap_or_default();
+        let mut out = Vec::with_capacity(arr.len());
+        for mut v in arr {
+            let imdb = v
+                .get("ProviderIds")
+                .and_then(|p| p.get("Imdb"))
+                .and_then(|s| s.as_str())
+                .map(|s| s.to_string());
+            let tmdb = v
+                .get("ProviderIds")
+                .and_then(|p| p.get("Tmdb"))
+                .and_then(|s| s.as_str())
+                .map(|s| s.to_string());
+            if let Some(imdb) = imdb {
+                if let Some(map) = v.as_object_mut() {
+                    map.insert("imdb_id".to_string(), serde_json::Value::String(imdb));
+                }
+            }
+            if let Some(tmdb) = tmdb {
+                if let Some(map) = v.as_object_mut() {
+                    map.insert("tmdb_id".to_string(), serde_json::Value::String(tmdb));
+                }
+            }
+            match serde_json::from_value::<UserItem>(v) {
+                Ok(item) => out.push(item),
+                Err(_) => continue,
+            }
+        }
+        if self.is_emby {
+            self.attach_emby_provider_ids(user_id, &mut out).await;
+        }
+        Ok(out)
+    }
+
+    async fn attach_emby_provider_ids(&self, user_id: &str, items: &mut [UserItem]) {
+        for item in items.iter_mut() {
+            if item.imdb_id.is_some() || item.tmdb_id.is_some() {
+                continue;
+            }
+            if let Ok((imdb, tmdb)) = self.get_item_providers(user_id, &item.id).await {
+                if !imdb.is_empty() {
+                    item.imdb_id = Some(imdb);
+                }
+                if !tmdb.is_empty() {
+                    item.tmdb_id = Some(tmdb);
+                }
+            }
+        }
+    }
+
+    pub async fn get_item_userdata(
+        &self,
+        user_id: &str,
+        item_id: &str,
+    ) -> Result<UserDataSnapshot> {
+        let path = format!("/Users/{}/Items/{}/UserData", user_id, item_id);
+        let url = self.url_path(&path);
+        let resp = send_with_retry(
+            self.add_auth_headers(self.client.get(&url)),
+            "get_item_userdata",
+        )
+        .await
+        .with_context(|| format!("Failed to get item userdata for {}", item_id))?;
+        if !resp.status().is_success() {
+            return Err(anyhow!("get_item_userdata failed: {}", resp.status()));
+        }
+        let snap: UserDataSnapshot = resp
+            .json()
+            .await
+            .context("Failed to parse item userdata response")?;
+        Ok(snap)
     }
 }

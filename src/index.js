@@ -237,6 +237,10 @@ function openServerModal(idx) {
   $('serverModal').style.display = 'flex';
 }
 function openSettingsModal() { $('settingsModal').style.display = 'flex'; }
+function openBackfillModal() {
+  $('backfillModal').style.display = 'flex';
+  pollBackfillStatus();
+}
 function closeModal(id) { $(id).style.display = 'none'; }
 function testConnection() {
   const type = $('serverType').value, url = $('serverUrl').value, api_key = $('serverKey').value;
@@ -271,7 +275,59 @@ async function saveConfig() {
   } catch (err) { showToast('WRITE CONFIG FAILED'); }
 }
 function showToast(msg) { const toast = $('toast'); toast.innerText = `> ${msg}`; toast.style.display = 'block'; setTimeout(() => { toast.style.display = 'none'; }, 4000); }
-document.addEventListener('keydown', (e) => { if (e.key === 'Escape') { ['serverModal','settingsModal','authModal'].forEach(id => { const m=$(id); if (m && m.style.display === 'flex') m.style.display='none'; }); } });
+async function startBackfill() {
+  const opts = {
+    direction: $('bfDirection').value,
+    merge: $('bfMerge').value,
+    scope: $('bfScope').value,
+    rate: Math.max(1, Math.min(50, parseInt($('bfRate').value) || 5)),
+    force: $('bfForce').checked,
+  };
+  $('bfStartBtn').disabled = true;
+  $('bfCancelBtn').disabled = false;
+  try {
+    const res = await authedFetch('/api/backfill', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(opts) });
+    showToast('BACKFILL STARTED');
+    pollBackfillStatus();
+  } catch (err) {
+    showToast('BACKFILL FAILED: ' + err.message);
+    $('bfStartBtn').disabled = false;
+    $('bfCancelBtn').disabled = true;
+  }
+}
+let _bfPollTimer = null;
+async function pollBackfillStatus() {
+  if (_bfPollTimer) clearTimeout(_bfPollTimer);
+  try {
+    const res = await authedFetch('/api/backfill/status');
+    const s = await res.json();
+    renderBackfillProgress(s);
+    if (s.state === 'running' || s.state === 'idle' && s.total_pairs > 0) {
+      _bfPollTimer = setTimeout(pollBackfillStatus, 1000);
+    } else {
+      _bfPollTimer = null;
+      $('bfStartBtn').disabled = false;
+      $('bfCancelBtn').disabled = true;
+    }
+  } catch (err) {
+    console.error(err);
+  }
+}
+function renderBackfillProgress(s) {
+  const pct = s.total_pairs > 0 ? Math.floor((s.processed / s.total_pairs) * 100) : 0;
+  const txt = s.state.toUpperCase() + ' | processed=' + s.processed + '/' + s.total_pairs +
+    ' | ok=' + s.succeeded + ' skip=' + s.skipped + ' fail=' + s.failed +
+    ' (' + pct + '%)' +
+    (s.current_pair ? ' | pair=' + s.current_pair : '');
+  const div = $('bfProgress');
+  if (!div) return;
+  div.textContent = txt;
+}
+async function cancelBackfill() {
+  $('bfCancelBtn').disabled = true;
+  showToast('CANCEL REQUESTED (will stop after current item)');
+}
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape') { ['serverModal','settingsModal','authModal','backfillModal'].forEach(id => { const m=$(id); if (m && m.style.display === 'flex') m.style.display='none'; }); } });
 const savedTheme = localStorage.getItem('hud-theme') || 'cyberpunk'; setTheme(savedTheme); $('themeSelector').value = savedTheme;
 document.addEventListener('DOMContentLoaded', () => {
   const b = $('authSubmitBtn'); if (b) b.addEventListener('click', submitAuth);

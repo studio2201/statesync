@@ -56,6 +56,14 @@ pub fn create_router(web_state: Arc<WebServerState>) -> Router {
         .route(
             "/api/reload",
             axum::routing::post(crate::web_api::post_reload),
+        )
+        .route(
+            "/api/backfill",
+            axum::routing::post(crate::web_api::post_backfill),
+        )
+        .route(
+            "/api/backfill/status",
+            get(crate::web_api::get_backfill_status),
         );
 
     public

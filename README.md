@@ -142,11 +142,73 @@ To install StateSync on Unraid:
    - **Name**: `statesync`
    - **Repository**: `ghcr.io/ubermetroid/statesync:latest`
    - **WebUI Port**: `8754` (mapped to host loopback by default; do **not** expose publicly without setting `STATESYNC_WEB_AUTH`).
-   - **Config Volume**: Map `/config` to `/mnt/user/appdata/statesync`.
-   - **Bind Address**: leave `127.0.0.1:8754` unless you also configure **Web UI Bearer Token**.
-   - **Web UI Bearer Token**: only needed if you change the bind address. Generate with `openssl rand -hex 32` and paste it in.
-   - **Timezone (TZ)**: Change from `UTC` to your local timezone.
+    - **Config Volume**: Map `/config` to `/mnt/user/appdata/statesync`.
+    - **Bind Address**: leave `127.0.0.1:8754` unless you also configure **Web UI Bearer Token**.
+    - **Web UI Bearer Token**: only needed if you change the bind address. Generate with `openssl rand -hex 32` and paste it in.
+    - **Timezone (TZ)**: Change from `UTC` to your local timezone.
 4. Click **Apply** to download and start the container.
+
+---
+
+## Backfilling history
+
+StateSync's WebSocket path is **forward-only** — it only syncs state when Emby or Jellyfin emits a `Sessions` or `UserDataChanged` event. The **backfill** command reconciles existing watch history between servers.
+
+### Trigger from CLI
+
+```bash
+statesync --backfill [--force] \
+  [--direction=emby-to-jellyfin|jellyfin-to-emby|both] \
+  [--merge=max|source-wins|newest] \
+  [--scope=played|resumable|all] \
+  [--rate=5]
+```
+
+Run with `--backfill --help` for inline help. CLI exits 0 on success, 1 on failures. Progress logged every 2s.
+
+### Trigger from dashboard
+
+Click `BACKFILL` in the header. Choose direction, merge policy, scope, rate, optionally force. Progress polls `/api/backfill/status` every 1s.
+
+### Trigger via HTTP
+
+```bash
+curl -X POST http://127.0.0.1:8754/api/backfill \
+  -H "Authorization: Bearer <token>" \
+  -H "Content-Type: application/json" \
+  -d '{"direction":"both","merge":"max","scope":"all","rate":5,"force":false}'
+```
+
+Returns `202 Accepted` with initial status, or `409 Conflict` if already running.
+
+### Force flag
+
+`--force` / `force: true` bypasses the `last_syncs` dedup cache and re-pushes every item. Always uses `source-wins` merge.
+
+Use for:
+- Reconciling two servers that have drifted
+- Applying a new merge policy retroactively
+- Recovering from suspected cache poisoning
+
+### Merge policies
+
+| Policy | Behavior |
+|---|---|
+| `max` (default) | `max(source_position, target_position)`; mark played if either side is played. Never reduces progress. |
+| `source-wins` | Always source. Overwrites target. |
+| `newest` | Pick side with newer `LastPlayedDate`. Falls back: source if source missing, target if target missing. |
+
+### Limits
+
+- Rate cap: 1–50 items/sec (default 5)
+- Hard cap: 100,000 items per run
+- One backfill at a time (mutex-guarded)
+- HTTP/WS timeouts: 60s per page, 30s per `update_progress`
+- Cancelling: graceful — completes current item and stops
+
+### Auto-start
+
+Set `STATESYNC_BACKFILL_ON_START=true` to auto-run on daemon start. Defaults come from `STATESYNC_BACKFILL_DIRECTION`, `STATESYNC_BACKFILL_MERGE`, `STATESYNC_BACKFILL_SCOPE`, `STATESYNC_BACKFILL_RATE` env vars.
 
 ---
 
