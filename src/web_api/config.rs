@@ -1,19 +1,10 @@
 use axum::{Extension, Json};
 use serde_json::json;
 use std::sync::Arc;
+pub use shared_core::mask_api_key;
 
 use crate::config::{Config, validate_config};
 use crate::web::WebServerState;
-
-pub fn mask_api_key(key: &str) -> String {
-    if key.is_empty() {
-        "".to_string()
-    } else if key.len() <= 8 {
-        "••••••••".to_string()
-    } else {
-        format!("{}••••••••{}", &key[..4], &key[key.len() - 4..])
-    }
-}
 
 pub async fn get_config() -> Json<Config> {
     let mut config = Config::load().unwrap_or_else(|_| crate::config::default_config());

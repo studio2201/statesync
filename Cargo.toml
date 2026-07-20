@@ -1,6 +1,6 @@
 [package]
 name = "statesync"
-version = "0.28.16"
+version = "0.28.17"
 edition = "2024"
 
 [dependencies]
@@ -17,6 +17,7 @@ axum = "0.7"
 percent-encoding = "2.3"
 chrono = "0.4"
 maud = "0.26"
+shared-core = { git = "https://github.com/studio2201/shared-assets.git", tag = "v3.0.33" }
 
 [dev-dependencies]
 tower = { version = "0.5", features = ["util"] }

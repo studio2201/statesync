@@ -203,6 +203,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "constant_time_eq"
+version = "0.3.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7c74b8349d32d297c9134b8c88677813a227df8f779daa29bfc29c183fe3dca6"
+
+[[package]]
 name = "core-foundation-sys"
 version = "0.8.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1318,6 +1324,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "shared-core"
+version = "3.0.33"
+source = "git+https://github.com/studio2201/shared-assets.git?tag=v3.0.33#5c1f076b40ab66804648a645cc37978056d104f5"
+dependencies = [
+ "constant_time_eq",
+ "serde",
+]
+
+[[package]]
 name = "shlex"
 version = "2.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1369,7 +1384,7 @@ checksum = "6ce2be8dc25455e1f91df71bfa12ad37d7af1092ae736f3a6cd0e37bc7810596"
 
 [[package]]
 name = "statesync"
-version = "0.28.15"
+version = "0.28.16"
 dependencies = [
  "anyhow",
  "axum",
@@ -1381,6 +1396,7 @@ dependencies = [
  "reqwest",
  "serde",
  "serde_json",
+ "shared-core",
  "tempfile",
  "tokio",
  "tokio-tungstenite",
