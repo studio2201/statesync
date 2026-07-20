@@ -72,12 +72,11 @@ async fn main() -> Result<()> {
     let web_auth = resolve_web_auth();
 
     if !statesync::config::is_loopback_bind(&bind_addr) && web_auth.is_none() {
-        eprintln!(
-            "FATAL: Refusing to bind to non-loopback address '{}' without STATESYNC_WEB_AUTH configuration. \
-             To bind to public interfaces, you MUST set STATESYNC_WEB_AUTH=bearer:<token>.",
+        warn!(
+            "WARNING: Binding to non-loopback address '{}' without STATESYNC_WEB_AUTH configuration. \
+             Your dashboard is exposed publicly without authentication.",
             bind_addr
         );
-        std::process::exit(1);
     }
 
     if web_auth.is_some() {
