@@ -8,9 +8,9 @@ When a user pauses, resumes, or finishes a show on one server, the same position
 
 ## Install — Unraid
 
-1. **Docker tab** → **Template Repositories** → add `https://github.com/UberMetroid/statesync`
+1. **Docker tab** → **Template Repositories** → add `https://github.com/studio2201/statesync`
 2. **Add Container** → pick **statesync** → click **Apply**
-3. Open `http://<your-unraid-ip>:8754` in a browser
+3. Open `http://<your-unraid-ip>:4407` in a browser
 4. Click **+ ADD MODULE**, pick the server type (JELLYFIN or EMBY), fill in the URL + API key, click **↻ AUTO** to auto-fill the display name from the server
 
 Config persists at `/mnt/user/appdata/statesync/config.json`. The container is created with `PUID=99` / `PGID=100` so the appdata dir shows as `nobody` in the Unraid file manager, matching other community apps.
@@ -21,11 +21,11 @@ Config persists at `/mnt/user/appdata/statesync/config.json`. The container is c
 # compose.yaml
 services:
   statesync:
-    image: ghcr.io/ubermetroid/statesync:latest
+    image: ghcr.io/studio2201/statesync:latest
     container_name: statesync
     restart: unless-stopped
     ports:
-      - "8754:8754"
+      - "4407:4407"
     volumes:
       - ./config:/config
     environment:
@@ -39,7 +39,7 @@ services:
 
 ```bash
 mkdir -p config && docker compose up -d
-# open http://localhost:8754
+# open http://localhost:4407
 ```
 
 The first run creates a default `config.json` if none exists — open the web UI and add servers.
@@ -93,7 +93,7 @@ You can also configure everything in the web UI — changes save to this file.
 
 | Variable | Default | What |
 |---|---|---|
-| `STATESYNC_BIND` | `0.0.0.0:8754` | Listen address |
+| `STATESYNC_BIND` | `0.0.0.0:4407` | Listen address |
 | `STATESYNC_WEB_AUTH` | _(unset)_ | Optional. `bearer:<token>` to require auth on `/api/*`. Generate with `openssl rand -hex 32` |
 | `STATESYNC_SYNC_THRESHOLD_SECONDS` | `5` | Skip redundant updates within this window |
 | `STATESYNC_ALLOW_INSECURE_HTTP` | `true` | Permits plain `http://` URLs to upstream Emby/Jellyfin servers (LAN-friendly default). Plain HTTP means the API key travels unencrypted between containers — fine on a home LAN, not fine if your media servers are exposed beyond it (e.g. behind a reverse proxy with TLS). Set `false` to require `https://`. |

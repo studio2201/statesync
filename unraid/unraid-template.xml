@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <!--
   StateSync — real-time Emby/Jellyfin watch-state sync.
-  After install, open the web UI (port 8754) and add your Emby and
+  After install, open the web UI (port 4407) and add your Emby and
   Jellyfin servers. Their API keys live in /config/config.json.
 -->
 <Container version="2">
@@ -10,34 +10,34 @@
   <!-- Static metadata (Unraid reads these once, shows in the app UI) -->
   <!-- ============================================================ -->
   <Name>statesync</Name>
-  <Repository>ghcr.io/ubermetroid/statesync:latest</Repository>
-  <Registry>https://github.com/UberMetroid/statesync/pkgs/container/statesync</Registry>
+  <Repository>ghcr.io/studio2201/statesync:latest</Repository>
+  <Registry>https://github.com/studio2201/statesync/pkgs/container/statesync</Registry>
   <Network>bridge</Network>
   <Shell>sh</Shell>
   <Privileged>false</Privileged>
-  <Support>https://github.com/UberMetroid/statesync/issues</Support>
-  <Project>https://github.com/UberMetroid/statesync</Project>
+  <Support>https://github.com/studio2201/statesync/issues</Support>
+  <Project>https://github.com/studio2201/statesync</Project>
 
   <Overview>Keeps Emby and Jellyfin watch states in sync.</Overview>
   <Description>StateSync connects to your Emby and Jellyfin servers via their HTTP and WebSocket APIs. When a user pauses, resumes, or finishes a show on one server, the change is pushed to the other within a few seconds. Supports any number of Emby and Jellyfin servers (the daemon discovers new users automatically).
 
-Open the web UI on port 8754 after install to add servers. API keys are stored in the config volume and masked in the UI.
+Open the web UI on port 4407 after install to add servers. API keys are stored in the config volume and masked in the UI.
 
 Standard Unraid PUID/PGID/UMASK variables are honored. Defaults (99/100/022) match the 'nobody' user used by other community apps (binhex-syncthing, glances, ollama, etc.) so the appdata dir shows as 'nobody' in the Unraid file manager. Change PUID/PGID to run as a different user if you prefer.
 
 Use the REFRESH and FORCE SYNC buttons in the dashboard (top of the MAPPED USERS section) to manually reload the user list or push all historical played state across servers.</Description>
 
   <Category>MediaApp:Video MediaApp:Other</Category>
-  <Icon>https://raw.githubusercontent.com/UberMetroid/statesync/master/graphics/statesync_icon.jpg</Icon>
-  <WebUI>http://[IP]:[PORT:8754]</WebUI>
-  <TemplateURL>https://raw.githubusercontent.com/UberMetroid/statesync/master/unraid/unraid-template.xml</TemplateURL>
+  <Icon>https://raw.githubusercontent.com/studio2201/statesync/master/graphics/statesync_icon.jpg</Icon>
+  <WebUI>http://[IP]:[PORT:4407]</WebUI>
+  <TemplateURL>https://raw.githubusercontent.com/studio2201/statesync/master/unraid/unraid-template.xml</TemplateURL>
 
   <!-- ============================================================ -->
   <!-- Required settings (always visible, can't skip) -->
   <!-- ============================================================ -->
 
   <!-- Port the dashboard listens on. The WebUI URL above uses this. -->
-  <Config Name="Web UI Port" Target="8754" Default="8754" Mode="tcp" Description="Port the dashboard listens on. Open this in your browser after the container starts." Type="Port" Display="always" Required="true" Mask="false"/>
+  <Config Name="Web UI Port" Target="4407" Default="4407" Mode="tcp" Description="Port the dashboard listens on. Open this in your browser after the container starts." Type="Port" Display="always" Required="true" Mask="false"/>
 
   <!-- Where config.json (and your server list / API keys) live. -->
   <Config Name="Config Volume" Target="/config" Default="/mnt/user/appdata/statesync" Mode="rw" Description="Folder on the array where config.json is stored. Persists across container updates. Owned by PUID:PGID (default nobody:users)." Type="Path" Display="always" Required="true" Mask="false"/>

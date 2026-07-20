@@ -19,7 +19,7 @@ use statesync::{
     websocket::{handle_websocket_loop, make_ws_url},
 };
 
-const DEFAULT_BIND: &str = "0.0.0.0:8754";
+const DEFAULT_BIND: &str = "0.0.0.0:4407";
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 
@@ -371,7 +371,7 @@ fn print_help() {
     );
     println!();
     println!("Environment Variables:");
-    println!("  STATESYNC_BIND                 Listen address (default: 127.0.0.1:8754)");
+    println!("  STATESYNC_BIND                 Listen address (default: 127.0.0.1:4407)");
     println!(
         "                                  Refuses non-loopback binds without STATESYNC_WEB_AUTH."
     );
@@ -391,7 +391,7 @@ fn print_help() {
 async fn trigger_reload() -> Result<()> {
     println!("Sending reload signal to active statesync service...");
     let url = std::env::var("STATESYNC_RELOAD_URL")
-        .unwrap_or_else(|_| "http://127.0.0.1:8754/api/reload".to_string());
+        .unwrap_or_else(|_| "http://127.0.0.1:4407/api/reload".to_string());
     let token = std::env::var("STATESYNC_WEB_AUTH").ok();
     let client = reqwest::Client::builder()
         .timeout(Duration::from_secs(5))

@@ -295,7 +295,7 @@ async function loadDashboard() {
     if (footer && status.version) {
       footer.textContent = '';
       const link = document.createElement('a');
-      link.href = 'https://github.com/UberMetroid/statesync/releases/tag/v' + status.version;
+      link.href = 'https://github.com/studio2201/statesync/releases/tag/v' + status.version;
       link.target = '_blank';
       link.rel = 'noopener noreferrer';
       link.textContent = 'v' + status.version;

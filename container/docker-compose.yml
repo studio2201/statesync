@@ -2,13 +2,13 @@ version: '3.8'
 
 services:
   statesync:
-    image: ghcr.io/ubermetroid/statesync:latest
+    image: ghcr.io/studio2201/statesync:latest
     container_name: statesync
     restart: unless-stopped
     # Binds to 0.0.0.0 by default — accessible on the LAN.
-    # For loopback-only, change to "127.0.0.1:8754:8754"
+    # For loopback-only, change to "127.0.0.1:4407:4407"
     ports:
-      - "8754:8754"
+      - "4407:4407"
     volumes:
       - ./config:/config
     environment:

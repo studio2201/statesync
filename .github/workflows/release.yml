@@ -57,12 +57,12 @@ jobs:
 
           Container image:
           \`\`\`
-          docker pull ghcr.io/ubermetroid/statesync:${TAG}
-          docker pull ghcr.io/ubermetroid/statesync:latest
+          docker pull ghcr.io/studio2201/statesync:${TAG}
+          docker pull ghcr.io/studio2201/statesync:latest
           \`\`\`
 
-          See the [README](https://github.com/UberMetroid/statesync#readme) and the
-          [commits in this release](https://github.com/UberMetroid/statesync/commits/${TAG}).
+          See the [README](https://github.com/studio2201/statesync#readme) and the
+          [commits in this release](https://github.com/studio2201/statesync/commits/${TAG}).
           EOF
           )
           gh release create "$TAG" \

@@ -11,7 +11,7 @@ RUN cargo build --release --target x86_64-unknown-linux-musl
 #     /config and /app to nobody:nogroup (uid 65534, Unraid's appdata
 #     convention), then exec's the daemon as nobody.
 #   - Daemon itself runs as nobody. It can write to /config (now owned
-#     by nobody) and /app. Binds to 0.0.0.0:8754 (no root needed for
+#     by nobody) and /app. Binds to 0.0.0.0:4407 (no root needed for
 #     ports >= 1024).
 #   - If /config is on a read-only mount, chown fails and the daemon
 #     falls back to /app/config.json (ephemeral), then to an in-memory
@@ -26,7 +26,7 @@ COPY container/entrypoint.sh /usr/local/bin/entrypoint.sh
 RUN chmod +x /usr/local/bin/entrypoint.sh /usr/local/bin/statesync
 ENV RUST_LOG=info
 ENV TZ=UTC
-EXPOSE 8754
+EXPOSE 4407
 HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
-  CMD wget -qO- http://127.0.0.1:8754/healthz || exit 1
+  CMD wget -qO- http://127.0.0.1:4407/healthz || exit 1
 ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]

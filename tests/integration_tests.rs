@@ -106,7 +106,7 @@ async fn test_api_protected_with_bearer_auth() {
     let web_state = Arc::new(WebServerState {
         app_state,
         reload_tx,
-        bind_addr: "0.0.0.0:8754".to_string(),
+        bind_addr: "0.0.0.0:4407".to_string(),
         web_auth: Some("bearer:secret123".to_string()),
         version: "test".to_string(),
         started_at: "2025-01-01T00:00:00Z".to_string(),
