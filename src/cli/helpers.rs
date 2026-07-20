@@ -131,3 +131,42 @@ pub fn print_help() {
     println!("  RUST_LOG                       tracing log filter (overrides default 'info').");
     println!("  TZ                             Container timezone.");
 }
+
+pub const DEFAULT_BIND: &str = "0.0.0.0:4601";
+
+pub fn resolve_bind_addr() -> String {
+    std::env::var("STATESYNC_BIND").unwrap_or_else(|_| DEFAULT_BIND.to_string())
+}
+
+pub fn resolve_web_auth() -> Option<String> {
+    std::env::var("STATESYNC_WEB_AUTH").ok().and_then(|v| {
+        let v = v.trim().to_string();
+        if v.is_empty() || v.eq_ignore_ascii_case("none") {
+            None
+        } else {
+            Some(v)
+        }
+    })
+}
+
+pub fn install_shutdown_handler() -> tokio::sync::oneshot::Receiver<()> {
+    let (tx, rx) = tokio::sync::oneshot::channel();
+    tokio::spawn(async move {
+        let mut sigterm =
+            match tokio::signal::unix::signal(tokio::signal::unix::SignalKind::terminate()) {
+                Ok(s) => s,
+                Err(_) => return,
+            };
+        let mut sigint =
+            match tokio::signal::unix::signal(tokio::signal::unix::SignalKind::interrupt()) {
+                Ok(s) => s,
+                Err(_) => return,
+            };
+        tokio::select! {
+            _ = sigterm.recv() => tracing::info!("SIGTERM received."),
+            _ = sigint.recv() => tracing::info!("SIGINT received."),
+        }
+        let _ = tx.send(());
+    });
+    rx
+}

@@ -4,6 +4,7 @@ use std::time::Duration;
 pub mod types;
 pub mod request;
 pub mod api;
+pub mod played;
 
 pub use types::{WsMessage, UserDataChangedInfo, UserDataEntry, SessionInfo, NowPlayingItem, PlayState, PlayedItem};
 

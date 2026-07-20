@@ -8,6 +8,7 @@ use crate::config::Config;
 use crate::state::AppState;
 
 pub mod loop_handler;
+pub mod handlers;
 pub use loop_handler::handle_websocket_loop;
 
 pub fn make_ws_url(url: &str, api_key: &str, is_emby: bool) -> String {

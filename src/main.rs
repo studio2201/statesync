@@ -19,23 +19,9 @@ use statesync::{
 
 mod cli;
 
-const DEFAULT_BIND: &str = "0.0.0.0:4601";
+use cli::{resolve_bind_addr, resolve_web_auth, install_shutdown_handler};
+
 const VERSION: &str = env!("CARGO_PKG_VERSION");
-
-fn resolve_bind_addr() -> String {
-    std::env::var("STATESYNC_BIND").unwrap_or_else(|_| DEFAULT_BIND.to_string())
-}
-
-fn resolve_web_auth() -> Option<String> {
-    std::env::var("STATESYNC_WEB_AUTH").ok().and_then(|v| {
-        let v = v.trim().to_string();
-        if v.is_empty() || v.eq_ignore_ascii_case("none") {
-            None
-        } else {
-            Some(v)
-        }
-    })
-}
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -251,26 +237,4 @@ fn init_logging() {
     use tracing_subscriber::{EnvFilter, fmt};
     let filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info"));
     let _ = fmt().with_env_filter(filter).try_init();
-}
-
-fn install_shutdown_handler() -> tokio::sync::oneshot::Receiver<()> {
-    let (tx, rx) = tokio::sync::oneshot::channel();
-    tokio::spawn(async move {
-        let mut sigterm =
-            match tokio::signal::unix::signal(tokio::signal::unix::SignalKind::terminate()) {
-                Ok(s) => s,
-                Err(_) => return,
-            };
-        let mut sigint =
-            match tokio::signal::unix::signal(tokio::signal::unix::SignalKind::interrupt()) {
-                Ok(s) => s,
-                Err(_) => return,
-            };
-        tokio::select! {
-            _ = sigterm.recv() => info!("SIGTERM received."),
-            _ = sigint.recv() => info!("SIGINT received."),
-        }
-        let _ = tx.send(());
-    });
-    rx
 }
