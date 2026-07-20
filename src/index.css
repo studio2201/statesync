@@ -17,7 +17,7 @@ h2 { font-size: 16px; margin: 0 0 15px 0; color: var(--border); border-left: 3px
 .server-info { display: flex; align-items: center; gap: 12px; }
 .status-Connected, .status-Synchronizing { color: var(--green); }
 .status-Reconnecting, .status-Connecting, .status-Validating, .status-Scanning { color: var(--accent); }
-.status-Offline { color: var(--red); }
+.status-Offline, .status-Error { color: var(--red); }
 .btn { background: transparent; border: 1px solid var(--border); color: var(--border); padding: 8px 16px; font-family: inherit; font-size: 12px; cursor: pointer; transition: all 0.2s; }
 .btn-small { background: transparent; border: 1px solid var(--border); color: var(--border); padding: 3px 8px; font-family: inherit; font-size: 10px; cursor: pointer; transition: all 0.2s; line-height: 1.2; }
 .btn-accent-small { border-color: var(--accent); color: var(--accent); }

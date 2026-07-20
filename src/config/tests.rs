@@ -143,4 +143,54 @@ mod tests {
         let s = std::fs::read_to_string(&path).unwrap();
         assert!(s.contains("sync_threshold_seconds"));
     }
+
+    #[test]
+    fn test_invalid_schemes_rejected() {
+        use crate::config::ServerConfig;
+        
+        let mut cfg = default_config();
+        cfg.servers.push(ServerConfig {
+            name: "bad_server".to_string(),
+            url: "ftp://127.0.0.1:8096".to_string(),
+            api_key: "key".to_string(),
+            is_emby: true,
+            sync_direction: "both".to_string(),
+            allow_insecure_http: true,
+        });
+        assert!(validate_config(&cfg).is_err(), "ftp scheme should be rejected");
+
+        cfg.servers[0].url = "ws://127.0.0.1:8096".to_string();
+        assert!(validate_config(&cfg).is_err(), "ws scheme should be rejected");
+
+        cfg.servers[0].url = "127.0.0.1:8096".to_string();
+        assert!(validate_config(&cfg).is_err(), "no scheme should be rejected");
+    }
+
+    #[test]
+    fn test_excessive_lengths_rejected() {
+        use crate::config::ServerConfig;
+
+        let mut cfg = default_config();
+        
+        // Name too long (> 64 chars)
+        cfg.servers.push(ServerConfig {
+            name: "a".repeat(65),
+            url: "http://127.0.0.1:8096".to_string(),
+            api_key: "key".to_string(),
+            is_emby: true,
+            sync_direction: "both".to_string(),
+            allow_insecure_http: true,
+        });
+        assert!(validate_config(&cfg).is_err(), "overly long name should be rejected");
+
+        // URL too long (> 512 chars)
+        cfg.servers[0].name = "ok_name".to_string();
+        cfg.servers[0].url = format!("http://{}", "a".repeat(510));
+        assert!(validate_config(&cfg).is_err(), "overly long url should be rejected");
+
+        // API Key too long (> 256 chars)
+        cfg.servers[0].url = "http://127.0.0.1:8096".to_string();
+        cfg.servers[0].api_key = "a".repeat(257);
+        assert!(validate_config(&cfg).is_err(), "overly long api key should be rejected");
+    }
 }

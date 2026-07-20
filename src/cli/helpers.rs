@@ -68,10 +68,15 @@ pub async fn init_clients_parallel(
                         "Failed to initialize cache for server '{}' on startup: {}. Retrying in background...",
                         name, e
                     );
-                    app_state.lock().await.log_event(
-                        "warn",
-                        &format!("Offline server '{}' on startup. Retrying in background...", name),
+                    let mut state = app_state.lock().await;
+                    if i < state.websocket_statuses.len() {
+                        state.websocket_statuses[i] = "Error".to_string();
+                    }
+                    state.log_event(
+                        "error",
+                        &format!("Failed to connect / init cache for '{}': {}", name, e),
                     );
+                    drop(state);
                     Some((
                         client,
                         statesync::state::ServerCache {

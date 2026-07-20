@@ -158,6 +158,11 @@ async fn main() -> Result<()> {
             }
         }
 
+        {
+            let mut state = app_state.lock().await;
+            state.websocket_statuses = vec!["Offline".to_string(); config.servers.len()];
+        }
+
         let (clients, caches) = match cli::init_clients_parallel(&config, &app_state).await {
             Ok(v) => v,
             Err(e) => {
@@ -174,9 +179,7 @@ async fn main() -> Result<()> {
 
         {
             let mut state = app_state.lock().await;
-            let count = caches.len();
             state.caches = caches;
-            state.websocket_statuses = vec!["Offline".to_string(); count];
         }
 
         let (shutdown_tx, _) = broadcast::channel::<()>(1);

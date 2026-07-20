@@ -48,6 +48,16 @@ pub async fn handle_websocket_loop(
                     "Background cache init failed for '{}': {}. Retrying in 10s...",
                     source_name, e
                 );
+                {
+                    let mut state = state_lock.lock().await;
+                    if source_index < state.websocket_statuses.len() {
+                        state.websocket_statuses[source_index] = "Error".to_string();
+                    }
+                    state.log_event(
+                        "error",
+                        &format!("Background cache init failed for '{}': {}", source_name, e),
+                    );
+                }
                 tokio::select! {
                     _ = shutdown_rx.recv() => return,
                     _ = tokio::time::sleep(Duration::from_secs(10)) => {}
@@ -197,7 +207,11 @@ pub async fn handle_websocket_loop(
             Err(e) => {
                 let err_str = redact_api_key(&e.to_string());
                 error!("Failed to connect to '{}' WebSocket: {}.", source_name, err_str);
-                state_lock.lock().await.log_event(
+                let mut state = state_lock.lock().await;
+                if source_index < state.websocket_statuses.len() {
+                    state.websocket_statuses[source_index] = "Error".to_string();
+                }
+                state.log_event(
                     "error",
                     &format!("Failed to connect to '{}' WebSocket: {}", source_name, err_str),
                 );
