@@ -98,6 +98,16 @@ pub async fn handle_websocket_loop(
                         "Failed to send subscribe message for '{}': {}",
                         source_name, e
                     );
+                    {
+                        let mut state = state_lock.lock().await;
+                        if source_index < state.websocket_statuses.len() {
+                            state.websocket_statuses[source_index] = "Error".to_string();
+                        }
+                        state.log_event(
+                            "error",
+                            &format!("Failed to send subscribe message for '{}': {}", source_name, e),
+                        );
+                    }
                     tokio::time::sleep(Duration::from_secs(5)).await;
                     continue;
                 }
@@ -199,10 +209,16 @@ pub async fn handle_websocket_loop(
                     }
                 }
                 warn!("'{}' WebSocket disconnected. Reconnecting...", source_name);
-                state_lock.lock().await.log_event(
-                    "warn",
-                    &format!("'{}' WebSocket disconnected. Reconnecting...", source_name),
-                );
+                {
+                    let mut state = state_lock.lock().await;
+                    if source_index < state.websocket_statuses.len() {
+                        state.websocket_statuses[source_index] = "Error".to_string();
+                    }
+                    state.log_event(
+                        "warn",
+                        &format!("'{}' WebSocket disconnected. Reconnecting...", source_name),
+                    );
+                }
             }
             Err(e) => {
                 let err_str = redact_api_key(&e.to_string());
