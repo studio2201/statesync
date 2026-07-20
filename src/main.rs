@@ -71,13 +71,7 @@ async fn main() -> Result<()> {
     let bind_addr = resolve_bind_addr();
     let web_auth = resolve_web_auth();
 
-    if !statesync::config::is_loopback_bind(&bind_addr) && web_auth.is_none() {
-        warn!(
-            "WARNING: Binding to non-loopback address '{}' without STATESYNC_WEB_AUTH configuration. \
-             Your dashboard is exposed publicly without authentication.",
-            bind_addr
-        );
-    }
+
 
     if web_auth.is_some() {
         eprintln!("STATESYNC_WEB_AUTH is set; bearer token required for /api/* endpoints.");
