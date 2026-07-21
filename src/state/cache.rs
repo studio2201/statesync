@@ -1,6 +1,6 @@
-use std::collections::HashMap;
-use anyhow::Result;
 use crate::client::MediaClient;
+use anyhow::Result;
+use std::collections::HashMap;
 
 #[derive(Debug, Clone)]
 /// Missing documentation.

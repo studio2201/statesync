@@ -1,5 +1,5 @@
-use crate::config::Config;
 use super::TEST_LOCK;
+use crate::config::Config;
 
 #[test]
 fn test_config_load_from_env_flat() {

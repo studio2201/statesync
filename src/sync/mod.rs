@@ -1,14 +1,18 @@
 use std::sync::OnceLock;
 use tokio::sync::Semaphore;
 
-/// Missing documentation.
-pub mod resolve;
+pub mod favorite_sync;
+pub mod live_item_title;
 /// Missing documentation.
 pub mod progress;
+pub mod progress_message;
+/// Missing documentation.
+pub mod resolve;
 #[cfg(test)]
 pub mod tests;
 
-pub use progress::{sync_favorite_to_targets, sync_progress_to_targets};
+pub use favorite_sync::sync_favorite_to_targets;
+pub use progress::sync_progress_to_targets;
 
 fn sync_semaphore() -> &'static Semaphore {
     static S: OnceLock<Semaphore> = OnceLock::new();
@@ -19,14 +23,4 @@ fn sync_semaphore() -> &'static Semaphore {
             .unwrap_or(8);
         Semaphore::new(permits.max(1))
     })
-}
-
-
-#[cfg(test)]
-mod generated_tests {
-    use super::*;
-    #[test]
-    fn test_sync_semaphore_generated_test_0() {
-        assert!(true);
-    }
 }

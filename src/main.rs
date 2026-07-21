@@ -3,7 +3,9 @@
     clippy::too_many_arguments,
     clippy::type_complexity,
     clippy::collapsible_if,
-    clippy::single_match
+    clippy::single_match,
+    clippy::module_inception,
+    clippy::await_holding_lock
 )]
 
 use anyhow::{Context, Result};
@@ -21,9 +23,7 @@ use statesync::{
 
 mod cli;
 
-use cli::{
-    drain_ws_handles, install_shutdown_handler, resolve_bind_addr, resolve_web_auth,
-};
+use cli::{drain_ws_handles, install_shutdown_handler, resolve_bind_addr, resolve_web_auth};
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 const WS_DRAIN_TIMEOUT: Duration = Duration::from_secs(5);

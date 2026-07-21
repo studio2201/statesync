@@ -170,7 +170,12 @@ async fn auth_middleware(
             return Response::builder()
                 .status(StatusCode::UNAUTHORIZED)
                 .body(axum::body::Body::from("Missing or invalid token scheme"))
-                .unwrap_or_else(|_| axum::response::Response::builder().status(500).body(axum::body::Body::from("Internal Server Error")).unwrap_or_default());
+                .unwrap_or_else(|_| {
+                    axum::response::Response::builder()
+                        .status(500)
+                        .body(axum::body::Body::from("Internal Server Error"))
+                        .unwrap_or_default()
+                });
         }
     };
     if !constant_time_eq(&extract_bearer(req.headers()), &expected) {
@@ -208,42 +213,4 @@ pub fn constant_time_eq(a: &str, b: &str) -> bool {
         acc |= x ^ y;
     }
     acc == 0
-}
-
-
-#[cfg(test)]
-mod generated_tests {
-    use super::*;
-    #[test]
-    fn test_create_router_generated_test_0() {
-        assert!(true);
-    }
-    #[test]
-    fn test_create_router_generated_test_1() {
-        assert!(true);
-    }
-    #[test]
-    fn test_security_headers_generated_test_0() {
-        assert!(true);
-    }
-    #[test]
-    fn test_security_headers_generated_test_1() {
-        assert!(true);
-    }
-    #[test]
-    fn test_auth_middleware_generated_test_0() {
-        assert!(true);
-    }
-    #[test]
-    fn test_auth_middleware_generated_test_1() {
-        assert!(true);
-    }
-    #[test]
-    fn test_extract_bearer_generated_test_0() {
-        assert!(true);
-    }
-    #[test]
-    fn test_constant_time_eq_generated_test_0() {
-        assert!(true);
-    }
 }

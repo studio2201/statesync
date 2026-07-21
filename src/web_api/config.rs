@@ -1,7 +1,7 @@
 use axum::{Extension, Json, http::StatusCode};
 use serde_json::json;
-use std::sync::Arc;
 pub use shared_core::mask_api_key;
+use std::sync::Arc;
 
 use crate::config::{Config, normalize_config, validate_config};
 use crate::web::WebServerState;
@@ -62,6 +62,8 @@ pub async fn post_config(
     let _ = state.reload_tx.send(()).await;
     (
         StatusCode::OK,
-        Json(json!({ "status": "ok", "message": "Configuration saved. Sync service is reloading..." })),
+        Json(
+            json!({ "status": "ok", "message": "Configuration saved. Sync service is reloading..." }),
+        ),
     )
 }

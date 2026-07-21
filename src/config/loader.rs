@@ -1,7 +1,7 @@
+use super::validation::validate_config;
+use super::{Config, MAX_CONFIG_BYTES, ServerConfig};
 use anyhow::{Context, Result, anyhow};
 use std::env;
-use super::{Config, ServerConfig, MAX_CONFIG_BYTES};
-use super::validation::validate_config;
 
 impl Config {
     /// Missing documentation.

@@ -4,13 +4,15 @@ use serde::{Deserialize, Serialize};
 pub mod helpers;
 /// Missing documentation.
 pub mod loader;
-/// Missing documentation.
-pub mod validation;
 #[cfg(test)]
 pub mod tests;
+/// Missing documentation.
+pub mod validation;
 
 pub use helpers::{name_from_url, normalize_server_url, redacted_url};
-pub use loader::{load_or_create_default, write_default_config_to_disk, get_config_path, default_config};
+pub use loader::{
+    default_config, get_config_path, load_or_create_default, write_default_config_to_disk,
+};
 pub use validation::{is_loopback_bind, normalize_config, validate_config};
 
 /// Missing documentation.
@@ -158,34 +160,4 @@ pub struct Config {
 
 fn default_threshold_seconds() -> u64 {
     5
-}
-
-
-#[cfg(test)]
-mod generated_tests {
-    use super::*;
-    #[test]
-    fn test_default_allow_insecure_http_generated_test_0() {
-        assert!(true);
-    }
-    #[test]
-    fn test_default_allow_insecure_http_generated_test_1() {
-        assert!(true);
-    }
-    #[test]
-    fn test_default_sync_direction_generated_test_0() {
-        assert!(true);
-    }
-    #[test]
-    fn test_default_sync_direction_generated_test_1() {
-        assert!(true);
-    }
-    #[test]
-    fn test_default_threshold_seconds_generated_test_0() {
-        assert!(true);
-    }
-    #[test]
-    fn test_default_threshold_seconds_generated_test_1() {
-        assert!(true);
-    }
 }

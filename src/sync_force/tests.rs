@@ -1,7 +1,9 @@
 #[cfg(test)]
 mod tests {
-    use crate::sync_force::{ForceSyncState, ForceSyncStatus, SyncForceTracker, ForceSyncError, helpers};
     use crate::sync_force::runner::rate_from_env;
+    use crate::sync_force::{
+        ForceSyncError, ForceSyncState, ForceSyncStatus, SyncForceTracker, helpers,
+    };
 
     #[test]
     fn force_direction_accepts_lowercase_both() {
@@ -117,17 +119,26 @@ mod tests {
         unsafe {
             std::env::set_var("STATESYNC_FORCE_DIRECTION", "emby_to_jellyfin");
         }
-        assert_eq!(helpers::direction_from_env(), crate::sync_force::Direction::Both);
+        assert_eq!(
+            helpers::direction_from_env(),
+            crate::sync_force::Direction::Both
+        );
 
         unsafe {
             std::env::set_var("STATESYNC_FORCE_DIRECTION", "jellyfin_to_emby");
         }
-        assert_eq!(helpers::direction_from_env(), crate::sync_force::Direction::Both);
+        assert_eq!(
+            helpers::direction_from_env(),
+            crate::sync_force::Direction::Both
+        );
 
         unsafe {
             std::env::remove_var("STATESYNC_FORCE_DIRECTION");
         }
-        assert_eq!(helpers::direction_from_env(), crate::sync_force::Direction::Both);
+        assert_eq!(
+            helpers::direction_from_env(),
+            crate::sync_force::Direction::Both
+        );
     }
 
     #[test]
@@ -154,12 +165,19 @@ mod tests {
     #[tokio::test]
     async fn test_force_sync_pair_cancelled_immediately() {
         let server = mockito::Server::new_async().await;
-        let client = std::sync::Arc::new(crate::client::MediaClient::new(server.url(), "key".to_string(), false));
+        let client = std::sync::Arc::new(crate::client::MediaClient::new(
+            server.url(),
+            "key".to_string(),
+            false,
+        ));
         let tracker = std::sync::Arc::new(SyncForceTracker::default());
-        tracker.cancel.store(true, std::sync::atomic::Ordering::SeqCst);
+        tracker
+            .cancel
+            .store(true, std::sync::atomic::Ordering::SeqCst);
 
         let config = crate::config::default_config();
-        let state = std::sync::Arc::new(tokio::sync::Mutex::new(crate::state::AppState::new(vec![])));
+        let state =
+            std::sync::Arc::new(tokio::sync::Mutex::new(crate::state::AppState::new(vec![])));
         let ctx = crate::sync_force::ForceContext {
             direction: crate::sync_force::Direction::Both,
             config,
@@ -192,7 +210,8 @@ mod tests {
             &mut errors,
             &sem,
             std::time::Duration::from_millis(1),
-        ).await;
+        )
+        .await;
 
         assert!(cancelled);
         assert_eq!(processed, 0);

@@ -1,9 +1,9 @@
-use std::sync::Arc;
-use std::time::Duration;
+use super::helpers::{format_force_skip_story, init_clients_parallel, print_force_progress};
 use statesync::config::Config;
 use statesync::state::AppState;
-use statesync::sync_force::{Direction, ForceContext, ForceSyncState, ForceSyncStatus, run_force_sync};
-use super::helpers::init_clients_parallel;
+use statesync::sync_force::{Direction, ForceContext, ForceSyncState, run_force_sync};
+use std::sync::Arc;
+use std::time::Duration;
 
 /// Returns (direction always Both, dry_run).
 pub(super) fn parse_sync_force_args(args: &[String]) -> (Direction, bool) {
@@ -17,70 +17,18 @@ pub(super) fn parse_sync_force_args(args: &[String]) -> (Direction, bool) {
             println!("Usage:");
             println!("  statesync --sync-force");
             println!("  statesync --sync-force --dry-run   # preview only, no writes\n");
-            println!("Meshes all send→receive server pairs (per-server send/receive still applies).");
-            println!("Uses Settings scopes (force played / position / favorites) and user allowlist.");
+            println!(
+                "Meshes all send→receive server pairs (per-server send/receive still applies)."
+            );
+            println!(
+                "Uses Settings scopes (force played / position / favorites) and user allowlist."
+            );
             println!("Skips already matched targets. Story: phases + skip reasons.");
             println!("Rate: STATESYNC_FORCE_RATE items/sec (default 5, max 50).");
             std::process::exit(0);
         }
     }
     (Direction::Both, dry_run)
-}
-
-fn phase_label(phase: Option<&str>) -> &'static str {
-    match phase.unwrap_or("").to_ascii_lowercase().as_str() {
-        "preparing" => "Preparing",
-        "played" => "Played history",
-        "favorites" => "Favorites",
-        "finishing" => "Finishing",
-        "done" => "Done",
-        "cancelled" => "Cancelled",
-        _ => "Running",
-    }
-}
-
-fn format_skip_story(status: &ForceSyncStatus) -> String {
-    let sr = &status.skip_reasons;
-    let mut bits = Vec::new();
-    if sr.already_equal > 0 {
-        bits.push(format!("{} already matched", sr.already_equal));
-    }
-    if sr.no_provider > 0 {
-        bits.push(format!("{} no IMDb/TMDb", sr.no_provider));
-    }
-    if sr.no_match > 0 {
-        bits.push(format!("{} not in other library", sr.no_match));
-    }
-    if sr.other > 0 {
-        bits.push(format!("{} other", sr.other));
-    }
-    if bits.is_empty() {
-        String::new()
-    } else {
-        format!(" · skips: {}", bits.join(", "))
-    }
-}
-
-fn print_force_progress(status: &ForceSyncStatus) {
-    let phase = phase_label(status.phase.as_deref());
-    let user = status.current_user.as_deref().unwrap_or("…");
-    let scope = if status.scope.is_empty() {
-        "default".to_string()
-    } else {
-        status.scope.join("+")
-    };
-    println!(
-        "  [{}] {}/{} · pushed {} · skipped {} · failed {} · user={} · scope={}{}",
-        phase,
-        status.processed,
-        status.total_pairs.max(1),
-        status.succeeded,
-        status.skipped,
-        status.failed,
-        user,
-        scope,
-        format_skip_story(status)
-    );
 }
 
 pub async fn run_sync_force_cli(args: &[String]) -> anyhow::Result<()> {
@@ -147,7 +95,11 @@ pub async fn run_sync_force_cli(args: &[String]) -> anyhow::Result<()> {
 
     println!(
         "Starting {} · {} · {} item/s · servers: {}",
-        if dry_run { "force preview (no writes)" } else { "force sync" },
+        if dry_run {
+            "force preview (no writes)"
+        } else {
+            "force sync"
+        },
         if scope_bits.is_empty() {
             "nothing enabled in Settings".to_string()
         } else {
@@ -193,11 +145,12 @@ pub async fn run_sync_force_cli(args: &[String]) -> anyhow::Result<()> {
     let status = run_force_sync(ctx).await;
     let _ = printer.await;
 
-    println!();
     let verb = match status.state {
         ForceSyncState::Completed if dry_run => "Force preview finished (no writes)",
         ForceSyncState::Completed => "Force sync finished cleanly",
-        ForceSyncState::Failed if status.last_error.as_deref() == Some("Sync cancelled by user") => {
+        ForceSyncState::Failed
+            if status.last_error.as_deref() == Some("Sync cancelled by user") =>
+        {
             "Force sync cancelled"
         }
         ForceSyncState::Failed if dry_run => "Force preview finished with errors (no writes)",
@@ -213,7 +166,7 @@ pub async fn run_sync_force_cli(args: &[String]) -> anyhow::Result<()> {
         status.skipped,
         status.failed
     );
-    let skip_story = format_skip_story(&status);
+    let skip_story = format_force_skip_story(&status);
     if !skip_story.is_empty() {
         println!("  {}", skip_story.trim_start_matches(" · "));
     }

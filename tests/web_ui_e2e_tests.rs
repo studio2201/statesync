@@ -2,9 +2,9 @@ use axum::{
     body::Body,
     http::{Request, StatusCode},
 };
-use percent_encoding::{utf8_percent_encode, NON_ALPHANUMERIC};
+use percent_encoding::{NON_ALPHANUMERIC, utf8_percent_encode};
 use statesync::state::AppState;
-use statesync::web::{create_router, WebServerState};
+use statesync::web::{WebServerState, create_router};
 use std::sync::Arc;
 use std::time::Instant;
 use tokio::sync::{Mutex, mpsc};
@@ -39,7 +39,9 @@ async fn test_e2e_serve_dashboard_html() {
     let response = app.oneshot(req).await.unwrap();
     assert_eq!(response.status(), StatusCode::OK);
 
-    let body_bytes = axum::body::to_bytes(response.into_body(), usize::MAX).await.unwrap();
+    let body_bytes = axum::body::to_bytes(response.into_body(), usize::MAX)
+        .await
+        .unwrap();
     let html = String::from_utf8(body_bytes.to_vec()).unwrap();
 
     assert!(html.contains("<!DOCTYPE html>"));
@@ -70,7 +72,9 @@ async fn test_e2e_api_server_info_query() {
     let response = app.oneshot(req).await.unwrap();
     assert_eq!(response.status(), StatusCode::OK);
 
-    let body_bytes = axum::body::to_bytes(response.into_body(), usize::MAX).await.unwrap();
+    let body_bytes = axum::body::to_bytes(response.into_body(), usize::MAX)
+        .await
+        .unwrap();
     let json_res: serde_json::Value = serde_json::from_slice(&body_bytes).unwrap();
 
     assert_eq!(json_res["name"], "Test Emby Server");
@@ -83,13 +87,15 @@ async fn test_e2e_api_server_info_query() {
 #[tokio::test]
 async fn test_e2e_api_test_connection_emby_and_jellyfin() {
     let mut server = mockito::Server::new_async().await;
-    
+
     // Mock Emby /Users response
-    let mock_users = server.mock("GET", "/Users?StartIndex=0&Limit=500")
+    let mock_users = server
+        .mock("GET", "/Users?StartIndex=0&Limit=500")
         .with_status(200)
         .with_header("content-type", "application/json")
         .with_body(r#"{"Items": [{"Name": "alice", "Id": "u1"}], "TotalRecordCount": 1}"#)
-        .create_async().await;
+        .create_async()
+        .await;
 
     let web_state = make_test_web_state();
     let app = create_router(web_state);
@@ -110,7 +116,9 @@ async fn test_e2e_api_test_connection_emby_and_jellyfin() {
     let response = app.oneshot(req).await.unwrap();
     assert_eq!(response.status(), StatusCode::OK);
 
-    let body_bytes = axum::body::to_bytes(response.into_body(), usize::MAX).await.unwrap();
+    let body_bytes = axum::body::to_bytes(response.into_body(), usize::MAX)
+        .await
+        .unwrap();
     let json_res: serde_json::Value = serde_json::from_slice(&body_bytes).unwrap();
 
     assert_eq!(json_res["status"], "ok");

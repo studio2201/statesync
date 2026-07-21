@@ -1,7 +1,7 @@
 use axum::{Extension, Json};
 use percent_encoding::{NON_ALPHANUMERIC, utf8_percent_encode};
 use serde_json::json;
-use std::collections::{HashSet, HashMap};
+use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 use tokio::sync::Mutex;
 
@@ -189,22 +189,4 @@ pub async fn get_status(
         "sync_logs": sync_logs,
         "last_full_sync": last_full_sync
     }))
-}
-
-
-#[cfg(test)]
-mod generated_tests {
-    use super::*;
-    #[test]
-    fn test_cache_stats_generated_test_0() {
-        assert!(true);
-    }
-    #[test]
-    fn test_get_status_generated_test_0() {
-        assert!(true);
-    }
-    #[test]
-    fn test_get_status_generated_test_1() {
-        assert!(true);
-    }
 }

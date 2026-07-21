@@ -51,10 +51,7 @@ pub async fn post_clear_watched(
             tracker
                 .force_sync_in_progress
                 .store(false, std::sync::atomic::Ordering::SeqCst);
-            return json_err(
-                StatusCode::INTERNAL_SERVER_ERROR,
-                &format!("config: {}", e),
-            );
+            return json_err(StatusCode::INTERNAL_SERVER_ERROR, &format!("config: {}", e));
         }
     };
     if config.servers.is_empty() {
@@ -134,7 +131,10 @@ async fn clear_watched_for_user(
         let client = MediaClient::new(s.url.clone(), s.api_key.clone(), s.is_emby);
         let user_id = {
             let st = app_state.lock().await;
-            let cache = st.caches.get(i).ok_or_else(|| "cache missing".to_string())?;
+            let cache = st
+                .caches
+                .get(i)
+                .ok_or_else(|| "cache missing".to_string())?;
             // Prefer exact key match (users map is lowercased keys in some paths)
             let direct = cache.users.get(&name.to_lowercase()).cloned();
             direct.or_else(|| {
@@ -173,8 +173,7 @@ async fn clear_watched_for_user(
         {
             let mut st = app_state.lock().await;
             let prefix = name.to_lowercase();
-            st.last_syncs
-                .retain(|(u, _), _| u.to_lowercase() != prefix);
+            st.last_syncs.retain(|(u, _), _| u.to_lowercase() != prefix);
         }
     }
 

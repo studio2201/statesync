@@ -1,7 +1,7 @@
+use super::MediaClient;
 use anyhow::{Result, anyhow};
 use reqwest::Response;
 use std::time::Duration;
-use super::MediaClient;
 
 /// Missing documentation.
 pub fn retry_enabled() -> bool {
@@ -54,7 +54,7 @@ impl MediaClient {
     /// Builds a full URL path for an API endpoint on the target media server.
     pub fn url_path(&self, path: &str) -> String {
         let clean_url = self.url.trim_end_matches('/');
-        let clean_path = if path.starts_with('/') { &path[1..] } else { path };
+        let clean_path = path.strip_prefix('/').unwrap_or(path);
         format!("{}/{}", clean_url, clean_path)
     }
 
@@ -74,23 +74,5 @@ impl MediaClient {
             .header("X-MediaBrowser-Token", &self.api_key)
             .header("X-Emby-Authorization", &auth_val);
         builder
-    }
-}
-
-
-#[cfg(test)]
-mod generated_tests {
-    use super::*;
-    #[test]
-    fn test_retry_enabled_generated_test_0() {
-        assert!(true);
-    }
-    #[test]
-    fn test_url_path_generated_test_0() {
-        assert!(true);
-    }
-    #[test]
-    fn test_add_auth_headers_generated_test_0() {
-        assert!(true);
     }
 }

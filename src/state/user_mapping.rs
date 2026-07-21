@@ -105,25 +105,3 @@ pub fn find_mapped_user_id(
     }
     None
 }
-
-
-#[cfg(test)]
-mod generated_tests {
-    use super::*;
-    #[test]
-    fn test_min_substring_len_generated_test_0() {
-        assert!(true);
-    }
-    #[test]
-    fn test_min_substring_len_generated_test_1() {
-        assert!(true);
-    }
-    #[test]
-    fn test_find_mapped_user_id_generated_test_0() {
-        assert!(true);
-    }
-    #[test]
-    fn test_find_mapped_user_id_generated_test_1() {
-        assert!(true);
-    }
-}

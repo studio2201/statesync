@@ -1,194 +1,79 @@
 # StateSync
 
-Copies **watched**, **resume point**, and **favorites** between Emby and Jellyfin  
-(and Emby↔Emby or Jellyfin↔Jellyfin). Same person, same title — both servers agree.
+**Watched, resume, and favorites — synced across Emby and Jellyfin.**
 
-It does **not** move video files, ratings, playlists, or library structure.
+```bash
+docker run -d --name statesync -p 4601:4601 -v statesync-config:/config \
+  ghcr.io/studio2201/statesync:latest
+```
 
----
+Open **http://localhost:4601** → **Add server** (paste address + API key) twice → play something.
 
-## What you need
-
-1. One or more Emby and/or Jellyfin servers
-2. An **API key** from each server’s admin UI
-3. A machine that can reach them over your LAN (Unraid, Docker, etc.)
+StateSync detects Emby vs Jellyfin, matches people and titles, and keeps watch state in sync. No login.
 
 ---
 
-## Install (Unraid)
+## One perfect flow
 
-1. Docker → **Add Container** (import `statesync.xml` from this repo if needed)
-2. **Network Type: `br0`** (same custom network Emby/Jellyfin use)
-3. Optional: give StateSync its own fixed IP on that network
-4. Appdata: `/mnt/user/appdata/statesync`
-5. Apply, open `http://STATESYNC-IP:4601`
+1. Run the container (command above).  
+2. Add your Emby (or Jellyfin) URL + API key → Save (type is auto-detected).  
+3. Add the other server.  
+4. If usernames differ, click **Link users**.  
+5. Optional: **Preview force** then **Force sync** for history.  
 
-No login.
-
-### Networking (if “can’t connect”)
-
-If Emby or Jellyfin has its **own LAN IP** on Unraid **br0** (macvlan):
-
-| StateSync network | Can reach Emby on br0? |
-|-------------------|------------------------|
-| `br0` (same as Emby) | **Yes** |
-| `bridge` (docker0) | **Usually no** |
-| `host` | **Usually no** (host can’t talk to its own macvlan containers) |
-
-Your PC can open the media server in a browser. That does **not** mean a container on `bridge`/`host` can. Put StateSync on **br0**, then use the media server’s br0 IP.
+That’s it. Live plays sync automatically; force fills in the past.
 
 ---
 
-## Install (Docker Compose)
+## Install elsewhere
+
+**Unraid:** import `statesync.xml`, network **br0** (same as Emby/Jellyfin if they use macvlan), appdata → `/mnt/user/appdata/statesync`.
+
+**Compose:**
 
 ```yaml
 services:
   statesync:
     image: ghcr.io/studio2201/statesync:latest
-    container_name: statesync
+    ports: ["4601:4601"]
+    volumes: ["./config:/config"]
     restart: unless-stopped
-    ports:
-      - "4601:4601"
-    volumes:
-      - ./config:/config
-    environment:
-      - TZ=UTC
-      - RUST_LOG=info
 ```
+
+---
+
+## What it syncs
+
+| | Live | Force |
+|--|------|--------|
+| Played | ✓ | ✓ (skips if already matched) |
+| Position | ✓ | ✓ |
+| Favorites | ✓ | ✓ |
+
+**Clear watched** is a per-user button (all servers for that person) — not force sync.  
+**Not synced:** ratings, playlists, libraries, files.
+
+---
+
+## CLI
 
 ```bash
-mkdir -p config
-docker compose up -d
-# open http://localhost:4601
+statesync --validate
+statesync --sync-force --dry-run   # preview
+statesync --sync-force
+statesync --tui
 ```
 
 ---
 
-## First setup (web UI)
+## Docs & ops
 
-1. Open the dashboard
-2. **Add server** → address + API key (paste a full browser URL if you want)
-3. **Test connection** or **Save** — Emby vs Jellyfin is **detected automatically**
-4. Add the other server(s)
-5. If usernames differ, **Link users**
-6. Optional: **Force sync** once to backfill history
-
-### Server address
-
-Use something StateSync can reach **from the container**:
-
-| Good | Bad |
-|------|-----|
-| `http://10.0.0.5:8096` | `localhost` (the container itself) |
-| `http://10.0.0.5:8920` | Hostnames Docker can’t resolve |
-
-Full browser URLs are fine. Only **host + port** is kept. Same IP, different ports get distinct auto-names (`10.0.0.5:8096` vs `10.0.0.5:8920`).
-
-### API key
-
-Create one in Emby or Jellyfin admin settings. It lives in `config.json` — keep it private.
-
----
-
-## What syncs
-
-| | Live (while watching) | Force sync (backfill) |
-|--|----------------------|------------------------|
-| **Played** | Yes | Yes — skips if target already watched |
-| **Position** | Yes | Yes — in-progress; skips if already equal |
-| **Favorites** | Yes | Yes — skips if already favorited |
-
-**Not synced:** ratings, playlists, collections, hidden items, layout, passwords, libraries.
-
-Titles match by **IMDb / TMDb**. People match by **username** or **Link users**.
-
-**User allowlist** (Settings): empty = everyone; otherwise only listed people (and their linked aliases) sync.
-
-**Clear watched** (per user on the Mapped users table): dedicated action that marks **all** played items unwatched for that person on **every** server. Irreversible. Not part of force sync.
-
-Dashboard status **Live** means the event stream is open (healthy).
-
----
-
-## After it works
-
-- **Now playing** — who’s watching, with posters  
-- **Preview force** — count would-push / skips without writing  
-- **Force sync** — historical catch-up; phases + skip reasons  
-- **Settings** — live/force fields, user allowlist, threshold  
-- **Activity log** — copyable story for support  
-
-Config file:
-
-`/config/config.json` (Unraid: `/mnt/user/appdata/statesync/config.json`)
-
----
-
-## Common problems
-
-**“Failed to get users list” / can’t connect**  
-1. Address is a **LAN IP** reachable *from Docker*, not `localhost`  
-2. Correct port  
-3. Valid API key  
-4. StateSync on the same network path as the media server (often **br0**)
-
-**Users don’t match**  
-Same username matches automatically. Different names → **Link users** (or Settings text mappings).
-
-**Nothing while watching**  
-Both servers should show **Live**. Wait a few seconds after pause/seek. Force is for history, not a substitute for a live link.
-
-**Force mostly “already matched”**  
-Good — target already had that state. Second runs should be fast.
-
----
-
-## CLI (optional)
-
-```bash
-statesync --help
-statesync --version
-statesync --validate              # config + connection check
-statesync --sync-force            # full backfill
-statesync --sync-force --dry-run  # preview only (no writes)
-statesync --tui                   # terminal dashboard
-statesync --dry-run               # mapping / cache check (not the same as force dry-run)
-statesync --reload
-```
-
-Force prints phases and skip reasons (already matched, no provider id, not in other library).
-
----
-
-## How it works (short)
-
-1. Connects to each server (HTTP + live event stream)  
-2. Detects Emby vs Jellyfin  
-3. Watches play / played / favorite changes  
-4. Matches titles by IMDb/TMDb, people by name or link  
-5. Writes only the fields you enabled — skips when already equal  
-
----
-
-## Optional environment
-
-| Variable | Default | Meaning |
-|----------|---------|---------|
-| `STATESYNC_BIND` | `0.0.0.0:4601` | Web UI listen address |
-| `STATESYNC_SYNC_THRESHOLD_SECONDS` | `5` | Ignore near-duplicate progress |
-| `STATESYNC_FORCE_RATE` | `5` | Force items/sec (1–50) |
-| `STATESYNC_LOG_RETENTION` | `100` | In-memory activity log lines |
-| `STATESYNC_ACCEPT_INVALID_CERTS` | `false` | Self-signed HTTPS only if you must |
-| `RUST_LOG` | `info` | Log level |
-| `TZ` | `UTC` | Timestamps |
-
----
-
-## Links
-
-- Image: `ghcr.io/studio2201/statesync:latest` (also `0.28.x` / `v0.28.x` each release)
-- Unraid not pulling new image: force-update / remove local image, re-apply  
+- Networking (Unraid br0): if the container can’t reach Emby, put StateSync on **br0** next to it.  
+- Config: `/config/config.json`  
+- Image tags: `latest`, `0.28.x`, `v0.28.x`  
 - Issues: https://github.com/studio2201/statesync/issues  
+
+Architecture and env vars: see [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) (if present) or in-app **How sync works**.
 
 ## License
 

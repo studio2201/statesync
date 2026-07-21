@@ -3,9 +3,18 @@ use crate::config::validation::is_loopback_bind;
 
 #[test]
 fn test_redacted_url_strips_path_and_query() {
-    assert_eq!(redacted_url("http://192.168.1.1:8096/foo"), "http://192.168.1.1:8096/...");
-    assert_eq!(redacted_url("https://emby.example.com/"), "https://emby.example.com");
-    assert_eq!(redacted_url("https://emby.example.com"), "https://emby.example.com");
+    assert_eq!(
+        redacted_url("http://192.168.1.1:8096/foo"),
+        "http://192.168.1.1:8096/..."
+    );
+    assert_eq!(
+        redacted_url("https://emby.example.com/"),
+        "https://emby.example.com"
+    );
+    assert_eq!(
+        redacted_url("https://emby.example.com"),
+        "https://emby.example.com"
+    );
     assert_eq!(redacted_url("not-a-url"), "not-a-url");
 }
 
@@ -22,7 +31,10 @@ fn test_is_loopback_bind() {
 
 #[test]
 fn test_redacted_url_various_schemes() {
-    assert_eq!(redacted_url("http://user:pass@host:port/path"), "http://user:pass@host:port/...");
+    assert_eq!(
+        redacted_url("http://user:pass@host:port/path"),
+        "http://user:pass@host:port/..."
+    );
     assert_eq!(redacted_url("https://my-host.com"), "https://my-host.com");
     assert_eq!(redacted_url("http://127.0.0.1"), "http://127.0.0.1");
 }
@@ -102,8 +114,7 @@ fn test_sync_options_missing_fields_deserialize() {
     let cfg: crate::config::Config = serde_json::from_str(r#"{"servers":[]}"#).unwrap();
     assert!(cfg.sync.live_favorites);
     // Old configs may still contain force_unwatch; ignore unknown via serde default path
-    let _old: crate::config::Config = serde_json::from_str(
-        r#"{"servers":[],"sync":{"force_unwatch":true,"live_played":true}}"#,
-    )
-    .unwrap();
+    let _old: crate::config::Config =
+        serde_json::from_str(r#"{"servers":[],"sync":{"force_unwatch":true,"live_played":true}}"#)
+            .unwrap();
 }

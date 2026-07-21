@@ -11,11 +11,17 @@ fn test_constant_time_eq() {
 #[test]
 fn test_extract_bearer() {
     let mut headers = HeaderMap::new();
-    headers.insert(axum::http::header::AUTHORIZATION, "Bearer mytoken".parse().unwrap());
+    headers.insert(
+        axum::http::header::AUTHORIZATION,
+        "Bearer mytoken".parse().unwrap(),
+    );
     assert_eq!(extract_bearer(&headers), "mytoken");
 
     let mut headers_lower = HeaderMap::new();
-    headers_lower.insert(axum::http::header::AUTHORIZATION, "bearer mytoken2".parse().unwrap());
+    headers_lower.insert(
+        axum::http::header::AUTHORIZATION,
+        "bearer mytoken2".parse().unwrap(),
+    );
     assert_eq!(extract_bearer(&headers_lower), "mytoken2");
 
     let headers_empty = HeaderMap::new();
@@ -26,21 +32,42 @@ fn test_extract_bearer() {
 async fn test_serve_manifest() {
     let resp = handlers::serve_manifest().await.into_response();
     assert_eq!(resp.status(), axum::http::StatusCode::OK);
-    assert_eq!(resp.headers().get("content-type").unwrap().to_str().unwrap(), "application/manifest+json");
+    assert_eq!(
+        resp.headers()
+            .get("content-type")
+            .unwrap()
+            .to_str()
+            .unwrap(),
+        "application/manifest+json"
+    );
 }
 
 #[tokio::test]
 async fn test_serve_icon() {
     let resp = handlers::serve_icon().await.into_response();
     assert_eq!(resp.status(), axum::http::StatusCode::OK);
-    assert_eq!(resp.headers().get("content-type").unwrap().to_str().unwrap(), "image/svg+xml");
+    assert_eq!(
+        resp.headers()
+            .get("content-type")
+            .unwrap()
+            .to_str()
+            .unwrap(),
+        "image/svg+xml"
+    );
 }
 
 #[tokio::test]
 async fn test_serve_favicon() {
     let resp = handlers::serve_favicon().await.into_response();
     assert_eq!(resp.status(), axum::http::StatusCode::OK);
-    assert_eq!(resp.headers().get("content-type").unwrap().to_str().unwrap(), "image/jpeg");
+    assert_eq!(
+        resp.headers()
+            .get("content-type")
+            .unwrap()
+            .to_str()
+            .unwrap(),
+        "image/jpeg"
+    );
     let bytes = axum::body::to_bytes(resp.into_body(), 1024 * 1024)
         .await
         .expect("favicon body");
@@ -57,7 +84,14 @@ async fn test_serve_favicon() {
 async fn test_serve_sw() {
     let resp = handlers::serve_sw().await.into_response();
     assert_eq!(resp.status(), axum::http::StatusCode::OK);
-    assert_eq!(resp.headers().get("content-type").unwrap().to_str().unwrap(), "application/javascript");
+    assert_eq!(
+        resp.headers()
+            .get("content-type")
+            .unwrap()
+            .to_str()
+            .unwrap(),
+        "application/javascript"
+    );
 }
 
 #[tokio::test]
@@ -80,8 +114,10 @@ async fn test_serve_healthz_unhealthy() {
         started_at: "2025-01-01".to_string(),
         started_instant: Instant::now(),
     });
-    
-    let resp = handlers::serve_healthz(Extension(web_state)).await.into_response();
+
+    let resp = handlers::serve_healthz(Extension(web_state))
+        .await
+        .into_response();
     assert_eq!(resp.status(), StatusCode::SERVICE_UNAVAILABLE);
 }
 
@@ -89,7 +125,9 @@ async fn test_serve_healthz_unhealthy() {
 async fn test_serve_healthz_healthy() {
     let cache = crate::state::ServerCache {
         name: "test".to_string(),
-        users: [("alice".to_string(), "u1".to_string())].into_iter().collect(),
+        users: [("alice".to_string(), "u1".to_string())]
+            .into_iter()
+            .collect(),
         imdb_to_id: std::collections::HashMap::new(),
         tmdb_to_id: std::collections::HashMap::new(),
         id_to_providers: std::collections::HashMap::new(),
@@ -109,7 +147,9 @@ async fn test_serve_healthz_healthy() {
         started_at: "2025-01-01".to_string(),
         started_instant: Instant::now(),
     });
-    
-    let resp = handlers::serve_healthz(Extension(web_state)).await.into_response();
+
+    let resp = handlers::serve_healthz(Extension(web_state))
+        .await
+        .into_response();
     assert_eq!(resp.status(), StatusCode::OK);
 }

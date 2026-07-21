@@ -1,8 +1,8 @@
-use anyhow::{Result, anyhow};
 use super::{
-    Config, ServerConfig, MAX_NAME_LEN, MAX_URL_LEN, MAX_KEY_LEN, MAX_MAPPING_GROUPS,
-    MAX_GROUP_MEMBERS, MAX_MEMBER_LEN, name_from_url, normalize_server_url,
+    Config, MAX_GROUP_MEMBERS, MAX_KEY_LEN, MAX_MAPPING_GROUPS, MAX_MEMBER_LEN, MAX_NAME_LEN,
+    MAX_URL_LEN, ServerConfig, name_from_url, normalize_server_url,
 };
+use anyhow::{Result, anyhow};
 
 /// Fill empty names from URL host and normalize URLs in place.
 pub fn normalize_config(cfg: &mut Config) {

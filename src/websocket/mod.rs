@@ -8,9 +8,11 @@ use crate::config::Config;
 use crate::state::AppState;
 
 /// Missing documentation.
-pub mod loop_handler;
-/// Missing documentation.
 pub mod handlers;
+/// Missing documentation.
+pub mod loop_handler;
+pub mod session_events;
+pub mod userdata_events;
 pub use loop_handler::handle_websocket_loop;
 
 #[cfg(test)]
@@ -47,9 +49,7 @@ pub fn make_ws_url(url: &str, api_key: &str, is_emby: bool) -> String {
     let encoded_key = utf8_percent_encode(api_key.trim(), NON_ALPHANUMERIC).to_string();
     format!(
         "{}{}?api_key={}&deviceId=statesync",
-        ws_base,
-        ws_path,
-        encoded_key
+        ws_base, ws_path, encoded_key
     )
 }
 
@@ -113,26 +113,4 @@ fn redact_api_key(msg: &str) -> String {
     }
     result.push_str(current);
     result
-}
-
-
-#[cfg(test)]
-mod generated_tests {
-    use super::*;
-    #[test]
-    fn test_next_backoff_generated_test_0() {
-        assert!(true);
-    }
-    #[test]
-    fn test_spawn_userdata_sync_generated_test_0() {
-        assert!(true);
-    }
-    #[test]
-    fn test_spawn_userdata_sync_generated_test_1() {
-        assert!(true);
-    }
-    #[test]
-    fn test_redact_api_key_generated_test_0() {
-        assert!(true);
-    }
 }

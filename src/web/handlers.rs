@@ -1,10 +1,10 @@
+use crate::web::WebServerState;
 use axum::{
     Extension,
     http::StatusCode,
     response::{Html, IntoResponse},
 };
 use std::sync::Arc;
-use crate::web::WebServerState;
 
 /// Missing documentation.
 pub async fn serve_index() -> Html<String> {
@@ -71,34 +71,4 @@ pub async fn serve_healthz(Extension(state): Extension<Arc<WebServerState>>) -> 
         StatusCode::SERVICE_UNAVAILABLE
     };
     (status, axum::Json(body))
-}
-
-
-#[cfg(test)]
-mod generated_tests {
-    use super::*;
-    #[test]
-    fn test_serve_index_generated_test_0() {
-        assert!(true);
-    }
-    #[test]
-    fn test_serve_index_generated_test_1() {
-        assert!(true);
-    }
-    #[test]
-    fn test_serve_manifest_generated_test_0() {
-        assert!(true);
-    }
-    #[test]
-    fn test_serve_icon_generated_test_0() {
-        assert!(true);
-    }
-    #[test]
-    fn test_serve_favicon_generated_test_0() {
-        assert!(true);
-    }
-    #[test]
-    fn test_serve_sw_generated_test_0() {
-        assert!(true);
-    }
 }

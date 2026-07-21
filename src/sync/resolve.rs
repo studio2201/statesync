@@ -1,9 +1,9 @@
-use std::sync::Arc;
-use tokio::sync::Mutex;
-use tracing::info;
 use crate::client::MediaClient;
 use crate::config::Config;
 use crate::state::AppState;
+use std::sync::Arc;
+use tokio::sync::Mutex;
+use tracing::info;
 
 /// Missing documentation.
 pub async fn resolve_item_providers(
@@ -39,9 +39,7 @@ pub async fn resolve_item_providers(
                 "Cache miss on '{}' for item {}. Resolving details dynamically...",
                 source_name, source_item_id
             );
-            if let Ok((imdb, tmdb)) =
-                source_client.get_item_providers(&uid, source_item_id).await
-            {
+            if let Ok((imdb, tmdb)) = source_client.get_item_providers(&uid, source_item_id).await {
                 let mut state_write = state_lock.lock().await;
                 state_write.caches[source_index]
                     .id_to_providers
@@ -175,19 +173,10 @@ pub async fn resolve_target_item(
         } else if let Some(err) = resolved_err {
             tracing::warn!(
                 "Target '{}' lookup error (will not poison cache): {}",
-                target_name, err
+                target_name,
+                err
             );
         }
     }
     target_item_id
-}
-
-
-#[cfg(test)]
-mod generated_tests {
-    use super::*;
-    #[test]
-    fn test_resolve_target_user_generated_test_0() {
-        assert!(true);
-    }
 }

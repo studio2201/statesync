@@ -1,6 +1,6 @@
-mod loader;
 mod env;
-mod validation;
 mod helpers;
+mod loader;
+mod validation;
 
 pub static TEST_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());

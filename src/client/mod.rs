@@ -2,18 +2,23 @@ use reqwest::Client;
 use std::time::Duration;
 
 /// Missing documentation.
-pub mod types;
+pub mod api;
+pub mod api_items;
+/// Missing documentation.
+pub mod played;
+pub mod played_lists;
 /// Missing documentation.
 pub mod request;
 /// Missing documentation.
-pub mod api;
-/// Missing documentation.
-pub mod played;
+pub mod types;
 
 #[cfg(test)]
 mod tests;
 
-pub use types::{WsMessage, UserDataChangedInfo, UserDataEntry, SessionInfo, NowPlayingItem, PlayState, PlayedItem};
+pub use types::{
+    NowPlayingItem, PlayState, PlayedItem, SessionInfo, UserDataChangedInfo, UserDataEntry,
+    WsMessage,
+};
 
 /// Missing documentation.
 pub struct MediaClient {
@@ -63,15 +68,5 @@ impl MediaClient {
             api_key: clean_api_key,
             is_emby,
         }
-    }
-}
-
-
-#[cfg(test)]
-mod generated_tests {
-    use super::*;
-    #[test]
-    fn test_new_generated_test_0() {
-        assert!(true);
     }
 }

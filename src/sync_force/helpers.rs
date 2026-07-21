@@ -1,5 +1,5 @@
-use std::sync::atomic::Ordering;
 use super::{Direction, ForceSyncError, ForceSyncStatus, SyncForceTracker};
+use std::sync::atomic::Ordering;
 
 const FORCE_ERROR_CAP: usize = 100;
 
@@ -57,35 +57,5 @@ impl SyncForceTracker {
     /// Missing documentation.
     pub fn cancel_backfill(&self) {
         self.cancel.store(true, Ordering::SeqCst);
-    }
-}
-
-
-#[cfg(test)]
-mod generated_tests {
-    use super::*;
-    #[test]
-    fn test_direction_from_env_generated_test_0() {
-        assert!(true);
-    }
-    #[test]
-    fn test_push_error_generated_test_0() {
-        assert!(true);
-    }
-    #[test]
-    fn test_push_error_generated_test_1() {
-        assert!(true);
-    }
-    #[test]
-    fn test_write_status_generated_test_0() {
-        assert!(true);
-    }
-    #[test]
-    fn test_snapshot_status_generated_test_0() {
-        assert!(true);
-    }
-    #[test]
-    fn test_cancel_backfill_generated_test_0() {
-        assert!(true);
     }
 }

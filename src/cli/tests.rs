@@ -1,6 +1,6 @@
+use super::init_clients_parallel;
 use statesync::config::{Config, ServerConfig};
 use statesync::state::AppState;
-use super::init_clients_parallel;
 use std::sync::Arc;
 use tokio::sync::Mutex;
 
@@ -22,7 +22,7 @@ async fn test_init_clients_parallel_connection_failure() {
     };
 
     let app_state = Arc::new(Mutex::new(AppState::new(vec![])));
-    
+
     // Initialize websocket_statuses in app_state like main.rs does
     {
         let mut state = app_state.lock().await;
@@ -30,9 +30,7 @@ async fn test_init_clients_parallel_connection_failure() {
     }
 
     // Run init_clients_parallel
-    let (clients, caches) = init_clients_parallel(&config, &app_state)
-        .await
-        .unwrap();
+    let (clients, caches) = init_clients_parallel(&config, &app_state).await.unwrap();
 
     // Assert that the client and cache were still created
     assert_eq!(clients.len(), 1);
@@ -48,7 +46,11 @@ async fn test_init_clients_parallel_connection_failure() {
     assert!(!state.sync_logs.is_empty());
     let error_log = &state.sync_logs[0];
     assert_eq!(error_log.level, "error");
-    assert!(error_log.message.contains("Failed to connect / init cache for 'failing_server'"));
+    assert!(
+        error_log
+            .message
+            .contains("Failed to connect / init cache for 'failing_server'")
+    );
 }
 
 static CLI_TEST_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
@@ -64,9 +66,11 @@ fn test_resolve_bind_addr() {
     unsafe {
         std::env::remove_var("STATESYNC_BIND");
     }
-    assert_eq!(super::helpers::resolve_bind_addr(), super::helpers::DEFAULT_BIND);
+    assert_eq!(
+        super::helpers::resolve_bind_addr(),
+        super::helpers::DEFAULT_BIND
+    );
 }
-
 
 #[test]
 fn test_resolve_web_auth_disabled() {
@@ -93,13 +97,30 @@ fn test_parse_sync_force_args() {
     use statesync::sync_force::Direction;
 
     let args1 = vec!["binary".to_string(), "--sync-force".to_string()];
-    assert_eq!(super::force_sync::parse_sync_force_args(&args1), (Direction::Both, false));
+    assert_eq!(
+        super::force_sync::parse_sync_force_args(&args1),
+        (Direction::Both, false)
+    );
 
-    let args2 = vec!["binary".to_string(), "--sync-force".to_string(), "--dry-run".to_string()];
-    assert_eq!(super::force_sync::parse_sync_force_args(&args2), (Direction::Both, true));
+    let args2 = vec![
+        "binary".to_string(),
+        "--sync-force".to_string(),
+        "--dry-run".to_string(),
+    ];
+    assert_eq!(
+        super::force_sync::parse_sync_force_args(&args2),
+        (Direction::Both, true)
+    );
 
-    let args3 = vec!["binary".to_string(), "--sync-force".to_string(), "--preview".to_string()];
-    assert_eq!(super::force_sync::parse_sync_force_args(&args3), (Direction::Both, true));
+    let args3 = vec![
+        "binary".to_string(),
+        "--sync-force".to_string(),
+        "--preview".to_string(),
+    ];
+    assert_eq!(
+        super::force_sync::parse_sync_force_args(&args3),
+        (Direction::Both, true)
+    );
 }
 
 #[test]
@@ -151,12 +172,17 @@ fn test_draw_tui_from_json() {
 async fn test_trigger_reload_success() {
     let _guard = CLI_TEST_LOCK.lock().unwrap();
     let mut server = mockito::Server::new_async().await;
-    let mock_call = server.mock("POST", "/api/reload")
+    let mock_call = server
+        .mock("POST", "/api/reload")
         .with_status(200)
-        .create_async().await;
+        .create_async()
+        .await;
 
     unsafe {
-        std::env::set_var("STATESYNC_RELOAD_URL", format!("{}/api/reload", server.url()));
+        std::env::set_var(
+            "STATESYNC_RELOAD_URL",
+            format!("{}/api/reload", server.url()),
+        );
         std::env::set_var("STATESYNC_WEB_AUTH", "bearer:mysecret");
     }
 

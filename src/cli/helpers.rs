@@ -1,4 +1,5 @@
 use anyhow::Result;
+use statesync::sync_force::ForceSyncStatus;
 use std::sync::Arc;
 use std::time::Duration;
 use tokio::sync::Mutex;
@@ -176,4 +177,60 @@ pub async fn drain_ws_handles(handles: Vec<tokio::task::JoinHandle<()>>, timeout
         }
     };
     let _ = tokio::time::timeout(timeout, drain).await;
+}
+
+pub(super) fn phase_label(phase: Option<&str>) -> &'static str {
+    match phase.unwrap_or("").to_ascii_lowercase().as_str() {
+        "preparing" => "Preparing",
+        "played" => "Played history",
+        "favorites" => "Favorites",
+        "finishing" => "Finishing",
+        "done" => "Done",
+        "cancelled" => "Cancelled",
+        _ => "Running",
+    }
+}
+
+pub(super) fn format_force_skip_story(status: &ForceSyncStatus) -> String {
+    let sr = &status.skip_reasons;
+    let mut bits = Vec::new();
+    if sr.already_equal > 0 {
+        bits.push(format!("{} already matched", sr.already_equal));
+    }
+    if sr.no_provider > 0 {
+        bits.push(format!("{} no IMDb/TMDb", sr.no_provider));
+    }
+    if sr.no_match > 0 {
+        bits.push(format!("{} not in other library", sr.no_match));
+    }
+    if sr.other > 0 {
+        bits.push(format!("{} other", sr.other));
+    }
+    if bits.is_empty() {
+        String::new()
+    } else {
+        format!(" · skips: {}", bits.join(", "))
+    }
+}
+
+pub(super) fn print_force_progress(status: &ForceSyncStatus) {
+    let phase = phase_label(status.phase.as_deref());
+    let user = status.current_user.as_deref().unwrap_or("…");
+    let scope = if status.scope.is_empty() {
+        "default".to_string()
+    } else {
+        status.scope.join("+")
+    };
+    println!(
+        "  [{}] {}/{} · pushed {} · skipped {} · failed {} · user={} · scope={}{}",
+        phase,
+        status.processed,
+        status.total_pairs.max(1),
+        status.succeeded,
+        status.skipped,
+        status.failed,
+        user,
+        scope,
+        format_force_skip_story(status)
+    );
 }

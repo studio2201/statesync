@@ -1,4 +1,4 @@
-use crate::config::{Config, default_config, validate_config, ServerConfig};
+use crate::config::{Config, ServerConfig, default_config, validate_config};
 
 fn valid_server(name: &str) -> ServerConfig {
     ServerConfig {
@@ -61,7 +61,9 @@ fn test_excessive_lengths_rejected() {
 
 #[test]
 fn test_config_default_helpers() {
-    use crate::config::{default_allow_insecure_http, default_sync_direction, default_threshold_seconds};
+    use crate::config::{
+        default_allow_insecure_http, default_sync_direction, default_threshold_seconds,
+    };
     assert!(default_allow_insecure_http());
     assert_eq!(default_sync_direction(), "both");
     assert_eq!(default_threshold_seconds(), 5);

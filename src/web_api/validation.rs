@@ -16,8 +16,7 @@ pub fn valid_server_name(name: &str) -> bool {
         && !name.contains('/')
         && !name.contains('\\')
         && name.chars().all(|c| {
-            c.is_ascii_alphanumeric()
-                || matches!(c, '-' | '_' | '.' | ' ' | ':' | '[' | ']' | '@')
+            c.is_ascii_alphanumeric() || matches!(c, '-' | '_' | '.' | ' ' | ':' | '[' | ']' | '@')
         })
 }
 
@@ -34,10 +33,7 @@ pub fn validate_upstream_url(url: &str) -> Result<(), &'static str> {
     if !valid_server_url(url) {
         return Err("Invalid URL");
     }
-    let without_scheme = url
-        .split_once("://")
-        .map(|(_, rest)| rest)
-        .unwrap_or(url);
+    let without_scheme = url.split_once("://").map(|(_, rest)| rest).unwrap_or(url);
     let host_port = without_scheme
         .split('/')
         .next()

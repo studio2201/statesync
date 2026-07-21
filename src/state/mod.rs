@@ -1,14 +1,14 @@
+use crate::sync_force::SyncForceTracker;
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::Instant;
-use crate::sync_force::SyncForceTracker;
 
 /// Missing documentation.
 pub mod cache;
-/// Missing documentation.
-pub mod user_mapping;
 #[cfg(test)]
 pub mod tests;
+/// Missing documentation.
+pub mod user_mapping;
 
 pub use cache::{ServerCache, init_server_cache};
 pub use user_mapping::find_mapped_user_id;
@@ -130,27 +130,5 @@ impl AppState {
         if self.sync_logs.len() > self.log_retention {
             self.sync_logs.truncate(self.log_retention);
         }
-    }
-}
-
-
-#[cfg(test)]
-mod generated_tests {
-    use super::*;
-    #[test]
-    fn test_default_log_retention_generated_test_0() {
-        assert!(true);
-    }
-    #[test]
-    fn test_new_generated_test_0() {
-        assert!(true);
-    }
-    #[test]
-    fn test_log_event_generated_test_0() {
-        assert!(true);
-    }
-    #[test]
-    fn test_log_sync_generated_test_0() {
-        assert!(true);
     }
 }

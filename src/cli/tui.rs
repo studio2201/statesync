@@ -76,10 +76,7 @@ pub(super) fn draw_tui_from_json(status: &serde_json::Value) {
 
     // Last force story
     if let Some(fs) = status.get("last_full_sync") {
-        let st = fs
-            .get("state")
-            .and_then(|v| v.as_str())
-            .unwrap_or("Idle");
+        let st = fs.get("state").and_then(|v| v.as_str()).unwrap_or("Idle");
         let st_l = st.to_ascii_lowercase();
         if st_l == "running" {
             let phase = fs
@@ -110,16 +107,24 @@ pub(super) fn draw_tui_from_json(status: &serde_json::Value) {
             } else {
                 "\x1B[31mlast force had errors\x1B[0m"
             };
-            let mut line = format!("{}  pushed {} · skipped {} · failed {}", label, ok, skip, fail);
+            let mut line = format!(
+                "{}  pushed {} · skipped {} · failed {}",
+                label, ok, skip, fail
+            );
             if let Some(sr) = fs.get("skip_reasons") {
-                let ae = sr.get("already_equal").and_then(|v| v.as_u64()).unwrap_or(0);
+                let ae = sr
+                    .get("already_equal")
+                    .and_then(|v| v.as_u64())
+                    .unwrap_or(0);
                 if ae > 0 {
                     line.push_str(&format!(" · {} already matched", ae));
                 }
             }
             println!("{}", line);
         } else {
-            println!("\x1B[90mForce sync  not run yet — use Force sync in the web UI or --sync-force\x1B[0m");
+            println!(
+                "\x1B[90mForce sync  not run yet — use Force sync in the web UI or --sync-force\x1B[0m"
+            );
         }
         println!("\x1B[90m────────────────────────────────────────────────────────\x1B[0m");
     }
@@ -224,19 +229,4 @@ pub(super) fn draw_tui_from_json(status: &serde_json::Value) {
 
     use std::io::Write;
     let _ = std::io::stdout().flush();
-}
-
-
-#[cfg(test)]
-mod generated_tests {
-    use super::*;
-    #[test]
-    fn test_run_tui_generated_test_0() {
-        assert!(true);
-    }
-    #[test]
-    fn test_server_status_label_live() {
-        assert_eq!(server_status_label("Synchronizing").0, "Live");
-        assert_eq!(server_status_label("Error").0, "Failed");
-    }
 }

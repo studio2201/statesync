@@ -1,3 +1,7 @@
+use super::{handlers, next_backoff, redact_api_key};
+use crate::client::{MediaClient, SessionInfo, WsMessage};
+use crate::config::Config;
+use crate::state::AppState;
 use futures_util::{SinkExt, StreamExt};
 use serde_json::json;
 use std::sync::Arc;
@@ -6,13 +10,6 @@ use tokio::sync::{Mutex, broadcast};
 use tokio_tungstenite::connect_async;
 use tokio_tungstenite::tungstenite::protocol::Message as WsMessageProto;
 use tracing::{error, info, warn};
-
-use crate::client::{MediaClient, SessionInfo, WsMessage};
-use crate::config::Config;
-use crate::state::AppState;
-use super::{next_backoff, redact_api_key, handlers};
-
-/// Missing documentation.
 pub async fn handle_websocket_loop(
     source_index: usize,
     ws_url: &str,
@@ -31,7 +28,6 @@ pub async fn handle_websocket_loop(
             }
             state.caches[source_index].name.clone()
         };
-
         let cache_uninitialized = {
             let state = state_lock.lock().await;
             source_index < state.caches.len() && state.caches[source_index].users.is_empty()
@@ -66,12 +62,10 @@ pub async fn handle_websocket_loop(
                 continue;
             }
         }
-
         if source_index >= state_lock.lock().await.websocket_statuses.len() {
             return;
         }
         state_lock.lock().await.websocket_statuses[source_index] = "Reconnecting".to_string();
-
         let conn_result = tokio::select! {
             _ = shutdown_rx.recv() => {
                 state_lock.lock().await.websocket_statuses[source_index] = "Offline".to_string();
@@ -79,7 +73,6 @@ pub async fn handle_websocket_loop(
             }
             res = connect_async(ws_url) => res,
         };
-
         match conn_result {
             Ok((mut ws_stream, _)) => {
                 info!("'{}' WebSocket connected.", source_name);
@@ -91,7 +84,6 @@ pub async fn handle_websocket_loop(
                 state.websocket_statuses[source_index] = "Synchronizing".to_string();
                 drop(state);
                 backoff_attempt = 0;
-
                 let start_msg =
                     json!({ "MessageType": "SessionsStart", "Data": "0,1000" }).to_string();
                 if let Err(e) = ws_stream.send(WsMessageProto::Text(start_msg.into())).await {
@@ -106,17 +98,18 @@ pub async fn handle_websocket_loop(
                         }
                         state.log_event(
                             "error",
-                            &format!("Failed to send subscribe message for '{}': {}", source_name, e),
+                            &format!(
+                                "Failed to send subscribe message for '{}': {}",
+                                source_name, e
+                            ),
                         );
                     }
                     tokio::time::sleep(Duration::from_secs(5)).await;
                     continue;
                 }
-
                 let mut last_activity = Instant::now();
                 let mut ping_interval = tokio::time::interval(Duration::from_secs(30));
                 ping_interval.tick().await;
-
                 loop {
                     let next_msg = tokio::select! {
                         _ = shutdown_rx.recv() => {
@@ -137,14 +130,11 @@ pub async fn handle_websocket_loop(
                         }
                         msg = ws_stream.next() => msg,
                     };
-
                     let msg = match next_msg {
                         Some(m) => m,
                         None => break,
                     };
-
                     last_activity = Instant::now();
-
                     match msg {
                         Ok(WsMessageProto::Text(text)) => {
                             if let Ok(ws_msg) = serde_json::from_str::<WsMessage>(&text) {
@@ -223,18 +213,23 @@ pub async fn handle_websocket_loop(
             }
             Err(e) => {
                 let err_str = redact_api_key(&e.to_string());
-                error!("Failed to connect to '{}' WebSocket: {}.", source_name, err_str);
+                error!(
+                    "Failed to connect to '{}' WebSocket: {}.",
+                    source_name, err_str
+                );
                 let mut state = state_lock.lock().await;
                 if source_index < state.websocket_statuses.len() {
                     state.websocket_statuses[source_index] = "Error".to_string();
                 }
                 state.log_event(
                     "error",
-                    &format!("Failed to connect to '{}' WebSocket: {}", source_name, err_str),
+                    &format!(
+                        "Failed to connect to '{}' WebSocket: {}",
+                        source_name, err_str
+                    ),
                 );
             }
         }
-
         let backoff = next_backoff(backoff_attempt);
         backoff_attempt = backoff_attempt.saturating_add(1);
         tokio::select! {
@@ -246,4 +241,3 @@ pub async fn handle_websocket_loop(
         }
     }
 }
-

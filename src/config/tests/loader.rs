@@ -1,5 +1,5 @@
-use crate::config::{Config, default_config, ServerConfig};
 use super::TEST_LOCK;
+use crate::config::{Config, ServerConfig, default_config};
 
 #[test]
 fn test_config_deserialization_with_defaults() {
@@ -88,7 +88,7 @@ fn test_config_save_invalid_path() {
         sync_direction: "both".to_string(),
         allow_insecure_http: true,
     });
-    
+
     let path = crate::config::get_config_path();
     let old_content = std::fs::read_to_string(path).ok();
     let _ = std::fs::remove_file(path);

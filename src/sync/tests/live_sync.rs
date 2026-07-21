@@ -204,12 +204,11 @@ async fn played_true_is_debounced_via_history() {
         vec![],
     );
     let mut emby = make_cache("emby", vec![("alice", "u1")]);
-    emby.id_to_providers.insert(
-        "item1".to_string(),
-        ("tt999".to_string(), "".to_string()),
-    );
+    emby.id_to_providers
+        .insert("item1".to_string(), ("tt999".to_string(), "".to_string()));
     let mut jf = make_cache("jellyfin", vec![("alice", "u2")]);
-    jf.imdb_to_id.insert("tt999".to_string(), "item_jf".to_string());
+    jf.imdb_to_id
+        .insert("tt999".to_string(), "item_jf".to_string());
     let app_state = std::sync::Arc::new(tokio::sync::Mutex::new(AppState::new(vec![emby, jf])));
 
     let key = ("alice".to_string(), "tt999".to_string());
@@ -276,12 +275,6 @@ fn fuzzy_user_match_refuses_wrong_user_by_default() {
     let mut users = std::collections::HashMap::new();
     users.insert("bobby".to_string(), "id_bobby".to_string());
     users.insert("annabelle".to_string(), "id_ann".to_string());
-    assert_eq!(
-        crate::state::find_mapped_user_id("bob", &users, &[]),
-        None
-    );
-    assert_eq!(
-        crate::state::find_mapped_user_id("ann", &users, &[]),
-        None
-    );
+    assert_eq!(crate::state::find_mapped_user_id("bob", &users, &[]), None);
+    assert_eq!(crate::state::find_mapped_user_id("ann", &users, &[]), None);
 }

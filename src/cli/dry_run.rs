@@ -1,8 +1,8 @@
-use std::collections::HashSet;
-use std::time::Duration;
 use statesync::client::MediaClient;
 use statesync::config::Config;
 use statesync::state::init_server_cache;
+use std::collections::HashSet;
+use std::time::Duration;
 
 pub async fn trigger_reload() -> anyhow::Result<()> {
     println!("Sending reload signal to active statesync service...");
@@ -143,22 +143,4 @@ pub async fn dry_run() -> anyhow::Result<()> {
     }
     println!("\n✓ Dry run complete; no problems detected.");
     Ok(())
-}
-
-
-#[cfg(test)]
-mod generated_tests {
-    use super::*;
-    #[test]
-    fn test_trigger_reload_generated_test_0() {
-        assert!(true);
-    }
-    #[test]
-    fn test_dry_run_generated_test_0() {
-        assert!(true);
-    }
-    #[test]
-    fn test_dry_run_generated_test_1() {
-        assert!(true);
-    }
 }
