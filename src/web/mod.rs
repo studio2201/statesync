@@ -77,6 +77,10 @@ pub fn create_router(web_state: Arc<WebServerState>) -> Router {
             axum::routing::post(crate::web_api::post_users_refresh),
         )
         .route(
+            "/api/users/clear_watched",
+            axum::routing::post(crate::web_api::post_clear_watched),
+        )
+        .route(
             "/api/sync/force",
             axum::routing::post(crate::web_api::post_sync_force),
         )

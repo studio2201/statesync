@@ -28,6 +28,12 @@ pub async fn sync_progress_to_targets(
     if !send_position && !(send_played && played) {
         return;
     }
+    if !config
+        .sync
+        .user_allowed(user_name, &config.user_mappings)
+    {
+        return;
+    }
     {
         let st = state_lock.lock().await;
         if st
@@ -300,6 +306,12 @@ pub async fn sync_favorite_to_targets(
     item_name: Option<String>,
 ) {
     if !config.sync.live_favorites {
+        return;
+    }
+    if !config
+        .sync
+        .user_allowed(user_name, &config.user_mappings)
+    {
         return;
     }
     {

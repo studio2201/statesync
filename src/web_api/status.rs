@@ -172,6 +172,7 @@ pub async fn get_status(
         "by_field": tracker_status.by_field,
         "scope": tracker_status.scope,
         "skip_reasons": tracker_status.skip_reasons,
+        "dry_run": tracker_status.dry_run,
     });
 
     Json(json!({

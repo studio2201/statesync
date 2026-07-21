@@ -92,8 +92,10 @@ pub(super) fn draw_tui_from_json(status: &serde_json::Value) {
                 .get("current_user")
                 .and_then(|v| v.as_str())
                 .unwrap_or("…");
+            let dry = fs.get("dry_run").and_then(|v| v.as_bool()).unwrap_or(false);
             println!(
-                "\x1B[36mForce sync\x1B[0m  {} · {}/{} · {}",
+                "\x1B[36m{}\x1B[0m  {} · {}/{} · {}",
+                if dry { "Force preview" } else { "Force sync" },
                 force_phase_label(phase),
                 processed,
                 total.max(1),

@@ -102,6 +102,10 @@ Create one in Emby or Jellyfin admin settings. It lives in `config.json` — kee
 
 Titles match by **IMDb / TMDb**. People match by **username** or **Link users**.
 
+**User allowlist** (Settings): empty = everyone; otherwise only listed people (and their linked aliases) sync.
+
+**Clear watched** (per user on the Mapped users table): dedicated action that marks **all** played items unwatched for that person on **every** server. Irreversible. Not part of force sync.
+
 Dashboard status **Live** means the event stream is open (healthy).
 
 ---
@@ -109,8 +113,9 @@ Dashboard status **Live** means the event stream is open (healthy).
 ## After it works
 
 - **Now playing** — who’s watching, with posters  
-- **Force sync** — historical catch-up; shows phases and *why* items were skipped  
-- **Settings** — turn live/force fields on or off; threshold for near-duplicate progress  
+- **Preview force** — count would-push / skips without writing  
+- **Force sync** — historical catch-up; phases + skip reasons  
+- **Settings** — live/force fields, user allowlist, threshold  
 - **Activity log** — copyable story for support  
 
 Config file:
@@ -143,11 +148,12 @@ Good — target already had that state. Second runs should be fast.
 ```bash
 statesync --help
 statesync --version
-statesync --validate       # config + connection check
-statesync --sync-force     # full backfill (played / position / favorites per Settings)
-statesync --tui            # terminal dashboard (same story as the web UI)
-statesync --dry-run        # mapping / cache check without writing play state
-statesync --reload         # ask the running service to reload config
+statesync --validate              # config + connection check
+statesync --sync-force            # full backfill
+statesync --sync-force --dry-run  # preview only (no writes)
+statesync --tui                   # terminal dashboard
+statesync --dry-run               # mapping / cache check (not the same as force dry-run)
+statesync --reload
 ```
 
 Force prints phases and skip reasons (already matched, no provider id, not in other library).

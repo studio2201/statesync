@@ -79,6 +79,10 @@ pub struct SyncOptions {
     /// Force: push favorites.
     #[serde(default = "default_true")]
     pub force_favorites: bool,
+    /// If non-empty, only these usernames (case-insensitive) take part in live/force sync.
+    /// Empty = everyone. Also matches names linked via user_mappings.
+    #[serde(default)]
+    pub user_allowlist: Vec<String>,
 }
 
 fn default_true() -> bool {
@@ -94,7 +98,42 @@ impl Default for SyncOptions {
             force_played: true,
             force_position: true,
             force_favorites: true,
+            user_allowlist: Vec::new(),
         }
+    }
+}
+
+impl SyncOptions {
+    /// True if this username may sync (allowlist empty = all users).
+    pub fn user_allowed(&self, username: &str, user_mappings: &[Vec<String>]) -> bool {
+        if self.user_allowlist.is_empty() {
+            return true;
+        }
+        let want: std::collections::HashSet<String> = self
+            .user_allowlist
+            .iter()
+            .map(|s| s.trim().to_lowercase())
+            .filter(|s| !s.is_empty())
+            .collect();
+        if want.is_empty() {
+            return true;
+        }
+        let u = username.trim().to_lowercase();
+        if want.contains(&u) {
+            return true;
+        }
+        // Linked aliases: if any name in the same mapping group is allowlisted, allow all.
+        for group in user_mappings {
+            let members: Vec<String> = group
+                .iter()
+                .map(|s| s.trim().to_lowercase())
+                .filter(|s| !s.is_empty())
+                .collect();
+            if members.iter().any(|m| m == &u) && members.iter().any(|m| want.contains(m)) {
+                return true;
+            }
+        }
+        false
     }
 }
 

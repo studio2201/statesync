@@ -92,14 +92,14 @@ fn test_print_help() {
 fn test_parse_sync_force_args() {
     use statesync::sync_force::Direction;
 
-    let args1 = vec!["binary".to_string(), "--sync-force".to_string(), "--direction=emby-to-jellyfin".to_string()];
-    assert_eq!(super::force_sync::parse_sync_force_args(&args1), Direction::EmbyToJellyfin);
+    let args1 = vec!["binary".to_string(), "--sync-force".to_string()];
+    assert_eq!(super::force_sync::parse_sync_force_args(&args1), (Direction::Both, false));
 
-    let args2 = vec!["binary".to_string(), "--sync-force".to_string(), "--direction=jellyfin-to-emby".to_string()];
-    assert_eq!(super::force_sync::parse_sync_force_args(&args2), Direction::JellyfinToEmby);
+    let args2 = vec!["binary".to_string(), "--sync-force".to_string(), "--dry-run".to_string()];
+    assert_eq!(super::force_sync::parse_sync_force_args(&args2), (Direction::Both, true));
 
-    let args3 = vec!["binary".to_string(), "--sync-force".to_string(), "--direction=both".to_string()];
-    assert_eq!(super::force_sync::parse_sync_force_args(&args3), Direction::Both);
+    let args3 = vec!["binary".to_string(), "--sync-force".to_string(), "--preview".to_string()];
+    assert_eq!(super::force_sync::parse_sync_force_args(&args3), (Direction::Both, true));
 }
 
 #[test]

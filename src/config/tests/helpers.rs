@@ -82,6 +82,19 @@ fn test_sync_options_default_power_law() {
     let s = crate::config::SyncOptions::default();
     assert!(s.live_played && s.live_position && s.live_favorites);
     assert!(s.force_played && s.force_position && s.force_favorites);
+    assert!(s.user_allowlist.is_empty());
+}
+
+#[test]
+fn test_user_allowlist_matches_and_mappings() {
+    let mut s = crate::config::SyncOptions::default();
+    assert!(s.user_allowed("anyone", &[]));
+    s.user_allowlist = vec!["Alice".into()];
+    assert!(s.user_allowed("alice", &[]));
+    assert!(!s.user_allowed("bob", &[]));
+    let maps = vec![vec!["alice".into(), "alice_jf".into()]];
+    assert!(s.user_allowed("alice_jf", &maps));
+    assert!(!s.user_allowed("carol", &maps));
 }
 
 #[test]

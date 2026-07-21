@@ -184,6 +184,7 @@ mod extra_tests {
             by_field: Default::default(),
             scope: Vec::new(),
             skip_reasons: Default::default(),
+            dry_run: false,
         };
         assert_eq!(status.state, ForceSyncState::Completed);
         assert_eq!(status.total_pairs, 10);

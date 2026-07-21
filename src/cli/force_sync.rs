@@ -5,31 +5,26 @@ use statesync::state::AppState;
 use statesync::sync_force::{Direction, ForceContext, ForceSyncState, ForceSyncStatus, run_force_sync};
 use super::helpers::init_clients_parallel;
 
-pub(super) fn parse_sync_force_args(args: &[String]) -> Direction {
+/// Returns (direction always Both, dry_run).
+pub(super) fn parse_sync_force_args(args: &[String]) -> (Direction, bool) {
+    let mut dry_run = false;
     for a in args.iter().skip(2) {
-        if let Some(v) = a.strip_prefix("--direction=") {
-            return match v.to_ascii_lowercase().as_str() {
-                "emby-to-jellyfin" | "embytojellyfin" => Direction::EmbyToJellyfin,
-                "jellyfin-to-emby" | "jellyfintoemby" => Direction::JellyfinToEmby,
-                _ => Direction::Both, // both / empty / unknown
-            };
+        if a == "--dry-run" || a == "--preview" {
+            dry_run = true;
         }
         if a == "--help" || a == "-h" {
             println!("Force sync — backfill watched, resume, and favorites\n");
             println!("Usage:");
             println!("  statesync --sync-force");
-            println!("  statesync --sync-force --direction=both\n");
-            println!("Direction (optional; default both):");
-            println!("  both                 All send-capable servers → all receive-capable (recommended)");
-            println!("  emby-to-jellyfin     Legacy filter by server type");
-            println!("  jellyfin-to-emby     Legacy filter by server type\n");
-            println!("Uses the same Settings scopes as the web UI (force played / position / favorites).");
-            println!("Skips items already matched on the target. Story lines show phase + skip reasons.");
+            println!("  statesync --sync-force --dry-run   # preview only, no writes\n");
+            println!("Meshes all send→receive server pairs (per-server send/receive still applies).");
+            println!("Uses Settings scopes (force played / position / favorites) and user allowlist.");
+            println!("Skips already matched targets. Story: phases + skip reasons.");
             println!("Rate: STATESYNC_FORCE_RATE items/sec (default 5, max 50).");
             std::process::exit(0);
         }
     }
-    statesync::sync_force::direction_from_env()
+    (Direction::Both, dry_run)
 }
 
 fn phase_label(phase: Option<&str>) -> &'static str {
@@ -128,7 +123,7 @@ pub async fn run_sync_force_cli(args: &[String]) -> anyhow::Result<()> {
     }
 
     let tracker = state.lock().await.sync_force.clone();
-    let direction = parse_sync_force_args(args);
+    let (direction, dry_run) = parse_sync_force_args(args);
     let rate = std::env::var("STATESYNC_FORCE_RATE")
         .ok()
         .and_then(|v| v.parse::<u32>().ok())
@@ -146,9 +141,13 @@ pub async fn run_sync_force_cli(args: &[String]) -> anyhow::Result<()> {
     if sync.force_favorites {
         scope_bits.push("favorites");
     }
+    if dry_run {
+        scope_bits.push("dry-run");
+    }
 
     println!(
-        "Starting force sync · {} · {} item/s · servers: {}",
+        "Starting {} · {} · {} item/s · servers: {}",
+        if dry_run { "force preview (no writes)" } else { "force sync" },
         if scope_bits.is_empty() {
             "nothing enabled in Settings".to_string()
         } else {
@@ -157,7 +156,10 @@ pub async fn run_sync_force_cli(args: &[String]) -> anyhow::Result<()> {
         rate,
         server_names.join(", ")
     );
-    println!("Live play sync pauses until this finishes. Ctrl+C cancels after the current item.\n");
+    if !sync.user_allowlist.is_empty() {
+        println!("  user allowlist: {}", sync.user_allowlist.join(", "));
+    }
+    println!("Live play sync pauses until this finishes.\n");
 
     let last_print = Arc::new(tokio::sync::Mutex::new(std::time::Instant::now()));
     let printer = {
@@ -186,22 +188,30 @@ pub async fn run_sync_force_cli(args: &[String]) -> anyhow::Result<()> {
         state,
         tracker: tracker.clone(),
         direction,
+        dry_run,
     };
     let status = run_force_sync(ctx).await;
     let _ = printer.await;
 
     println!();
     let verb = match status.state {
+        ForceSyncState::Completed if dry_run => "Force preview finished (no writes)",
         ForceSyncState::Completed => "Force sync finished cleanly",
         ForceSyncState::Failed if status.last_error.as_deref() == Some("Sync cancelled by user") => {
             "Force sync cancelled"
         }
+        ForceSyncState::Failed if dry_run => "Force preview finished with errors (no writes)",
         ForceSyncState::Failed => "Force sync finished with errors",
         _ => "Force sync ended",
     };
     println!(
-        "{} · looked at {} · pushed {} · skipped {} · failed {}",
-        verb, status.processed, status.succeeded, status.skipped, status.failed
+        "{} · looked at {} · {} {} · skipped {} · failed {}",
+        verb,
+        status.processed,
+        if dry_run { "would push" } else { "pushed" },
+        status.succeeded,
+        status.skipped,
+        status.failed
     );
     let skip_story = format_skip_story(&status);
     if !skip_story.is_empty() {

@@ -282,13 +282,16 @@ async function deleteServer(idx) {
 async function saveSettings() {
   currentConfig.sync_threshold_seconds = parseInt($('syncThreshold').value);
   const chk = (id, def) => { const el = $(id); return el ? !!el.checked : def; };
+  const allowRaw = ($('cfgUserAllowlist') && $('cfgUserAllowlist').value) || '';
+  const user_allowlist = allowRaw.split(/[\n,]+/).map(s => s.trim()).filter(s => s.length > 0);
   currentConfig.sync = {
     live_played: chk('syncLivePlayed', true),
     live_position: chk('syncLivePosition', true),
     live_favorites: chk('syncLiveFavorites', true),
     force_played: chk('syncForcePlayed', true),
     force_position: chk('syncForcePosition', true),
-    force_favorites: chk('syncForceFavorites', true)
+    force_favorites: chk('syncForceFavorites', true),
+    user_allowlist
   };
   const mappingsLines = $('cfgUserMappings').value.split('\n');
   const user_mappings = [];
@@ -371,11 +374,12 @@ function applyForceSyncLiveUi(fs) {
   const st = forceStateKey(fs.state);
   const done = st === 'completed' || st === 'failed' || !!fs.finished_at;
   live.style.display = 'flex';
+  const dry = !!fs.dry_run || (fs.scope && fs.scope.indexOf('dry-run') >= 0);
   const title = $('fsStoryTitle');
   if (title) {
-    if (done && st === 'completed') title.textContent = 'Force sync finished';
-    else if (done && st === 'failed') title.textContent = 'Force sync finished with errors';
-    else title.textContent = 'Force sync · ' + forcePhaseLabel(fs.phase);
+    if (done && st === 'completed') title.textContent = dry ? 'Force preview finished (no writes)' : 'Force sync finished';
+    else if (done && st === 'failed') title.textContent = dry ? 'Force preview finished with errors' : 'Force sync finished with errors';
+    else title.textContent = (dry ? 'Force preview · ' : 'Force sync · ') + forcePhaseLabel(fs.phase);
   }
   const bar = $('fsProgressBar');
   if (bar) { bar.value = done && totalPairs === 0 ? 100 : pct; bar.max = 100; }
@@ -406,9 +410,9 @@ function applyForceSyncLiveUi(fs) {
     const played = bf.played || {};
     const fav = bf.favorite || {};
     const parts = [];
-    if (!done) parts.push('Live play sync is paused while this runs.');
+    if (!done) parts.push(dry ? 'Preview only — no server data is changed.' : 'Live play sync is paused while this runs.');
     if (fs.scope && fs.scope.length) parts.push('Scope: ' + fs.scope.join(', ') + '.');
-    parts.push('Pushed ' + (fs.succeeded || 0) + ', skipped ' + (fs.skipped || 0) + ', failed ' + (fs.failed || 0) + '.');
+    parts.push((dry ? 'Would push ' : 'Pushed ') + (fs.succeeded || 0) + ', skipped ' + (fs.skipped || 0) + ', failed ' + (fs.failed || 0) + '.');
     if (played.ok || played.skip || played.fail) {
       parts.push('Played ' + (played.ok || 0) + ' ok / ' + (played.skip || 0) + ' skip / ' + (played.fail || 0) + ' fail.');
     }
@@ -427,12 +431,37 @@ function applyForceSyncLiveUi(fs) {
     detail.textContent = parts.join(' ');
   }
 }
-async function forceSync() {
-  const btn = $('forceSyncBtn');
+async function clearWatchedForUser(name) {
+  if (!name) return;
+  const ok = confirm(
+    'Clear ALL watched history for "' + name + '" on every connected server?\n\n' +
+    'Every played item will be marked unwatched. This cannot be undone.\n\n' +
+    'Favorites and libraries are not removed — only watched flags.'
+  );
+  if (!ok) return;
+  showToast('Clearing watched for ' + name + '…');
+  try {
+    const res = await authedFetch('/api/users/clear_watched', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name })
+    });
+    const body = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(body.message || ('HTTP ' + res.status));
+    showToast(body.message || ('Clearing watched for ' + name));
+    setTimeout(loadDashboard, 1500);
+  } catch (err) {
+    showToast('Clear watched failed: ' + err.message);
+  }
+}
+async function forceSync(dryRun) {
+  dryRun = !!dryRun;
+  const btn = dryRun ? $('previewForceBtn') : $('forceSyncBtn');
+  const other = dryRun ? $('forceSyncBtn') : $('previewForceBtn');
   if (btn && btn.disabled) return;
   if (btn) btn.disabled = true;
+  if (other) other.disabled = true;
   window._forceSyncOptimistic = true;
-  // Show the story immediately — do not wait for the first poll.
   applyForceSyncLiveUi({
     state: 'Running',
     started_at: new Date().toISOString(),
@@ -443,17 +472,22 @@ async function forceSync() {
     skipped: 0,
     failed: 0,
     current_user: null,
-    last_error: null
+    last_error: null,
+    dry_run: dryRun,
+    scope: dryRun ? ['dry-run'] : []
   });
   const statusHint = $('forceSyncStatus');
-  if (statusHint) statusHint.textContent = 'Force sync started — scanning played history on every linked user…';
-  showToast('Force sync started — backfilling watched history');
+  if (statusHint) {
+    statusHint.textContent = dryRun
+      ? 'Preview force — counting what would change (no writes)…'
+      : 'Force sync started — scanning history on every linked user…';
+  }
+  showToast(dryRun ? 'Force preview started (no writes)' : 'Force sync started');
   try {
     const res = await authedFetch('/api/sync/force', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      // PascalCase matches serde default; lowercase "both" also accepted server-side.
-      body: JSON.stringify({ direction: 'Both' })
+      body: JSON.stringify({ direction: 'Both', dry_run: dryRun })
     });
     if (!res.ok && res.status !== 202) {
       let msg = 'HTTP ' + res.status;
@@ -471,8 +505,9 @@ async function forceSync() {
     window._forceSyncOptimistic = false;
     const live = $('forceSyncLive');
     if (live) live.style.display = 'none';
-    showToast('Force sync failed: ' + err.message);
+    showToast((dryRun ? 'Preview' : 'Force sync') + ' failed: ' + err.message);
     if (btn) btn.disabled = false;
+    if (other) other.disabled = false;
   }
 }
 async function cancelForceSync() {

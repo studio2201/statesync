@@ -118,8 +118,8 @@ pub fn print_help() {
     println!("  --dry-run        Load caches / user mapping check; no play-state writes");
     println!("  --sync-force     Full backfill (played, position, favorites per Settings)");
     println!();
-    println!("  Force prints phases and skip reasons (already matched, no provider id,");
-    println!("  not in other library). Prefer --direction=both (default).");
+    println!("  Force: phases + skip reasons. Preview without writing:");
+    println!("    statesync --sync-force --dry-run");
     println!();
     println!("Common environment:");
     println!("  STATESYNC_BIND                    Listen address (default 0.0.0.0:4601)");

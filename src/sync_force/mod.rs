@@ -34,23 +34,30 @@ fn default_force_direction() -> Direction {
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 /// Missing documentation.
 pub struct ForceSyncOptions {
-    /// Accepts `both` / `Both` / omitted (defaults to both).
+    /// Always mesh both ways among send/receive servers. Kept for API compatibility.
     #[serde(default = "default_force_direction")]
     pub direction: Direction,
+    /// If true, count would-be writes but do not change any server.
+    #[serde(default)]
+    pub dry_run: bool,
 }
 
-/// Force-sync mesh direction. UI sends lowercase `both`; serde accepts both casings.
-#[derive(Debug, Clone, Copy, serde::Serialize, serde::Deserialize, PartialEq)]
+/// Force-sync direction. Runtime always meshes send→receive (Both).
+/// Legacy variant names still deserialize for old clients/CLIs.
+#[derive(Debug, Clone, Copy, serde::Serialize, serde::Deserialize, PartialEq, Default)]
 #[serde(rename_all = "PascalCase")]
 pub enum Direction {
+    #[default]
     #[serde(alias = "both", alias = "BOTH")]
     Both,
+    /// Deprecated — ignored (treated as Both).
     #[serde(
         alias = "emby_to_jellyfin",
         alias = "embytojellyfin",
         alias = "EmbyToJellyfin"
     )]
     EmbyToJellyfin,
+    /// Deprecated — ignored (treated as Both).
     #[serde(
         alias = "jellyfin_to_emby",
         alias = "jellyfintoemby",
@@ -164,6 +171,9 @@ pub struct ForceSyncStatus {
     /// Aggregate skip reasons (trust at scale).
     #[serde(default)]
     pub skip_reasons: SkipReasons,
+    /// True when this run did not write (preview only).
+    #[serde(default)]
+    pub dry_run: bool,
 }
 
 impl ForceSyncStatus {
@@ -186,6 +196,7 @@ impl ForceSyncStatus {
             by_field: ForceByField::default(),
             scope: Vec::new(),
             skip_reasons: SkipReasons::default(),
+            dry_run: false,
         }
     }
 }
@@ -231,6 +242,8 @@ pub struct ForceContext {
     pub state: Arc<Mutex<AppState>>,
     /// Missing documentation.
     pub tracker: Arc<SyncForceTracker>,
+    /// Preview only — no UserData writes.
+    pub dry_run: bool,
 }
 
 

@@ -87,7 +87,8 @@ async function loadDashboard() {
     currentConfig = await configRes.json(); const status = await statusRes.json();
     if (!currentConfig.sync) currentConfig.sync = {
       live_played: true, live_position: true, live_favorites: true,
-      force_played: true, force_position: true, force_favorites: true
+      force_played: true, force_position: true, force_favorites: true,
+      user_allowlist: []
     };
     if ($('syncThreshold')) $('syncThreshold').value = currentConfig.sync_threshold_seconds;
     const s = currentConfig.sync;
@@ -98,6 +99,9 @@ async function loadDashboard() {
     setChk('syncForcePlayed', s.force_played !== false);
     setChk('syncForcePosition', s.force_position !== false);
     setChk('syncForceFavorites', s.force_favorites !== false);
+    if ($('cfgUserAllowlist')) {
+      $('cfgUserAllowlist').value = (s.user_allowlist || []).join('\n');
+    }
     if ($('cfgUserMappings')) {
       $('cfgUserMappings').value = (currentConfig.user_mappings || []).map(group => group.join(', ')).join('\n');
     }
@@ -201,20 +205,24 @@ async function loadDashboard() {
     } else {
       usersDiv.textContent = '';
       const serverCount = status.servers.length;
-      const headerRow = document.createElement('div');
-      headerRow.style.cssText = 'display:grid;grid-template-columns:repeat(' + serverCount + ', 1fr);gap:6px;margin-bottom:6px';
-      status.servers.forEach(srv => {
-        const h = document.createElement('div');
-        h.style.cssText = 'text-align:center;color:var(--muted);font-weight:600;font-size:11px;padding-bottom:6px;border-bottom:1px solid var(--border);text-transform:uppercase';
-        h.textContent = srv.name;
-        headerRow.appendChild(h);
-      });
-      usersDiv.appendChild(headerRow);
       const users = (status.users || []).slice().sort((a, b) =>
         a.name.localeCompare(b.name, undefined, { sensitivity: 'base', numeric: true })
       );
       const grid = document.createElement('div');
-      grid.style.cssText = 'display:grid;grid-template-columns:repeat(' + serverCount + ', 1fr);gap:6px';
+      grid.style.cssText = 'display:grid;grid-template-columns:repeat(' + serverCount + ', 1fr) auto;gap:6px;align-items:center';
+      const headerRow2 = document.createElement('div');
+      headerRow2.style.cssText = 'display:grid;grid-template-columns:repeat(' + serverCount + ', 1fr) auto;gap:6px;margin-bottom:6px';
+      status.servers.forEach(srv => {
+        const h = document.createElement('div');
+        h.style.cssText = 'text-align:center;color:var(--muted);font-weight:600;font-size:11px;padding-bottom:6px;border-bottom:1px solid var(--border);text-transform:uppercase';
+        h.textContent = srv.name;
+        headerRow2.appendChild(h);
+      });
+      const hAct = document.createElement('div');
+      hAct.style.cssText = 'text-align:center;color:var(--muted);font-weight:600;font-size:11px;padding-bottom:6px;border-bottom:1px solid var(--border);text-transform:uppercase';
+      hAct.textContent = 'Actions';
+      headerRow2.appendChild(hAct);
+      usersDiv.appendChild(headerRow2);
       users.forEach(u => {
         const row = document.createElement('div');
         row.style.cssText = 'display:contents';
@@ -233,6 +241,16 @@ async function loadDashboard() {
           }
           row.appendChild(cell);
         }
+        const act = document.createElement('div');
+        act.style.cssText = 'display:flex;justify-content:flex-end';
+        const clr = document.createElement('button');
+        clr.className = 'btn btn-danger';
+        clr.style.cssText = 'font-size:11px;padding:4px 8px';
+        clr.textContent = 'Clear watched';
+        clr.title = 'Mark all watched items unwatched for this person on every server';
+        clr.addEventListener('click', () => clearWatchedForUser(u.name));
+        act.appendChild(clr);
+        row.appendChild(act);
         grid.appendChild(row);
       });
       usersDiv.appendChild(grid);

@@ -3,6 +3,7 @@ use std::sync::atomic::Ordering;
 use crate::client::PlayedItem;
 use crate::state::SyncHistoryValue;
 use super::{ForceContext, ForceSyncError, ForceSyncStatus, push_error, write_status};
+use super::helpers::write_status_throttled;
 
 const FORCE_PAGE_TIMEOUT: Duration = Duration::from_secs(60);
 const FORCE_UPDATE_TIMEOUT: Duration = Duration::from_secs(30);
@@ -34,6 +35,8 @@ pub async fn force_sync_pair(
     let page_size: usize = 500;
     let force_played = ctx.config.sync.force_played;
     let force_position = ctx.config.sync.force_position;
+    let dry_run = ctx.dry_run;
+    let mut last_status_write = Instant::now() - Duration::from_secs(1);
 
     let mut page: usize = 0;
     let mut cancelled = false;
@@ -164,7 +167,7 @@ pub async fn force_sync_pair(
                     status.succeeded = *succeeded_total;
                     status.skipped = *skipped_total;
                     status.failed = *failed_total;
-                    write_status(&ctx.tracker, status);
+                    write_status_throttled(&ctx.tracker, status, &mut last_status_write, false);
                     let elapsed = started_item.elapsed();
                     if elapsed < min_interval {
                         tokio::time::sleep(min_interval - elapsed).await;
@@ -172,39 +175,45 @@ pub async fn force_sync_pair(
                     continue;
                 }
             }
-            let update_res = tokio::time::timeout(
-                FORCE_UPDATE_TIMEOUT,
-                target_client.update_user_data(
-                    tgt_user_id,
-                    &target_item_id,
-                    write_pos,
-                    write_played,
-                    None,
-                ),
-            )
-            .await;
+            let update_res = if dry_run {
+                Ok(Ok(()))
+            } else {
+                tokio::time::timeout(
+                    FORCE_UPDATE_TIMEOUT,
+                    target_client.update_user_data(
+                        tgt_user_id,
+                        &target_item_id,
+                        write_pos,
+                        write_played,
+                        None,
+                    ),
+                )
+                .await
+            };
             match update_res {
                 Ok(Ok(())) => {
-                    let key = (
-                        src_username.to_lowercase(),
-                        if !imdb.is_empty() {
-                            imdb.clone()
-                        } else {
-                            tmdb.clone()
-                        },
-                    );
-                    let mut st = ctx.state.lock().await;
-                    let prev_fav = st.last_syncs.get(&key).and_then(|v| v.favorite);
-                    st.last_syncs.insert(
-                        key,
-                        SyncHistoryValue {
-                            position_ticks: source_pos,
-                            timestamp: Instant::now(),
-                            played: true,
-                            favorite: prev_fav,
-                        },
-                    );
-                    drop(st);
+                    if !dry_run {
+                        let key = (
+                            src_username.to_lowercase(),
+                            if !imdb.is_empty() {
+                                imdb.clone()
+                            } else {
+                                tmdb.clone()
+                            },
+                        );
+                        let mut st = ctx.state.lock().await;
+                        let prev_fav = st.last_syncs.get(&key).and_then(|v| v.favorite);
+                        st.last_syncs.insert(
+                            key,
+                            SyncHistoryValue {
+                                position_ticks: source_pos,
+                                timestamp: Instant::now(),
+                                played: true,
+                                favorite: prev_fav,
+                            },
+                        );
+                        drop(st);
+                    }
                     *succeeded_total += 1;
                     *processed_total += 1;
                     status.by_field.played.ok += 1;
@@ -261,13 +270,14 @@ pub async fn force_sync_pair(
             status.succeeded = *succeeded_total;
             status.skipped = *skipped_total;
             status.failed = *failed_total;
-            write_status(&ctx.tracker, status);
+            write_status_throttled(&ctx.tracker, status, &mut last_status_write, false);
         }
         if cancelled {
             break;
         }
         page += 1;
     }
+    write_status(&ctx.tracker, status);
     cancelled
 }
 
@@ -295,6 +305,8 @@ pub async fn force_sync_favorites_pair(
     let source_client = ctx.clients[src_idx].clone();
     let target_client = ctx.clients[tgt_idx].clone();
     let page_size: usize = 500;
+    let dry_run = ctx.dry_run;
+    let mut last_status_write = Instant::now() - Duration::from_secs(1);
 
     let mut page: usize = 0;
     let mut cancelled = false;
@@ -396,7 +408,7 @@ pub async fn force_sync_favorites_pair(
                     status.succeeded = *succeeded_total;
                     status.skipped = *skipped_total;
                     status.failed = *failed_total;
-                    write_status(&ctx.tracker, status);
+                    write_status_throttled(&ctx.tracker, status, &mut last_status_write, false);
                     let elapsed = started_item.elapsed();
                     if elapsed < min_interval {
                         tokio::time::sleep(min_interval - elapsed).await;
@@ -404,33 +416,39 @@ pub async fn force_sync_favorites_pair(
                     continue;
                 }
             }
-            let update_res = tokio::time::timeout(
-                FORCE_UPDATE_TIMEOUT,
-                target_client.update_favorite(tgt_user_id, &target_item_id, true),
-            )
-            .await;
+            let update_res = if dry_run {
+                Ok(Ok(()))
+            } else {
+                tokio::time::timeout(
+                    FORCE_UPDATE_TIMEOUT,
+                    target_client.update_favorite(tgt_user_id, &target_item_id, true),
+                )
+                .await
+            };
             match update_res {
                 Ok(Ok(())) => {
-                    let key = (
-                        src_username.to_lowercase(),
-                        if !imdb.is_empty() {
-                            imdb.clone()
-                        } else {
-                            tmdb.clone()
-                        },
-                    );
-                    let mut st = ctx.state.lock().await;
-                    let prev = st.last_syncs.get(&key).cloned();
-                    st.last_syncs.insert(
-                        key,
-                        SyncHistoryValue {
-                            position_ticks: prev.as_ref().map(|p| p.position_ticks).unwrap_or(0),
-                            timestamp: Instant::now(),
-                            played: prev.as_ref().map(|p| p.played).unwrap_or(false),
-                            favorite: Some(true),
-                        },
-                    );
-                    drop(st);
+                    if !dry_run {
+                        let key = (
+                            src_username.to_lowercase(),
+                            if !imdb.is_empty() {
+                                imdb.clone()
+                            } else {
+                                tmdb.clone()
+                            },
+                        );
+                        let mut st = ctx.state.lock().await;
+                        let prev = st.last_syncs.get(&key).cloned();
+                        st.last_syncs.insert(
+                            key,
+                            SyncHistoryValue {
+                                position_ticks: prev.as_ref().map(|p| p.position_ticks).unwrap_or(0),
+                                timestamp: Instant::now(),
+                                played: prev.as_ref().map(|p| p.played).unwrap_or(false),
+                                favorite: Some(true),
+                            },
+                        );
+                        drop(st);
+                    }
                     *succeeded_total += 1;
                     *processed_total += 1;
                     status.by_field.favorite.ok += 1;
@@ -484,13 +502,14 @@ pub async fn force_sync_favorites_pair(
             status.succeeded = *succeeded_total;
             status.skipped = *skipped_total;
             status.failed = *failed_total;
-            write_status(&ctx.tracker, status);
+            write_status_throttled(&ctx.tracker, status, &mut last_status_write, false);
         }
         if cancelled {
             break;
         }
         page += 1;
     }
+    write_status(&ctx.tracker, status);
     cancelled
 }
 

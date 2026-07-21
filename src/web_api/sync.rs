@@ -104,6 +104,7 @@ pub async fn post_sync_force(
             if msg.contains("EOF") || msg.contains("empty") || msg.contains("EOF while parsing") {
                 crate::sync_force::ForceSyncOptions {
                     direction: crate::sync_force::Direction::Both,
+                    dry_run: false,
                 }
             } else {
                 return Response::builder()
@@ -173,7 +174,8 @@ pub async fn post_sync_force(
         clients,
         state: state.app_state.clone(),
         tracker: tracker.clone(),
-        direction: opts.direction,
+        direction: crate::sync_force::Direction::Both,
+        dry_run: opts.dry_run,
     };
     let tracker_for_status = tracker.clone();
     tokio::spawn(async move {

@@ -4,8 +4,7 @@ use tokio::sync::Semaphore;
 use tracing::info;
 
 use super::{
-    Direction, ForceByField, ForceContext, ForceSyncError, ForceSyncState, ForceSyncStatus,
-    write_status,
+    ForceByField, ForceContext, ForceSyncError, ForceSyncState, ForceSyncStatus, write_status,
 };
 use super::sync_loop::{force_sync_favorites_pair, force_sync_pair};
 
@@ -41,6 +40,9 @@ pub async fn run_force_sync(ctx: ForceContext) -> ForceSyncStatus {
     if ctx.config.sync.force_favorites {
         scope.push("favorites".to_string());
     }
+    if ctx.dry_run {
+        scope.push("dry-run".to_string());
+    }
     {
         let mut status = ctx.tracker.status.lock().await;
         *status = ForceSyncStatus {
@@ -60,21 +62,25 @@ pub async fn run_force_sync(ctx: ForceContext) -> ForceSyncStatus {
             by_field: ForceByField::default(),
             scope: scope.clone(),
             skip_reasons: Default::default(),
+            dry_run: ctx.dry_run,
         };
     }
     {
         let mut st = ctx.state.lock().await;
         st.log_event_detail(
             "info",
-            "Force sync started",
+            if ctx.dry_run {
+                "Force sync preview started (dry run — no writes)"
+            } else {
+                "Force sync started"
+            },
             Some(format!(
-                "scope={} · direction={:?} · live play sync paused until finished",
+                "scope={} · live play sync paused until finished",
                 if scope.is_empty() {
                     "none".to_string()
                 } else {
                     scope.join(",")
-                },
-                ctx.direction
+                }
             )),
         );
     }
@@ -91,10 +97,13 @@ pub async fn run_force_sync(ctx: ForceContext) -> ForceSyncStatus {
 
     let mut status = ctx.tracker.status.lock().await;
     *status = result.clone();
-    if let Ok(mut config) = crate::config::Config::load() {
-        config.last_full_sync = Some(result.clone());
-        if let Err(e) = config.save() {
-            tracing::error!("run_force_sync: failed to save force sync status to config: {}", e);
+    // Don't persist dry-run results as last_full_sync (would mislead "last force").
+    if !result.dry_run {
+        if let Ok(mut config) = crate::config::Config::load() {
+            config.last_full_sync = Some(result.clone());
+            if let Err(e) = config.save() {
+                tracing::error!("run_force_sync: failed to save force sync status to config: {}", e);
+            }
         }
     }
     status.clone()
@@ -105,23 +114,13 @@ async fn run_force_sync_inner(
     _started: chrono::DateTime<chrono::Utc>,
 ) -> ForceSyncStatus {
     let config = &ctx.config;
-    let is_emby: Vec<bool> = config.servers.iter().map(|s| s.is_emby).collect();
 
+    // Mesh: every send-capable source → every receive-capable target (ignore legacy type filters).
     let sources: Vec<usize> = (0..config.servers.len())
         .filter(|&i| config.servers[i].sync_direction != "receive")
-        .filter(|&i| match ctx.direction {
-            Direction::EmbyToJellyfin => is_emby.get(i).copied().unwrap_or(false),
-            Direction::JellyfinToEmby => !is_emby.get(i).copied().unwrap_or(false),
-            Direction::Both => true,
-        })
         .collect();
     let targets: Vec<usize> = (0..config.servers.len())
         .filter(|&i| config.servers[i].sync_direction != "send")
-        .filter(|&i| match ctx.direction {
-            Direction::EmbyToJellyfin => !is_emby.get(i).copied().unwrap_or(false),
-            Direction::JellyfinToEmby => is_emby.get(i).copied().unwrap_or(false),
-            Direction::Both => true,
-        })
         .collect();
 
     // (src_idx, tgt_idx, src_username, src_user_id, tgt_user_id)
@@ -134,6 +133,12 @@ async fn run_force_sync_inner(
                 None => continue,
             };
             for (username, src_user_id) in &cache.users {
+                if !config
+                    .sync
+                    .user_allowed(username, &config.user_mappings)
+                {
+                    continue;
+                }
                 for &tgt in &targets {
                     if src == tgt {
                         continue;
@@ -185,10 +190,10 @@ async fn run_force_sync_inner(
     }
 
     info!(
-        "force-sync starting: direction={:?}, pairs={}, rate={}/sec, scope played={} position={} favorites={}",
-        ctx.direction,
+        "force-sync starting: pairs={} rate={}/sec dry_run={} played={} position={} favorites={}",
         pairs.len(),
         rate_from_env(),
+        ctx.dry_run,
         config.sync.force_played,
         config.sync.force_position,
         config.sync.force_favorites,
@@ -324,18 +329,28 @@ async fn run_force_sync_inner(
         } else {
             "error"
         };
+        let title = if ctx.dry_run {
+            if cancelled {
+                "Force preview cancelled"
+            } else if failed_total == 0 {
+                "Force preview finished (no writes)"
+            } else {
+                "Force preview finished with errors (no writes)"
+            }
+        } else if cancelled {
+            "Force sync cancelled"
+        } else if failed_total == 0 {
+            "Force sync finished"
+        } else {
+            "Force sync finished with errors"
+        };
         st.log_event_detail(
             level,
-            if cancelled {
-                "Force sync cancelled"
-            } else if failed_total == 0 {
-                "Force sync finished"
-            } else {
-                "Force sync finished with errors"
-            },
+            title,
             Some(format!(
-                "processed={} succeeded={} skipped={} failed={} | played ok={} skip={} fail={} | favorites ok={} skip={} fail={} | skips: already_equal={} no_provider={} no_match={} other={} | {}s",
+                "processed={} {}={} skipped={} failed={} | played ok={} skip={} fail={} | favorites ok={} skip={} fail={} | skips: already_equal={} no_provider={} no_match={} other={} | {}s",
                 status.processed,
+                if ctx.dry_run { "would_push" } else { "succeeded" },
                 status.succeeded,
                 status.skipped,
                 status.failed,

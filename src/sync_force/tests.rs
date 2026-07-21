@@ -50,6 +50,7 @@ mod tests {
             by_field: Default::default(),
             scope: Vec::new(),
             skip_reasons: Default::default(),
+            dry_run: false,
         };
         assert_eq!(status.processed, 2);
         assert_eq!(status.total_pairs, 5);
@@ -112,18 +113,14 @@ mod tests {
 
     #[test]
     fn test_direction_from_env() {
+        // Type-based force directions are retired — always Both.
         unsafe {
             std::env::set_var("STATESYNC_FORCE_DIRECTION", "emby_to_jellyfin");
         }
-        assert_eq!(helpers::direction_from_env(), crate::sync_force::Direction::EmbyToJellyfin);
+        assert_eq!(helpers::direction_from_env(), crate::sync_force::Direction::Both);
 
         unsafe {
             std::env::set_var("STATESYNC_FORCE_DIRECTION", "jellyfin_to_emby");
-        }
-        assert_eq!(helpers::direction_from_env(), crate::sync_force::Direction::JellyfinToEmby);
-
-        unsafe {
-            std::env::set_var("STATESYNC_FORCE_DIRECTION", "both");
         }
         assert_eq!(helpers::direction_from_env(), crate::sync_force::Direction::Both);
 
@@ -169,6 +166,7 @@ mod tests {
             clients: vec![client.clone(), client.clone()],
             state,
             tracker: tracker.clone(),
+            dry_run: false,
         };
 
         let mut status = ForceSyncStatus::idle();

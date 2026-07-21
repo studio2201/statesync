@@ -3,16 +3,23 @@ use super::{Direction, ForceSyncError, ForceSyncStatus, SyncForceTracker};
 
 const FORCE_ERROR_CAP: usize = 100;
 
-/// Missing documentation.
+/// Always Both — legacy STATESYNC_FORCE_DIRECTION type filters are ignored.
 pub fn direction_from_env() -> Direction {
-    match std::env::var("STATESYNC_FORCE_DIRECTION")
-        .unwrap_or_default()
-        .to_lowercase()
-        .as_str()
-    {
-        "embytojellyfin" | "emby_to_jellyfin" => Direction::EmbyToJellyfin,
-        "jellyfintoemby" | "jellyfin_to_emby" => Direction::JellyfinToEmby,
-        _ => Direction::Both,
+    let _ = std::env::var("STATESYNC_FORCE_DIRECTION");
+    Direction::Both
+}
+
+/// Throttled status publish so huge libraries don't thrash the status mutex.
+pub fn write_status_throttled(
+    tracker: &SyncForceTracker,
+    status: &ForceSyncStatus,
+    last_write: &mut std::time::Instant,
+    force: bool,
+) {
+    let now = std::time::Instant::now();
+    if force || now.duration_since(*last_write).as_millis() >= 400 {
+        write_status(tracker, status);
+        *last_write = now;
     }
 }
 

@@ -43,7 +43,8 @@ pub fn render_dashboard() -> Markup {
                         }
                         div class="actions" {
                             button class="btn" id="refreshUsersBtn" onclick="refreshUsers()" { "Refresh users" }
-                            button class="btn btn-primary" id="forceSyncBtn" onclick="forceSync()" { "Force sync" }
+                            button class="btn" id="previewForceBtn" onclick="forceSync(true)" { "Preview force" }
+                            button class="btn btn-primary" id="forceSyncBtn" onclick="forceSync(false)" { "Force sync" }
                             button class="btn" onclick="openSettingsModal()" { "Settings" }
                             button class="btn btn-primary" onclick="openServerModal(-1)" { "Add server" }
                         }
@@ -98,12 +99,12 @@ pub fn render_dashboard() -> Markup {
                                 div class="how-step" {
                                     div class="how-num" { "5" }
                                     div class="how-title" { "Force sync" }
-                                    p { "Historical backfill: played history, in-progress positions, then favorites. Live play events pause until it finishes. Phases show in the banner." }
+                                    p { "Historical backfill (or Preview force with no writes). Skips already matched. Optional user allowlist. Phases + skip reasons in the banner." }
                                 }
                                 div class="how-step" {
                                     div class="how-num" { "6" }
-                                    div class="how-title" { "What is not synced" }
-                                    p { "Ratings, playlists, collections, hidden items, home layout, passwords, and library structure stay local." }
+                                    div class="how-title" { "Clear watched" }
+                                    p { "Per-user button on Mapped users: wipes watched flags for that person on every server. Dedicated action — not force sync. Confirm carefully." }
                                 }
                             }
                             div class="how-legend" {
@@ -215,7 +216,12 @@ pub fn render_dashboard() -> Markup {
                             label class="check-row" { input type="checkbox" id="syncForcePlayed" checked; " Played history" }
                             label class="check-row" { input type="checkbox" id="syncForcePosition" checked; " In-progress positions" }
                             label class="check-row" { input type="checkbox" id="syncForceFavorites" checked; " Favorites" }
-                            p class="form-hint" { "Force only pushes when the target is missing that state (already watched / already favorited is skipped)." }
+                            p class="form-hint" { "Force only pushes when the target is missing that state. Use Preview force to count without writing." }
+                        }
+                        div class="form-group" {
+                            label { "User allowlist (optional)" }
+                            textarea id="cfgUserAllowlist" rows="3" placeholder="alice&#10;bob" {};
+                            p class="form-hint" { "Empty = sync everyone. One name per line (or commas). Linked aliases of allowlisted people are included." }
                         }
                         div class="form-group" {
                             label { "Username mappings (advanced text)" }

@@ -79,12 +79,14 @@ pub const JS_ACTIONS: &str = r#"    const logsDiv = $('syncLogs');
       }
     }
     const forceBtn = $('forceSyncBtn');
-    if (forceBtn) {
+    const previewBtn = $('previewForceBtn');
+    {
       const noServers = !currentConfig.servers || currentConfig.servers.length === 0;
       const fs = status.last_full_sync;
       const st = fs ? forceStateKey(fs.state) : '';
       const inProgress = !!(fs && (st === 'running' || (fs.started_at && !fs.finished_at))) || !!window._forceSyncOptimistic;
-      forceBtn.disabled = noServers || inProgress;
+      if (forceBtn) forceBtn.disabled = noServers || inProgress;
+      if (previewBtn) previewBtn.disabled = noServers || inProgress;
     }
     const footer = $('versionFooter');
     if (footer && status.version) {
