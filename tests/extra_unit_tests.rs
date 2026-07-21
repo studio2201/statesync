@@ -176,4 +176,43 @@ mod extra_tests {
         let status = ForceSyncStatus::idle();
         assert!(format!("{:?}", status).contains("state"));
     }
+
+    #[test]
+    fn test_file_line_limits_rfc_conventions() {
+        use std::fs;
+        use std::path::Path;
+
+        fn check_dir(dir: &Path) {
+            if let Ok(entries) = fs::read_dir(dir) {
+                for entry in entries.flatten() {
+                    let path = entry.path();
+                    if path.is_dir() {
+                        let name = path.file_name().unwrap_or_default().to_string_lossy();
+                        if name != "target" && name != ".git" {
+                            check_dir(&path);
+                        }
+                    } else if path.extension().map(|e| e == "rs").unwrap_or(false) {
+                        let content = fs::read_to_string(&path).expect("failed to read file");
+                        let lines = content.lines().count();
+                        assert!(
+                            lines <= 250,
+                            "File {:?} has {} lines, exceeding 250 limit!",
+                            path,
+                            lines
+                        );
+                    }
+                }
+            }
+        }
+        check_dir(Path::new("."));
+    }
+
+    #[test]
+    fn test_cargo_rfc_file_tree_structure() {
+        use std::path::Path;
+        assert!(Path::new("Cargo.toml").exists(), "Cargo.toml must exist");
+        assert!(Path::new("src/lib.rs").exists(), "src/lib.rs must exist");
+        assert!(Path::new("src/main.rs").exists(), "src/main.rs must exist");
+        assert!(Path::new("tests/integration_tests.rs").exists(), "tests/integration_tests.rs must exist");
+    }
 }

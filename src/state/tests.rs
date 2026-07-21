@@ -213,25 +213,15 @@ mod tests {
     #[tokio::test]
     async fn test_init_server_cache_with_data() {
         let mut server = mockito::Server::new_async().await;
-        
         let users_mock = server.mock("GET", "/Users?StartIndex=0&Limit=500")
             .with_status(200)
             .with_header("content-type", "application/json")
             .with_body(r#"{"Items": [{"Name": "Alice", "Id": "u123"}], "TotalRecordCount": 1}"#)
             .create_async().await;
-
         let items_mock = server.mock("GET", "/Items?Recursive=true&Fields=ProviderIds&IncludeItemTypes=Movie,Episode&StartIndex=0&Limit=500")
             .with_status(200)
             .with_header("content-type", "application/json")
-            .with_body(r#"{
-                "Items": [
-                    {
-                        "Id": "item_1",
-                        "ProviderIds": {"Imdb": "tt123", "Tmdb": "tm456"}
-                    }
-                ],
-                "TotalRecordCount": 1
-            }"#)
+            .with_body(r#"{"Items": [{"Id": "item_1", "ProviderIds": {"Imdb": "tt123", "Tmdb": "tm456"}}], "TotalRecordCount": 1}"#)
             .create_async().await;
 
         let client = crate::client::MediaClient::new(server.url(), "key".to_string(), false);
