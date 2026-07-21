@@ -6,7 +6,6 @@ use axum::{
 };
 use std::sync::Arc;
 
-/// Missing documentation.
 pub async fn serve_index() -> Html<String> {
     Html(crate::dashboard::render_dashboard().into_string())
 }
@@ -38,7 +37,6 @@ pub async fn serve_favicon() -> impl IntoResponse {
     )
 }
 
-/// Missing documentation.
 pub async fn serve_sw() -> impl IntoResponse {
     (
         [("content-type", "application/javascript")],
@@ -46,7 +44,6 @@ pub async fn serve_sw() -> impl IntoResponse {
     )
 }
 
-/// Missing documentation.
 pub async fn serve_healthz(Extension(state): Extension<Arc<WebServerState>>) -> impl IntoResponse {
     use crate::web_api::cache_stats;
     let stats = cache_stats(&state.app_state).await;

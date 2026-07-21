@@ -24,12 +24,14 @@ pub async fn post_sync_force(
                     dry_run: false,
                 }
             } else {
+                let body = serde_json::json!({
+                    "status": "error",
+                    "message": format!("Invalid force-sync body: {}", msg),
+                })
+                .to_string();
                 return Response::builder()
                     .status(StatusCode::BAD_REQUEST)
-                    .body(Body::from(format!(
-                        r#"{{"status":"error","message":"Invalid force-sync body: {}"}}"#,
-                        msg.replace('"', "'")
-                    )))
+                    .body(Body::from(body))
                     .unwrap_or_else(|_| {
                         axum::response::Response::builder()
                             .status(500)
@@ -64,12 +66,14 @@ pub async fn post_sync_force(
         Ok(c) => c,
         Err(e) => {
             *tracker.running.lock().await = false;
+            let body = serde_json::json!({
+                "status": "error",
+                "message": format!("failed to load config: {}", e),
+            })
+            .to_string();
             return Response::builder()
                 .status(StatusCode::INTERNAL_SERVER_ERROR)
-                .body(Body::from(format!(
-                    r#"{{"status":"error","message":"failed to load config: {}"}}"#,
-                    e
-                )))
+                .body(Body::from(body))
                 .unwrap_or_else(|_| {
                     axum::response::Response::builder()
                         .status(500)
@@ -127,7 +131,6 @@ pub async fn post_sync_force(
         })
 }
 
-/// Missing documentation.
 pub async fn get_sync_force_status(
     Extension(state): Extension<Arc<WebServerState>>,
 ) -> Json<crate::sync_force::ForceSyncStatus> {
@@ -139,7 +142,6 @@ pub async fn get_sync_force_status(
     Json(status)
 }
 
-/// Missing documentation.
 pub async fn post_sync_force_cancel(Extension(state): Extension<Arc<WebServerState>>) -> Response {
     let tracker = {
         let st = state.app_state.lock().await;

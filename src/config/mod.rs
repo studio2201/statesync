@@ -1,51 +1,36 @@
 use serde::{Deserialize, Serialize};
 
-/// Missing documentation.
 pub mod helpers;
-/// Missing documentation.
 pub mod loader;
 #[cfg(test)]
 pub mod tests;
-/// Missing documentation.
+pub mod url_safety;
 pub mod validation;
 
 pub use helpers::{name_from_url, normalize_server_url, redacted_url};
 pub use loader::{
     default_config, get_config_path, load_or_create_default, write_default_config_to_disk,
 };
+pub use url_safety::{valid_server_url, validate_upstream_url};
 pub use validation::{is_loopback_bind, normalize_config, validate_config};
 
-/// Missing documentation.
 pub const MAX_NAME_LEN: usize = 64;
-/// Missing documentation.
 pub const MAX_URL_LEN: usize = 512;
-/// Missing documentation.
 pub const MAX_KEY_LEN: usize = 256;
-/// Missing documentation.
 pub const MAX_MAPPING_GROUPS: usize = 128;
-/// Missing documentation.
 pub const MAX_GROUP_MEMBERS: usize = 32;
-/// Missing documentation.
 pub const MAX_MEMBER_LEN: usize = 64;
-/// Missing documentation.
 pub const MAX_CONFIG_BYTES: usize = 64 * 1024;
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
-/// Missing documentation.
 pub struct ServerConfig {
-    /// Missing documentation.
     pub name: String,
-    /// Missing documentation.
     pub url: String,
-    /// Missing documentation.
     pub api_key: String,
-    /// Missing documentation.
     pub is_emby: bool,
     #[serde(default = "default_sync_direction")]
-    /// Missing documentation.
     pub sync_direction: String, // "both", "send", "receive"
     #[serde(default = "default_allow_insecure_http")]
-    /// Missing documentation.
     pub allow_insecure_http: bool,
 }
 
@@ -140,18 +125,13 @@ impl SyncOptions {
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
-/// Missing documentation.
 pub struct Config {
-    /// Missing documentation.
     pub servers: Vec<ServerConfig>,
     #[serde(default = "default_threshold_seconds")]
-    /// Missing documentation.
     pub sync_threshold_seconds: u64,
     #[serde(default)]
-    /// Missing documentation.
     pub user_mappings: Vec<Vec<String>>,
     #[serde(default)]
-    /// Missing documentation.
     pub last_full_sync: Option<crate::sync_force::ForceSyncStatus>,
     /// Live / force field toggles (played, position, favorites).
     #[serde(default)]

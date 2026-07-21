@@ -18,7 +18,6 @@ pub struct ServerInfoRequest {
     pub is_emby: bool,
 }
 
-/// Missing documentation.
 pub async fn post_server_info(
     _state: Extension<Arc<WebServerState>>,
     Json(req): Json<ServerInfoRequest>,
@@ -69,10 +68,7 @@ async fn fetch_server_info(url: &str, api_key: &str, is_emby: bool) -> Response 
     if let Err(msg) = validate_upstream_url(&url) {
         return Response::builder()
             .status(StatusCode::BAD_REQUEST)
-            .body(Body::from(format!(
-                r#"{{"error":"{}"}}"#,
-                msg.replace('"', "'")
-            )))
+            .body(Body::from(json!({ "error": msg }).to_string()))
             .unwrap_or_else(|_| {
                 Response::builder()
                     .status(500)
@@ -106,10 +102,9 @@ async fn fetch_server_info(url: &str, api_key: &str, is_emby: bool) -> Response 
             tracing::debug!("get_server_info failed for {}: {}", url, e);
             Response::builder()
                 .status(StatusCode::BAD_GATEWAY)
-                .body(Body::from(format!(
-                    r#"{{"error":"could not reach server: {}"}}"#,
-                    e.to_string().replace('"', "'")
-                )))
+                .body(Body::from(
+                    json!({ "error": format!("could not reach server: {}", e) }).to_string(),
+                ))
                 .unwrap_or_else(|_| {
                     Response::builder()
                         .status(500)

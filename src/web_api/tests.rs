@@ -40,6 +40,8 @@ fn test_valid_server_url() {
     assert!(valid_server_url("http://localhost/web/index.html"));
     assert!(!valid_server_url(&format!("http://{}", "a".repeat(510))));
     assert!(validate_upstream_url("http://169.254.169.254/").is_err());
+    assert!(validate_upstream_url("http://evil@169.254.169.254/").is_err());
+    assert!(validate_upstream_url("http://2852039166/").is_err());
     assert!(validate_upstream_url("http://10.0.0.10:8096").is_ok());
 }
 
@@ -86,7 +88,6 @@ async fn test_post_reload_channel_closed() {
     let web_state = Arc::new(WebServerState {
         app_state,
         reload_tx: tx,
-        bind_addr: "127.0.0.1:0".to_string(),
         web_auth: None,
         version: "test".to_string(),
         started_at: "2025-01-01".to_string(),

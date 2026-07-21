@@ -7,9 +7,7 @@ use crate::client::MediaClient;
 use crate::config::Config;
 use crate::state::AppState;
 
-/// Missing documentation.
 pub mod handlers;
-/// Missing documentation.
 pub mod loop_handler;
 pub mod session_events;
 pub mod userdata_events;
@@ -18,7 +16,6 @@ pub use loop_handler::handle_websocket_loop;
 #[cfg(test)]
 mod tests;
 
-/// Missing documentation.
 pub fn make_ws_url(url: &str, api_key: &str, is_emby: bool) -> String {
     let clean_url = url.trim().trim_end_matches('/');
     let lower_url = clean_url.to_lowercase();

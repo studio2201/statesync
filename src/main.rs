@@ -87,7 +87,6 @@ async fn main() -> Result<()> {
     let web_state = Arc::new(WebServerState {
         app_state: app_state.clone(),
         reload_tx: reload_tx.clone(),
-        bind_addr: bind_addr.clone(),
         web_auth: web_auth.clone(),
         version: VERSION.to_string(),
         started_at: started_at.clone(),

@@ -11,7 +11,6 @@ pub(super) fn rate_from_env() -> u32 {
         .unwrap_or(5)
 }
 
-/// Missing documentation.
 pub async fn run_force_sync(ctx: ForceContext) -> ForceSyncStatus {
     {
         let mut running = ctx.tracker.running.lock().await;

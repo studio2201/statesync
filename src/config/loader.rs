@@ -4,7 +4,6 @@ use anyhow::{Context, Result, anyhow};
 use std::env;
 
 impl Config {
-    /// Missing documentation.
     pub fn save(&self) -> Result<()> {
         let path = get_config_path();
         let serialized = serde_json::to_string_pretty(self)?;
@@ -21,7 +20,6 @@ impl Config {
         Ok(())
     }
 
-    /// Missing documentation.
     pub fn load() -> Result<Self> {
         let mut servers = Vec::new();
 
@@ -147,10 +145,8 @@ impl Config {
     }
 }
 
-/// Missing documentation.
 pub const DEFAULT_BIND_FOR_BANNER: &str = "127.0.0.1:4601";
 
-/// Missing documentation.
 pub fn get_config_path() -> &'static str {
     if std::path::Path::new("/config").exists() {
         "/config/config.json"
@@ -163,7 +159,6 @@ pub fn get_config_path() -> &'static str {
     }
 }
 
-/// Missing documentation.
 pub fn default_config() -> Config {
     Config {
         servers: Vec::new(),
@@ -174,7 +169,6 @@ pub fn default_config() -> Config {
     }
 }
 
-/// Missing documentation.
 pub fn write_default_config_to_disk() -> Result<Config> {
     let config = default_config();
     let serialized = serde_json::to_string_pretty(&config)?;
@@ -234,7 +228,6 @@ fn atomic_write(path: &str, bytes: &[u8]) -> anyhow::Result<()> {
     Ok(())
 }
 
-/// Missing documentation.
 pub fn load_or_create_default() -> Result<Config> {
     match Config::load() {
         Ok(c) => Ok(c),

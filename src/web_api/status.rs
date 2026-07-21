@@ -9,19 +9,13 @@ use crate::config::{Config, redacted_url};
 use crate::state::AppState;
 use crate::web::WebServerState;
 
-/// Missing documentation.
 pub struct CacheStats {
-    /// Missing documentation.
     pub total_servers: usize,
-    /// Missing documentation.
     pub connected_count: usize,
-    /// Missing documentation.
     pub ever_connected_count: usize,
-    /// Missing documentation.
     pub total_users: usize,
 }
 
-/// Missing documentation.
 pub async fn cache_stats(app_state: &Arc<Mutex<AppState>>) -> CacheStats {
     let state = app_state.lock().await;
     let total_servers = state.caches.len();
@@ -44,7 +38,6 @@ pub async fn cache_stats(app_state: &Arc<Mutex<AppState>>) -> CacheStats {
     }
 }
 
-/// Missing documentation.
 pub async fn get_status(
     Extension(state): Extension<Arc<WebServerState>>,
 ) -> Json<serde_json::Value> {

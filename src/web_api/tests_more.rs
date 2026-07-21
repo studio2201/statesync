@@ -14,7 +14,6 @@ async fn test_post_reload_success() {
     let web_state = Arc::new(WebServerState {
         app_state,
         reload_tx: tx,
-        bind_addr: "127.0.0.1:0".to_string(),
         web_auth: None,
         version: "test".to_string(),
         started_at: "2025-01-01".to_string(),
@@ -113,7 +112,6 @@ async fn test_serve_poster_bad_request_rfc_9110() {
     let web_state = Arc::new(WebServerState {
         app_state,
         reload_tx: tx,
-        bind_addr: "127.0.0.1:0".to_string(),
         web_auth: None,
         version: "test".to_string(),
         started_at: "2025-01-01".to_string(),
@@ -144,7 +142,6 @@ async fn test_get_server_info_bad_request_rfc_9110() {
     let web_state = Arc::new(WebServerState {
         app_state,
         reload_tx: tx,
-        bind_addr: "127.0.0.1:0".to_string(),
         web_auth: None,
         version: "test".to_string(),
         started_at: "2025-01-01".to_string(),

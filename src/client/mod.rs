@@ -1,15 +1,11 @@
 use reqwest::Client;
 use std::time::Duration;
 
-/// Missing documentation.
 pub mod api;
 pub mod api_items;
-/// Missing documentation.
 pub mod played;
 pub mod played_lists;
-/// Missing documentation.
 pub mod request;
-/// Missing documentation.
 pub mod types;
 
 #[cfg(test)]
@@ -20,15 +16,10 @@ pub use types::{
     WsMessage,
 };
 
-/// Missing documentation.
 pub struct MediaClient {
-    /// Missing documentation.
     pub client: Client,
-    /// Missing documentation.
     pub url: String,
-    /// Missing documentation.
     pub api_key: String,
-    /// Missing documentation.
     pub is_emby: bool,
 }
 
@@ -42,7 +33,6 @@ pub fn accept_invalid_certs_enabled() -> bool {
 }
 
 impl MediaClient {
-    /// Missing documentation.
     pub fn new(url: String, api_key: String, is_emby: bool) -> Self {
         // Always reduce pasted browser URLs to scheme://host:port.
         let clean_url = crate::config::normalize_server_url(&url);

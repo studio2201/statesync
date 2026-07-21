@@ -54,7 +54,6 @@ impl MediaClient {
         Ok(parse_items_with_providers(data))
     }
 
-    /// Missing documentation.
     pub async fn get_user_played_items_count(&self, user_id: &str) -> Result<u64> {
         let path = format!(
             "/Users/{}/Items?Recursive=true&Filters=IsPlayed&Limit=0",

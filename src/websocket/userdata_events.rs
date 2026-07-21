@@ -9,7 +9,6 @@ use tokio::sync::Mutex;
 use tracing::info;
 
 #[allow(clippy::too_many_arguments)]
-/// Missing documentation.
 pub async fn handle_userdata_changed_event(
     info: UserDataChangedInfo,
     source_index: usize,

@@ -62,6 +62,9 @@ pub(super) fn validate_server(s: &ServerConfig) -> Result<()> {
             s.name
         ));
     }
+    if let Err(msg) = super::url_safety::validate_upstream_url(&s.url) {
+        return Err(anyhow!("server '{}': {}", s.name, msg));
+    }
     if s.api_key.trim().is_empty() {
         return Err(anyhow!("server '{}': api_key is required", s.name));
     }
@@ -85,7 +88,6 @@ pub(super) fn validate_server(s: &ServerConfig) -> Result<()> {
     Ok(())
 }
 
-/// Missing documentation.
 pub fn validate_config(cfg: &Config) -> Result<()> {
     let mut cfg = cfg.clone();
     normalize_config(&mut cfg);
@@ -129,7 +131,6 @@ pub fn validate_config(cfg: &Config) -> Result<()> {
     Ok(())
 }
 
-/// Missing documentation.
 pub fn is_loopback_bind(addr: &str) -> bool {
     let host = if let Some(rest) = addr.strip_prefix('[') {
         match rest.find(']') {

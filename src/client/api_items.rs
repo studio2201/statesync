@@ -6,7 +6,6 @@ use percent_encoding::{NON_ALPHANUMERIC, utf8_percent_encode};
 use std::collections::HashMap;
 
 impl MediaClient {
-    /// Missing documentation.
     pub async fn get_library_items(&self) -> Result<HashMap<String, (String, String)>> {
         let mut all_items: HashMap<String, (String, String)> = HashMap::new();
         let mut start_index: usize = 0;
@@ -71,7 +70,6 @@ impl MediaClient {
         Ok(all_items)
     }
 
-    /// Missing documentation.
     pub async fn get_item_providers(
         &self,
         user_id: &str,
@@ -113,7 +111,6 @@ impl MediaClient {
         Ok((imdb, tmdb))
     }
 
-    /// Missing documentation.
     pub async fn get_item_name(&self, user_id: &str, item_id: &str) -> Result<String> {
         let path = format!(
             "/Users/{}/Items/{}",

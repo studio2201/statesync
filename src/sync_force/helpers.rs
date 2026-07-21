@@ -23,7 +23,6 @@ pub fn write_status_throttled(
     }
 }
 
-/// Missing documentation.
 pub fn push_error(
     errors: &mut Vec<ForceSyncError>,
     status: &mut ForceSyncStatus,
@@ -37,7 +36,6 @@ pub fn push_error(
     status.errors = errors.clone();
 }
 
-/// Missing documentation.
 pub fn write_status(tracker: &SyncForceTracker, status: &ForceSyncStatus) {
     if let Ok(mut lock) = tracker.status.try_lock() {
         *lock = status.clone();
@@ -45,7 +43,6 @@ pub fn write_status(tracker: &SyncForceTracker, status: &ForceSyncStatus) {
 }
 
 impl SyncForceTracker {
-    /// Missing documentation.
     pub fn snapshot_status(&self) -> ForceSyncStatus {
         if let Ok(lock) = self.status.try_lock() {
             lock.clone()
@@ -54,7 +51,6 @@ impl SyncForceTracker {
         }
     }
 
-    /// Missing documentation.
     pub fn cancel_backfill(&self) {
         self.cancel.store(true, Ordering::SeqCst);
     }

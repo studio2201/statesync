@@ -3,10 +3,8 @@ use tokio::sync::Semaphore;
 
 pub mod favorite_sync;
 pub mod live_item_title;
-/// Missing documentation.
 pub mod progress;
 pub mod progress_message;
-/// Missing documentation.
 pub mod resolve;
 #[cfg(test)]
 pub mod tests;

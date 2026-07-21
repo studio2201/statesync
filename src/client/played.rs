@@ -21,7 +21,6 @@ const PATH_SEGMENT: &AsciiSet = &CONTROLS
     .add(b'}');
 
 impl MediaClient {
-    /// Missing documentation.
     pub async fn find_item_by_provider(
         &self,
         user_id: &str,

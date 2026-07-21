@@ -11,7 +11,6 @@ fn default_force_direction() -> Direction {
 }
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
-/// Missing documentation.
 pub struct ForceSyncOptions {
     /// Always mesh both ways among send/receive servers. Kept for API compatibility.
     #[serde(default = "default_force_direction")]
@@ -46,30 +45,19 @@ pub enum Direction {
 }
 
 #[derive(Debug, Clone, Copy, serde::Serialize, serde::Deserialize, PartialEq)]
-/// Missing documentation.
 pub enum ForceSyncState {
-    /// Missing documentation.
     Idle,
-    /// Missing documentation.
     Running,
-    /// Missing documentation.
     Completed,
-    /// Missing documentation.
     Failed,
 }
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
-/// Missing documentation.
 pub struct ForceSyncError {
-    /// Missing documentation.
     pub user: String,
-    /// Missing documentation.
     pub server: String,
-    /// Missing documentation.
     pub item_id: Option<String>,
-    /// Missing documentation.
     pub provider: Option<String>,
-    /// Missing documentation.
     pub message: String,
 }
 
@@ -112,31 +100,18 @@ pub struct SkipReasons {
 }
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
-/// Missing documentation.
 pub struct ForceSyncStatus {
-    /// Missing documentation.
     pub state: ForceSyncState,
-    /// Missing documentation.
     pub started_at: Option<String>,
-    /// Missing documentation.
     pub finished_at: Option<String>,
-    /// Missing documentation.
     pub direction: Option<Direction>,
-    /// Missing documentation.
     pub total_pairs: u64,
-    /// Missing documentation.
     pub processed: u64,
-    /// Missing documentation.
     pub succeeded: u64,
-    /// Missing documentation.
     pub skipped: u64,
-    /// Missing documentation.
     pub failed: u64,
-    /// Missing documentation.
     pub current_user: Option<String>,
-    /// Missing documentation.
     pub last_error: Option<String>,
-    /// Missing documentation.
     pub errors: Vec<ForceSyncError>,
     /// Human phase for WUI: preparing | played | favorites | finishing
     #[serde(default)]
@@ -156,7 +131,6 @@ pub struct ForceSyncStatus {
 }
 
 impl ForceSyncStatus {
-    /// Missing documentation.
     pub fn idle() -> Self {
         Self {
             state: ForceSyncState::Idle,
@@ -186,15 +160,10 @@ impl Default for ForceSyncStatus {
     }
 }
 
-/// Missing documentation.
 pub struct SyncForceTracker {
-    /// Missing documentation.
     pub force_sync_in_progress: AtomicBool,
-    /// Missing documentation.
     pub running: Mutex<bool>,
-    /// Missing documentation.
     pub cancel: AtomicBool,
-    /// Missing documentation.
     pub status: Mutex<ForceSyncStatus>,
 }
 
@@ -209,17 +178,11 @@ impl Default for SyncForceTracker {
     }
 }
 
-/// Missing documentation.
 pub struct ForceContext {
-    /// Missing documentation.
     pub direction: Direction,
-    /// Missing documentation.
     pub config: Config,
-    /// Missing documentation.
     pub clients: Vec<Arc<MediaClient>>,
-    /// Missing documentation.
     pub state: Arc<Mutex<AppState>>,
-    /// Missing documentation.
     pub tracker: Arc<SyncForceTracker>,
     /// Preview only — no UserData writes.
     pub dry_run: bool,

@@ -8,53 +8,27 @@ use axum::{Extension, body::Body, extract::Query, http::StatusCode, response::Re
 use std::sync::Arc;
 use std::time::Duration;
 
-/// Missing documentation.
+/// Cap proxied image payload (DoS / memory).
+const MAX_POSTER_BYTES: u64 = 2 * 1024 * 1024;
+
 pub async fn serve_poster(
-    Extension(state): Extension<Arc<WebServerState>>,
+    Extension(_state): Extension<Arc<WebServerState>>,
     Query(params): Query<std::collections::HashMap<String, String>>,
 ) -> Response {
     let server_name = params.get("server").cloned().unwrap_or_default();
     let item_id = params.get("item_id").cloned().unwrap_or_default();
 
     if !valid_server_name(&server_name) || !valid_item_id(&item_id) {
-        return Response::builder()
-            .status(StatusCode::BAD_REQUEST)
-            .body(Body::from("Bad Request"))
-            .unwrap_or_else(|_| {
-                Response::builder()
-                    .status(500)
-                    .body(Body::from("Internal Server Error"))
-                    .unwrap_or_default()
-            });
+        return bad_request();
     }
 
     let config = match Config::load() {
         Ok(cfg) => cfg,
-        Err(_) => {
-            return Response::builder()
-                .status(StatusCode::INTERNAL_SERVER_ERROR)
-                .body(Body::from("Internal Error"))
-                .unwrap_or_else(|_| {
-                    Response::builder()
-                        .status(500)
-                        .body(Body::from("Internal Server Error"))
-                        .unwrap_or_default()
-                });
-        }
+        Err(_) => return internal_error(),
     };
     let server_cfg = match config.servers.iter().find(|s| s.name == server_name) {
         Some(s) => s,
-        None => {
-            return Response::builder()
-                .status(StatusCode::NOT_FOUND)
-                .body(Body::from("Not Found"))
-                .unwrap_or_else(|_| {
-                    Response::builder()
-                        .status(500)
-                        .body(Body::from("Internal Server Error"))
-                        .unwrap_or_default()
-                });
-        }
+        None => return not_found("Not Found"),
     };
 
     let client = MediaClient::new(
@@ -67,19 +41,15 @@ pub async fn serve_poster(
     let url = client.url_path(&path);
     let builder = client.add_auth_headers(client.client.get(&url));
 
-    let _ = &state;
     match tokio::time::timeout(Duration::from_secs(10), builder.send()).await {
         Ok(Ok(resp)) => {
             if !resp.status().is_success() {
-                return Response::builder()
-                    .status(StatusCode::NOT_FOUND)
-                    .body(Body::from("No poster"))
-                    .unwrap_or_else(|_| {
-                        Response::builder()
-                            .status(500)
-                            .body(Body::from("Internal Server Error"))
-                            .unwrap_or_default()
-                    });
+                return not_found("No poster");
+            }
+            if let Some(len) = resp.content_length() {
+                if len > MAX_POSTER_BYTES {
+                    return not_found("No poster");
+                }
             }
             let content_type = resp
                 .headers()
@@ -90,6 +60,9 @@ pub async fn serve_poster(
             // Only proxy real image payloads (avoid HTML error pages as "images").
             let is_image = content_type.starts_with("image/");
             if let Ok(bytes) = resp.bytes().await {
+                if bytes.len() as u64 > MAX_POSTER_BYTES {
+                    return not_found("No poster");
+                }
                 if is_image && !bytes.is_empty() {
                     let mut res = Response::new(Body::from(bytes));
                     if let Ok(val) = axum::http::HeaderValue::from_str(&content_type) {
@@ -109,10 +82,26 @@ pub async fn serve_poster(
     Response::builder()
         .status(StatusCode::NOT_FOUND)
         .body(Body::empty())
-        .unwrap_or_else(|_| {
-            Response::builder()
-                .status(500)
-                .body(Body::from("Internal Server Error"))
-                .unwrap_or_default()
-        })
+        .unwrap_or_else(|_| internal_error())
+}
+
+fn bad_request() -> Response {
+    Response::builder()
+        .status(StatusCode::BAD_REQUEST)
+        .body(Body::from("Bad Request"))
+        .unwrap_or_else(|_| internal_error())
+}
+
+fn not_found(msg: &'static str) -> Response {
+    Response::builder()
+        .status(StatusCode::NOT_FOUND)
+        .body(Body::from(msg))
+        .unwrap_or_else(|_| internal_error())
+}
+
+fn internal_error() -> Response {
+    Response::builder()
+        .status(StatusCode::INTERNAL_SERVER_ERROR)
+        .body(Body::from("Internal Server Error"))
+        .unwrap_or_default()
 }

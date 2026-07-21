@@ -6,7 +6,6 @@ use crate::client::MediaClient;
 use crate::config::Config;
 use crate::web::WebServerState;
 
-/// Missing documentation.
 pub async fn post_reload(Extension(state): Extension<Arc<WebServerState>>) -> Response {
     if let Err(e) = state.reload_tx.send(()).await {
         tracing::error!("Failed to trigger config reload: {}", e);
@@ -31,7 +30,6 @@ pub async fn post_reload(Extension(state): Extension<Arc<WebServerState>>) -> Re
         })
 }
 
-/// Missing documentation.
 pub async fn post_users_refresh(Extension(state): Extension<Arc<WebServerState>>) -> Response {
     let config = match Config::load() {
         Ok(c) => c,

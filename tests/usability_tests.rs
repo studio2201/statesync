@@ -16,7 +16,6 @@ fn make_test_web_state() -> Arc<WebServerState> {
     Arc::new(WebServerState {
         app_state,
         reload_tx,
-        bind_addr: "127.0.0.1:0".to_string(),
         web_auth: None,
         version: "v0.28.33".to_string(),
         started_at: "2026-07-20T00:00:00Z".to_string(),

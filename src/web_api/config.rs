@@ -6,7 +6,6 @@ use std::sync::Arc;
 use crate::config::{Config, normalize_config, validate_config};
 use crate::web::WebServerState;
 
-/// Missing documentation.
 pub async fn get_config() -> Json<Config> {
     let mut config = Config::load().unwrap_or_else(|_| crate::config::default_config());
     for s in &mut config.servers {
@@ -15,7 +14,6 @@ pub async fn get_config() -> Json<Config> {
     Json(config)
 }
 
-/// Missing documentation.
 pub async fn post_config(
     Extension(state): Extension<Arc<WebServerState>>,
     Json(mut new_config): Json<Config>,

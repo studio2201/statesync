@@ -85,6 +85,7 @@ pub async fn process_played_items_batch(
                 source_pos,
                 &tgt_ud,
             ) {
+                // No write → do not apply min_interval sleep (would stall large equal libraries).
                 *skipped_total += 1;
                 *processed_total += 1;
                 status.by_field.played.skip += 1;
@@ -94,10 +95,6 @@ pub async fn process_played_items_batch(
                 status.skipped = *skipped_total;
                 status.failed = *failed_total;
                 write_status_throttled(&ctx.tracker, status, last_status_write, false);
-                let elapsed = started_item.elapsed();
-                if elapsed < min_interval {
-                    tokio::time::sleep(min_interval - elapsed).await;
-                }
                 continue;
             }
         }

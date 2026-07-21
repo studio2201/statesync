@@ -1,4 +1,3 @@
-/// Missing documentation.
 pub fn redacted_url(url: &str) -> String {
     let trimmed = url.trim_end_matches('/');
     if let Some(idx) = trimmed.find("://") {

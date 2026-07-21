@@ -108,7 +108,6 @@ async fn test_serve_healthz_unhealthy() {
     let web_state = Arc::new(WebServerState {
         app_state,
         reload_tx: mpsc::channel(1).0,
-        bind_addr: "127.0.0.1:0".to_string(),
         web_auth: None,
         version: "test".to_string(),
         started_at: "2025-01-01".to_string(),
@@ -141,7 +140,6 @@ async fn test_serve_healthz_healthy() {
     let web_state = Arc::new(WebServerState {
         app_state,
         reload_tx: mpsc::channel(1).0,
-        bind_addr: "127.0.0.1:0".to_string(),
         web_auth: None,
         version: "test".to_string(),
         started_at: "2025-01-01".to_string(),

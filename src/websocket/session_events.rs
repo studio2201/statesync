@@ -36,7 +36,6 @@ pub async fn init_cache_in_background(
 }
 
 #[allow(clippy::too_many_arguments)]
-/// Missing documentation.
 pub async fn handle_sessions_event(
     sessions: Vec<SessionInfo>,
     source_index: usize,

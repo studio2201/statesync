@@ -124,6 +124,7 @@ pub async fn force_sync_favorites_pair(
                 .await
             {
                 if tgt_ud.is_favorite == Some(true) {
+                    // No write → skip min_interval pacing (equal libraries must not stall).
                     *skipped_total += 1;
                     *processed_total += 1;
                     status.by_field.favorite.skip += 1;
@@ -133,10 +134,6 @@ pub async fn force_sync_favorites_pair(
                     status.skipped = *skipped_total;
                     status.failed = *failed_total;
                     write_status_throttled(&ctx.tracker, status, &mut last_status_write, false);
-                    let elapsed = started_item.elapsed();
-                    if elapsed < min_interval {
-                        tokio::time::sleep(min_interval - elapsed).await;
-                    }
                     continue;
                 }
             }

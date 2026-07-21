@@ -3,14 +3,12 @@ use anyhow::{Result, anyhow};
 use reqwest::Response;
 use std::time::Duration;
 
-/// Missing documentation.
 pub fn retry_enabled() -> bool {
     std::env::var("STATESYNC_HTTP_RETRY")
         .map(|v| !v.eq_ignore_ascii_case("off"))
         .unwrap_or(true)
 }
 
-/// Missing documentation.
 pub async fn send_with_retry(req: reqwest::RequestBuilder, label: &str) -> Result<Response> {
     let enabled = retry_enabled();
     let mut last_err: Option<anyhow::Error> = None;

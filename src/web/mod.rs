@@ -12,29 +12,18 @@ use tokio::sync::{Mutex, mpsc};
 
 use crate::state::AppState;
 
-/// Missing documentation.
 pub mod handlers;
 
 #[cfg(test)]
 mod tests;
 
 #[derive(Clone)]
-/// Missing documentation.
 pub struct WebServerState {
-    /// Missing documentation.
     pub app_state: Arc<Mutex<AppState>>,
-    /// Missing documentation.
     pub reload_tx: mpsc::Sender<()>,
-    #[allow(dead_code)]
-    /// Missing documentation.
-    pub bind_addr: String,
-    /// Missing documentation.
     pub web_auth: Option<String>,
-    /// Missing documentation.
     pub version: String,
-    /// Missing documentation.
     pub started_at: String,
-    /// Missing documentation.
     pub started_instant: Instant,
 }
 
@@ -47,7 +36,6 @@ const PUBLIC_PATHS: &[&str] = &[
     "/healthz",
 ];
 
-/// Missing documentation.
 pub fn create_router(web_state: Arc<WebServerState>) -> Router {
     let public = Router::new()
         .route("/", get(handlers::serve_index))
@@ -190,7 +178,6 @@ async fn auth_middleware(
     next.run(req).await
 }
 
-/// Missing documentation.
 pub fn extract_bearer(headers: &HeaderMap) -> String {
     headers
         .get(axum::http::header::AUTHORIZATION)
@@ -203,14 +190,18 @@ pub fn extract_bearer(headers: &HeaderMap) -> String {
         .to_string()
 }
 
-/// Missing documentation.
 pub fn constant_time_eq(a: &str, b: &str) -> bool {
-    if a.len() != b.len() {
-        return false;
-    }
-    let mut acc = 0u8;
-    for (x, y) in a.bytes().zip(b.bytes()) {
+    // Always walk the longer buffer so timing is less length-dependent.
+    let ab = a.as_bytes();
+    let bb = b.as_bytes();
+    let max = ab.len().max(bb.len());
+    let mut acc = (ab.len() ^ bb.len()) as u8;
+    let mut i = 0;
+    while i < max {
+        let x = ab.get(i).copied().unwrap_or(0);
+        let y = bb.get(i).copied().unwrap_or(0);
         acc |= x ^ y;
+        i += 1;
     }
     acc == 0
 }

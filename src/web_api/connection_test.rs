@@ -9,17 +9,12 @@ use super::validation::validate_upstream_url;
 use crate::client::MediaClient;
 
 #[derive(Debug, Deserialize)]
-/// Missing documentation.
 pub struct TestConnRequest {
-    /// Missing documentation.
     pub url: String,
-    /// Missing documentation.
     pub api_key: String,
-    /// Missing documentation.
     pub is_emby: bool,
 }
 
-/// Missing documentation.
 pub async fn test_connection(
     Json(req): Json<TestConnRequest>,
 ) -> (StatusCode, Json<serde_json::Value>) {

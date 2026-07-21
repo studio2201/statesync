@@ -4,7 +4,6 @@ use anyhow::{Context, Result, anyhow};
 use std::collections::HashMap;
 
 impl MediaClient {
-    /// Missing documentation.
     pub async fn get_public_server_info(&self) -> Result<serde_json::Value> {
         let clean_url = self.url.trim_end_matches('/');
         let primary_url = format!("{}/System/Info/Public", clean_url);
