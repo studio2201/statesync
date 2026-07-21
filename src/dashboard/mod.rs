@@ -171,25 +171,6 @@ pub fn render_dashboard() -> Markup {
 
                 div class="toast" id="toast" {}
 
-                div class="modal" id="authModal" style="display:none" {
-                    div class="modal-content" {
-                        h2 { "Sign in" }
-                        p class="form-hint" style="margin-bottom:12px" {
-                            "Enter the dashboard token from the container log or appdata/.web_auth (hex only, no bearer: prefix)."
-                        }
-                        div class="form-group" {
-                            label { "Token" }
-                            input type="password" id="authToken" autocomplete="off" {}
-                        }
-                        div class="modal-actions" {
-                            div {}
-                            div class="right" {
-                                button class="btn btn-primary" id="authSubmitBtn" { "Unlock" }
-                            }
-                        }
-                    }
-                }
-
                 script { (maud::PreEscaped(full_js)) }
             }
         }

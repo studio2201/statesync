@@ -8,8 +8,8 @@ pub use dry_run::{dry_run, trigger_reload, validate_config};
 pub use force_sync::run_sync_force_cli;
 pub use tui::run_tui;
 pub use helpers::{
-    drain_ws_handles, enforce_bind_auth, init_clients_parallel, install_shutdown_handler,
-    print_help, resolve_bind_addr, resolve_web_auth,
+    drain_ws_handles, init_clients_parallel, install_shutdown_handler, print_help,
+    resolve_bind_addr, resolve_web_auth,
 };
 
 #[cfg(test)]

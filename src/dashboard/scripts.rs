@@ -4,18 +4,10 @@
 pub const JS_CORE: &str = r#"if ('serviceWorker' in navigator) { navigator.serviceWorker.register('/sw.js').catch(() => {}); }
 const $ = id => document.getElementById(id);
 let currentConfig = { servers: [], sync_threshold_seconds: 5 }; let editIndex = -1;
-const AUTH_TOKEN_KEY = 'statesync-auth-token';
 function esc(s) { if (s == null) return ''; return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]); }
-function getAuthHeaders() {
-  const t = localStorage.getItem(AUTH_TOKEN_KEY);
-  return t ? { 'Authorization': 'Bearer ' + t } : {};
-}
 async function authedFetch(url, opts) {
   opts = opts || {};
-  opts.headers = Object.assign({}, opts.headers || {}, getAuthHeaders());
-  const r = await fetch(url, opts);
-  if (r.status === 401) { showAuthModal(); throw new Error('unauthorized'); }
-  return r;
+  return fetch(url, opts);
 }
 async function loadPoster(url, img) {
   try {
@@ -26,21 +18,6 @@ async function loadPoster(url, img) {
     img.onload = () => { try { URL.revokeObjectURL(obj); } catch (_) {} };
     img.src = obj;
   } catch (_) {}
-}
-function showAuthModal() {
-  const m = $('authModal'); if (m) m.style.display = 'flex';
-}
-function hideAuthModal() {
-  const m = $('authModal'); if (m) m.style.display = 'none';
-}
-function submitAuth() {
-  let t = $('authToken').value.trim();
-  if (!t) return;
-  // Accept accidental "bearer:xxx" paste
-  if (t.toLowerCase().startsWith('bearer:')) t = t.slice(7).trim();
-  localStorage.setItem(AUTH_TOKEN_KEY, t);
-  hideAuthModal();
-  loadDashboard();
 }
 function setTheme(n) { document.body.className = n === 'cyberpunk' ? '' : `theme-${n}`; localStorage.setItem('hud-theme', n); }
 function nameFromUrl(url) {

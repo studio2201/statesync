@@ -225,7 +225,7 @@ function initLogsToggle() {
 }
 document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') {
-    ['serverModal','settingsModal','authModal'].forEach(id => {
+    ['serverModal','settingsModal'].forEach(id => {
       const m = $(id); if (m && m.style.display === 'flex') m.style.display = 'none';
     });
   }
@@ -235,14 +235,10 @@ setTheme(savedTheme);
 if ($('themeSelector')) $('themeSelector').value = savedTheme;
 initLogsToggle();
 document.addEventListener('DOMContentLoaded', () => {
-  const b = $('authSubmitBtn'); if (b) b.addEventListener('click', submitAuth);
-  const t = $('authToken'); if (t) t.addEventListener('keydown', (e) => { if (e.key === 'Enter') submitAuth(); });
   loadDashboard();
   setInterval(loadDashboard, 3000);
 });
 if (document.readyState !== 'loading') {
-  const b = $('authSubmitBtn'); if (b) b.addEventListener('click', submitAuth);
-  const t = $('authToken'); if (t) t.addEventListener('keydown', (e) => { if (e.key === 'Enter') submitAuth(); });
   loadDashboard();
   setInterval(loadDashboard, 3000);
 }

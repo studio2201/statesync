@@ -22,8 +22,7 @@ use statesync::{
 mod cli;
 
 use cli::{
-    drain_ws_handles, enforce_bind_auth, install_shutdown_handler, resolve_bind_addr,
-    resolve_web_auth,
+    drain_ws_handles, install_shutdown_handler, resolve_bind_addr, resolve_web_auth,
 };
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
@@ -76,17 +75,9 @@ async fn main() -> Result<()> {
     init_logging();
     info!("Starting statesync v{} sidecar...", VERSION);
     let bind_addr = resolve_bind_addr();
+    // Dashboard is open (no sign-in). resolve_web_auth always returns None.
     let web_auth = resolve_web_auth();
-    enforce_bind_auth(&bind_addr, web_auth.as_ref())?;
-
-    if web_auth.is_some() {
-        eprintln!("STATESYNC_WEB_AUTH is set; bearer token required for /api/* endpoints.");
-    } else {
-        eprintln!(
-            "STATESYNC_WEB_AUTH not set; /api/* is open on loopback-only bind {}.",
-            bind_addr
-        );
-    }
+    eprintln!("Web UI open at http://{} (no authentication)", bind_addr);
 
     let app_state = Arc::new(Mutex::new(AppState::new(vec![])));
     let (reload_tx, mut reload_rx) = mpsc::channel::<()>(5);

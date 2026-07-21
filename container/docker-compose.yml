@@ -14,8 +14,6 @@ services:
     environment:
       - RUST_LOG=info
       - TZ=UTC
-      # Required for default 0.0.0.0 bind (non-loopback without auth is refused):
-      - STATESYNC_WEB_AUTH=bearer:replace-with-openssl-rand-hex-32
       # Allow http:// to upstream servers by default (LAN-friendly).
       # Set to "false" to require https:// only.
       - STATESYNC_ALLOW_INSECURE_HTTP=true

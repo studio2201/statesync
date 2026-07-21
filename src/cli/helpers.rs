@@ -123,10 +123,6 @@ pub fn print_help() {
     println!("Environment Variables:");
     println!("  STATESYNC_BIND                 Listen address (default: 0.0.0.0:4601)");
     println!(
-        "                                  Non-loopback binds require STATESYNC_WEB_AUTH."
-    );
-    println!("  STATESYNC_WEB_AUTH             'bearer:<token>' required for non-loopback binds.");
-    println!(
         "  STATESYNC_ALLOW_INSECURE_HTTP  Set 'true' to permit http:// URLs to upstream servers."
     );
     println!(
@@ -144,22 +140,16 @@ pub fn print_help() {
     println!("  TZ                             Container timezone.");
 }
 
-/// Docker-friendly default; process refuses this bind without STATESYNC_WEB_AUTH.
+/// Docker / Unraid-friendly default (all interfaces).
 pub const DEFAULT_BIND: &str = "0.0.0.0:4601";
 
 pub fn resolve_bind_addr() -> String {
     std::env::var("STATESYNC_BIND").unwrap_or_else(|_| DEFAULT_BIND.to_string())
 }
 
+/// Dashboard authentication is disabled — always open, no sign-in.
 pub fn resolve_web_auth() -> Option<String> {
-    std::env::var("STATESYNC_WEB_AUTH").ok().and_then(|v| {
-        let v = v.trim().to_string();
-        if v.is_empty() || v.eq_ignore_ascii_case("none") {
-            None
-        } else {
-            Some(v)
-        }
-    })
+    None
 }
 
 pub fn install_shutdown_handler() -> tokio::sync::oneshot::Receiver<()> {
@@ -182,20 +172,6 @@ pub fn install_shutdown_handler() -> tokio::sync::oneshot::Receiver<()> {
         let _ = tx.send(());
     });
     rx
-}
-
-/// Non-loopback binds require `STATESYNC_WEB_AUTH`.
-pub fn enforce_bind_auth(bind_addr: &str, web_auth: Option<&String>) -> anyhow::Result<()> {
-    use statesync::config::is_loopback_bind;
-    if is_loopback_bind(bind_addr) || web_auth.is_some() {
-        return Ok(());
-    }
-    anyhow::bail!(
-        "Refusing to bind non-loopback address '{}' without STATESYNC_WEB_AUTH. \
-         Set STATESYNC_WEB_AUTH=bearer:<token> (e.g. openssl rand -hex 32), \
-         or bind loopback only (STATESYNC_BIND=127.0.0.1:4601).",
-        bind_addr
-    );
 }
 
 pub async fn drain_ws_handles(handles: Vec<tokio::task::JoinHandle<()>>, timeout: Duration) {

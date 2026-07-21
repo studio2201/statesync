@@ -10,11 +10,9 @@ When a user pauses, resumes, or finishes a show on one server, the same position
 
 1. **Docker tab** → **Template Repositories** → add `https://github.com/studio2201/statesync` (or import `statesync.xml` / `unraid/unraid-template.xml` from this repo)
 2. **Add Container** → pick **statesync**
-3. **Dashboard Auth** (recommended): leave **empty** on first install — the container generates a token, prints it in the log, and saves it to `/mnt/user/appdata/statesync/.web_auth`. Or set `bearer:<token>` yourself (`openssl rand -hex 32`).
-4. Confirm **Config Volume** is `/mnt/user/appdata/statesync`, network is **host**, then **Apply**
-5. Open **Logs** once and copy the generated bearer token if you left auth blank
-6. Open `http://<your-unraid-ip>:4601` → paste the token when the auth modal appears
-7. **+ ADD MODULE** → pick JELLYFIN or EMBY → URL + API key → **↻ AUTO** for the display name
+3. Confirm **Config Volume** is `/mnt/user/appdata/statesync`, network is **host**, then **Apply**
+4. Open `http://<your-unraid-ip>:4601` — no login required
+5. **Add server** → URL + API key → **Save**
 
 Config persists at `/mnt/user/appdata/statesync/config.json`. Defaults `PUID=99` / `PGID=100` so appdata shows as `nobody` in the Unraid file manager.
 
@@ -36,8 +34,6 @@ services:
     environment:
       - RUST_LOG=info
       - TZ=UTC
-      # Required for non-loopback binds (default 0.0.0.0:4601):
-      - STATESYNC_WEB_AUTH=bearer:replace-with-openssl-rand-hex-32
       # Optional PUID/PGID/UMASK if you want a non-default user:
       # - PUID=99
       # - PGID=100
@@ -100,8 +96,7 @@ You can also configure everything in the web UI — changes save to this file.
 
 | Variable | Default | What |
 |---|---|---|
-| `STATESYNC_BIND` | `0.0.0.0:4601` | Listen address. **Non-loopback binds require `STATESYNC_WEB_AUTH`** (daemon refuses to start otherwise). |
-| `STATESYNC_WEB_AUTH` | _(unset)_ | `bearer:<token>` required for non-loopback binds; enables auth on `/api/*`. Generate with `openssl rand -hex 32` |
+| `STATESYNC_BIND` | `0.0.0.0:4601` | Listen address |
 | `STATESYNC_SYNC_THRESHOLD_SECONDS` | `5` | Skip redundant updates (progress and played) within this window |
 | `STATESYNC_ALLOW_INSECURE_HTTP` | `true` | Permits plain `http://` URLs to upstream Emby/Jellyfin servers (LAN-friendly default). Plain HTTP means the API key travels unencrypted between containers — fine on a home LAN, not fine if your media servers are exposed beyond it (e.g. behind a reverse proxy with TLS). Set `false` to require `https://`. |
 | `STATESYNC_ACCEPT_INVALID_CERTS` | `false` | Set `true` only for intentionally trusted self-signed HTTPS upstreams (disables TLS cert verification). |
@@ -193,7 +188,7 @@ Useful for initial reconciliation after the daemon has been running a while and 
 
 - **API keys**: stored in `config.json` only. Returned masked by `GET /api/config` (first 4 + last 4 chars).
 - **Upstream HTTPS**: by default StateSync talks plain `http://` to your Emby/Jellyfin (LAN convention). Set `STATESYNC_ALLOW_INSECURE_HTTP=false` if your media servers are exposed beyond the LAN (e.g. behind a reverse proxy with TLS).
-- **Dashboard auth**: non-loopback binds (default / Unraid host network) **require** `STATESYNC_WEB_AUTH=bearer:<token>`. Leave it unset in Docker/Unraid to auto-generate on first start (`/config/.web_auth`). For internet exposure, put the daemon behind a reverse proxy (Caddy / Traefik / nginx) that handles TLS.
+- **Dashboard**: open on the LAN with no sign-in. For internet exposure, put it behind a reverse proxy (Caddy / Traefik / nginx) with its own auth/TLS.
 
 ## How it works
 
