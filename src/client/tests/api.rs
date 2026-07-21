@@ -276,3 +276,24 @@ fn test_userdata_entry_deserializes_favorite() {
     assert_eq!(v.is_favorite, Some(true));
     assert!(!v.played);
 }
+
+#[tokio::test]
+async fn test_get_item_user_data() {
+    let _guard = match super::TEST_LOCK.lock() {
+        Ok(g) => g,
+        Err(p) => p.into_inner(),
+    };
+    let mut server = mockito::Server::new_async().await;
+    let mock = server
+        .mock("GET", "/Users/u1/Items/item1/UserData")
+        .with_status(200)
+        .with_body(r#"{"Played":true,"PlaybackPositionTicks":1000,"IsFavorite":true}"#)
+        .create_async()
+        .await;
+    let client = MediaClient::new(server.url(), "key".to_string(), false);
+    let ud = client.get_item_user_data("u1", "item1").await.unwrap();
+    assert!(ud.played);
+    assert_eq!(ud.playback_position_ticks, Some(1000));
+    assert_eq!(ud.is_favorite, Some(true));
+    mock.assert_async().await;
+}

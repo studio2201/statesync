@@ -49,6 +49,7 @@ mod tests {
             phase: None,
             by_field: Default::default(),
             scope: Vec::new(),
+            skip_reasons: Default::default(),
         };
         assert_eq!(status.processed, 2);
         assert_eq!(status.total_pairs, 5);

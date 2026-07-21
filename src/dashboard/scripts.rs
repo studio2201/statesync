@@ -87,7 +87,7 @@ async function loadDashboard() {
     currentConfig = await configRes.json(); const status = await statusRes.json();
     if (!currentConfig.sync) currentConfig.sync = {
       live_played: true, live_position: true, live_favorites: true,
-      force_played: true, force_position: true, force_favorites: true, force_unwatch: false
+      force_played: true, force_position: true, force_favorites: true
     };
     if ($('syncThreshold')) $('syncThreshold').value = currentConfig.sync_threshold_seconds;
     const s = currentConfig.sync;
@@ -98,7 +98,6 @@ async function loadDashboard() {
     setChk('syncForcePlayed', s.force_played !== false);
     setChk('syncForcePosition', s.force_position !== false);
     setChk('syncForceFavorites', s.force_favorites !== false);
-    setChk('syncForceUnwatch', !!s.force_unwatch);
     if ($('cfgUserMappings')) {
       $('cfgUserMappings').value = (currentConfig.user_mappings || []).map(group => group.join(', ')).join('\n');
     }

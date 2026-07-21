@@ -78,6 +78,37 @@ impl MediaClient {
         Ok(None)
     }
 
+    /// Read current UserData for an item (played / position / favorite).
+    pub async fn get_item_user_data(
+        &self,
+        user_id: &str,
+        item_id: &str,
+    ) -> Result<crate::client::types::UserDataEntry> {
+        let path = format!(
+            "/Users/{}/Items/{}/UserData",
+            utf8_percent_encode(user_id, PATH_SEGMENT),
+            utf8_percent_encode(item_id, PATH_SEGMENT)
+        );
+        let url = self.url_path(&path);
+        let resp = send_with_retry(
+            self.add_auth_headers(self.client.get(&url)),
+            "get_item_user_data",
+        )
+        .await
+        .with_context(|| format!("UserData get failed: {}", url))?;
+        let mut data: serde_json::Value = resp
+            .json()
+            .await
+            .context("Failed to parse UserData response")?;
+        // Normalize ItemId if API omits it (some builds only return fields).
+        if data.get("ItemId").is_none() && data.get("itemId").is_none() {
+            if let Some(map) = data.as_object_mut() {
+                map.insert("ItemId".to_string(), serde_json::json!(item_id));
+            }
+        }
+        serde_json::from_value(data).context("Failed to decode UserData")
+    }
+
     /// Write playback progress (position + played). Does not touch IsFavorite.
     pub async fn update_progress(
         &self,

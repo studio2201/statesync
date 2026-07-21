@@ -79,16 +79,10 @@ pub struct SyncOptions {
     /// Force: push favorites.
     #[serde(default = "default_true")]
     pub force_favorites: bool,
-    /// Force: clear played on target when source is unwatched (high regret; off).
-    #[serde(default = "default_false")]
-    pub force_unwatch: bool,
 }
 
 fn default_true() -> bool {
     true
-}
-fn default_false() -> bool {
-    false
 }
 
 impl Default for SyncOptions {
@@ -100,7 +94,6 @@ impl Default for SyncOptions {
             force_played: true,
             force_position: true,
             force_favorites: true,
-            force_unwatch: false,
         }
     }
 }

@@ -108,6 +108,23 @@ pub struct ForceByField {
     pub favorite: FieldCounters,
 }
 
+/// Why force sync skipped an item (aggregated for WUI / activity log).
+#[derive(Debug, Clone, Default, serde::Serialize, serde::Deserialize, PartialEq, Eq)]
+pub struct SkipReasons {
+    /// No IMDb/TMDb on source item.
+    #[serde(default)]
+    pub no_provider: u64,
+    /// Provider present but no matching item on target library.
+    #[serde(default)]
+    pub no_match: u64,
+    /// Target already has the same played / favorite / position state.
+    #[serde(default)]
+    pub already_equal: u64,
+    /// Other skips (disabled scopes, etc.).
+    #[serde(default)]
+    pub other: u64,
+}
+
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 /// Missing documentation.
 pub struct ForceSyncStatus {
@@ -144,6 +161,9 @@ pub struct ForceSyncStatus {
     /// Which force scopes were enabled for this run.
     #[serde(default)]
     pub scope: Vec<String>,
+    /// Aggregate skip reasons (trust at scale).
+    #[serde(default)]
+    pub skip_reasons: SkipReasons,
 }
 
 impl ForceSyncStatus {
@@ -165,6 +185,7 @@ impl ForceSyncStatus {
             phase: None,
             by_field: ForceByField::default(),
             scope: Vec::new(),
+            skip_reasons: SkipReasons::default(),
         }
     }
 }

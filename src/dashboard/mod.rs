@@ -215,8 +215,7 @@ pub fn render_dashboard() -> Markup {
                             label class="check-row" { input type="checkbox" id="syncForcePlayed" checked; " Played history" }
                             label class="check-row" { input type="checkbox" id="syncForcePosition" checked; " In-progress positions" }
                             label class="check-row" { input type="checkbox" id="syncForceFavorites" checked; " Favorites" }
-                            label class="check-row" { input type="checkbox" id="syncForceUnwatch"; " Unwatch / clear played (off by default)" }
-                            p class="form-hint" { "Unwatch is high-regret and not applied yet even if checked — reserved." }
+                            p class="form-hint" { "Force only pushes when the target is missing that state (already watched / already favorited is skipped)." }
                         }
                         div class="form-group" {
                             label { "Username mappings (advanced text)" }

@@ -54,6 +54,10 @@ pub const JS_ACTIONS: &str = r#"    const logsDiv = $('syncLogs');
         if (bf.favorite && (bf.favorite.ok || bf.favorite.skip || bf.favorite.fail)) {
           story += ' · favorites ' + (bf.favorite.ok || 0) + ' ok';
         }
+        const sr = fs.skip_reasons || {};
+        if (sr.already_equal) story += ' · ' + sr.already_equal + ' already matched';
+        if (sr.no_provider) story += ' · ' + sr.no_provider + ' no provider id';
+        if (sr.no_match) story += ' · ' + sr.no_match + ' no library match';
         if (fs.scope && fs.scope.length) story += ' · scope ' + fs.scope.join('/');
         story += '.';
         left.innerHTML = story;

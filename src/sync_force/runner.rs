@@ -59,6 +59,7 @@ pub async fn run_force_sync(ctx: ForceContext) -> ForceSyncStatus {
             phase: Some("preparing".to_string()),
             by_field: ForceByField::default(),
             scope: scope.clone(),
+            skip_reasons: Default::default(),
         };
     }
     {
@@ -333,7 +334,7 @@ async fn run_force_sync_inner(
                 "Force sync finished with errors"
             },
             Some(format!(
-                "processed={} succeeded={} skipped={} failed={} | played ok={} skip={} fail={} | favorites ok={} skip={} fail={} | {}s",
+                "processed={} succeeded={} skipped={} failed={} | played ok={} skip={} fail={} | favorites ok={} skip={} fail={} | skips: already_equal={} no_provider={} no_match={} other={} | {}s",
                 status.processed,
                 status.succeeded,
                 status.skipped,
@@ -344,6 +345,10 @@ async fn run_force_sync_inner(
                 status.by_field.favorite.ok,
                 status.by_field.favorite.skip,
                 status.by_field.favorite.fail,
+                status.skip_reasons.already_equal,
+                status.skip_reasons.no_provider,
+                status.skip_reasons.no_match,
+                status.skip_reasons.other,
                 status
                     .started_at
                     .as_ref()

@@ -108,6 +108,7 @@ pub async fn force_sync_pair(
                 *skipped_total += 1;
                 *processed_total += 1;
                 status.by_field.played.skip += 1;
+                status.skip_reasons.no_provider += 1;
                 continue;
             }
             let resolved = target_client
@@ -121,6 +122,7 @@ pub async fn force_sync_pair(
                     *skipped_total += 1;
                     *processed_total += 1;
                     status.by_field.played.skip += 1;
+                    status.skip_reasons.no_match += 1;
                     continue;
                 }
             };
@@ -130,7 +132,45 @@ pub async fn force_sync_pair(
             if write_pos.is_none() && write_played.is_none() {
                 *skipped_total += 1;
                 *processed_total += 1;
+                status.skip_reasons.other += 1;
                 continue;
+            }
+            // Skip if target already has equivalent state (trust at scale — no rewrite).
+            const POS_EQ_TICKS: u64 = 50_000_000; // 5 seconds
+            if let Ok(tgt_ud) = target_client
+                .get_item_user_data(tgt_user_id, &target_item_id)
+                .await
+            {
+                let mut need_write = false;
+                if force_played && !tgt_ud.played {
+                    need_write = true;
+                }
+                if force_position {
+                    let tgt_pos = tgt_ud.playback_position_ticks.unwrap_or(0);
+                    if (source_pos as i64).abs_diff(tgt_pos) as u64 > POS_EQ_TICKS {
+                        // Only push position when meaningfully ahead or different mid-watch.
+                        if source_pos > 0 || tgt_pos > 0 {
+                            need_write = true;
+                        }
+                    }
+                }
+                // Already played on target and position close enough (or position not in scope).
+                if !need_write {
+                    *skipped_total += 1;
+                    *processed_total += 1;
+                    status.by_field.played.skip += 1;
+                    status.skip_reasons.already_equal += 1;
+                    status.processed = *processed_total;
+                    status.succeeded = *succeeded_total;
+                    status.skipped = *skipped_total;
+                    status.failed = *failed_total;
+                    write_status(&ctx.tracker, status);
+                    let elapsed = started_item.elapsed();
+                    if elapsed < min_interval {
+                        tokio::time::sleep(min_interval - elapsed).await;
+                    }
+                    continue;
+                }
             }
             let update_res = tokio::time::timeout(
                 FORCE_UPDATE_TIMEOUT,
@@ -324,6 +364,7 @@ pub async fn force_sync_favorites_pair(
                 *skipped_total += 1;
                 *processed_total += 1;
                 status.by_field.favorite.skip += 1;
+                status.skip_reasons.no_provider += 1;
                 continue;
             }
             let resolved = target_client
@@ -337,9 +378,32 @@ pub async fn force_sync_favorites_pair(
                     *skipped_total += 1;
                     *processed_total += 1;
                     status.by_field.favorite.skip += 1;
+                    status.skip_reasons.no_match += 1;
                     continue;
                 }
             };
+            // Already favorited on target → skip write.
+            if let Ok(tgt_ud) = target_client
+                .get_item_user_data(tgt_user_id, &target_item_id)
+                .await
+            {
+                if tgt_ud.is_favorite == Some(true) {
+                    *skipped_total += 1;
+                    *processed_total += 1;
+                    status.by_field.favorite.skip += 1;
+                    status.skip_reasons.already_equal += 1;
+                    status.processed = *processed_total;
+                    status.succeeded = *succeeded_total;
+                    status.skipped = *skipped_total;
+                    status.failed = *failed_total;
+                    write_status(&ctx.tracker, status);
+                    let elapsed = started_item.elapsed();
+                    if elapsed < min_interval {
+                        tokio::time::sleep(min_interval - elapsed).await;
+                    }
+                    continue;
+                }
+            }
             let update_res = tokio::time::timeout(
                 FORCE_UPDATE_TIMEOUT,
                 target_client.update_favorite(tgt_user_id, &target_item_id, true),

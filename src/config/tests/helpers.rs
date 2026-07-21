@@ -82,12 +82,15 @@ fn test_sync_options_default_power_law() {
     let s = crate::config::SyncOptions::default();
     assert!(s.live_played && s.live_position && s.live_favorites);
     assert!(s.force_played && s.force_position && s.force_favorites);
-    assert!(!s.force_unwatch);
 }
 
 #[test]
 fn test_sync_options_missing_fields_deserialize() {
     let cfg: crate::config::Config = serde_json::from_str(r#"{"servers":[]}"#).unwrap();
     assert!(cfg.sync.live_favorites);
-    assert!(!cfg.sync.force_unwatch);
+    // Old configs may still contain force_unwatch; ignore unknown via serde default path
+    let _old: crate::config::Config = serde_json::from_str(
+        r#"{"servers":[],"sync":{"force_unwatch":true,"live_played":true}}"#,
+    )
+    .unwrap();
 }

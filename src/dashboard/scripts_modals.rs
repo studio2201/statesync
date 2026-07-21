@@ -288,8 +288,7 @@ async function saveSettings() {
     live_favorites: chk('syncLiveFavorites', true),
     force_played: chk('syncForcePlayed', true),
     force_position: chk('syncForcePosition', true),
-    force_favorites: chk('syncForceFavorites', true),
-    force_unwatch: chk('syncForceUnwatch', false)
+    force_favorites: chk('syncForceFavorites', true)
   };
   const mappingsLines = $('cfgUserMappings').value.split('\n');
   const user_mappings = [];
@@ -416,6 +415,13 @@ function applyForceSyncLiveUi(fs) {
     if (fav.ok || fav.skip || fav.fail) {
       parts.push('Favorites ' + (fav.ok || 0) + ' ok / ' + (fav.skip || 0) + ' skip / ' + (fav.fail || 0) + ' fail.');
     }
+    const sr = fs.skip_reasons || {};
+    const skipBits = [];
+    if (sr.already_equal) skipBits.push(sr.already_equal + ' already matched');
+    if (sr.no_provider) skipBits.push(sr.no_provider + ' no IMDb/TMDb');
+    if (sr.no_match) skipBits.push(sr.no_match + ' not in other library');
+    if (sr.other) skipBits.push(sr.other + ' other');
+    if (skipBits.length) parts.push('Skips: ' + skipBits.join(', ') + '.');
     if (fs.last_error) parts.push('Last error: ' + fs.last_error);
     if (elapsed > 0) parts.push('Elapsed ' + elapsed + 's.');
     detail.textContent = parts.join(' ');

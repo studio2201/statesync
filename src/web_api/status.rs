@@ -171,6 +171,7 @@ pub async fn get_status(
         "phase": tracker_status.phase,
         "by_field": tracker_status.by_field,
         "scope": tracker_status.scope,
+        "skip_reasons": tracker_status.skip_reasons,
     });
 
     Json(json!({
