@@ -122,8 +122,10 @@ async fn security_headers(req: Request, next: Next) -> Response {
         HeaderName::from_static("permissions-policy"),
         HeaderValue::from_static("interest-cohort=()"),
     );
+    // blob: is allowed so poster thumbnails can use object URLs if needed;
+    // primary path sets img.src to /api/poster directly (same-origin 'self').
     if let Ok(csp) = HeaderValue::from_str(
-        "default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; script-src 'self' 'unsafe-inline'; connect-src 'self'",
+        "default-src 'self'; img-src 'self' data: blob:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; script-src 'self' 'unsafe-inline'; connect-src 'self'",
     ) {
         h.insert(HeaderName::from_static("content-security-policy"), csp);
     }

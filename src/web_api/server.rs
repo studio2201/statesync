@@ -163,36 +163,52 @@ pub async fn serve_poster(
         server_cfg.api_key.clone(),
         server_cfg.is_emby,
     );
-    let path = format!("/Items/{}/Images/Primary", item_id);
+    // MaxWidth keeps thumbnails small; Emby/Jellyfin return Primary art for the item.
+    let path = format!("/Items/{}/Images/Primary?maxWidth=120&quality=80", item_id);
     let url = client.url_path(&path);
     let builder = client.add_auth_headers(client.client.get(&url));
 
     let _ = &state;
     match tokio::time::timeout(Duration::from_secs(10), builder.send()).await {
         Ok(Ok(resp)) => {
+            if !resp.status().is_success() {
+                return Response::builder()
+                    .status(StatusCode::NOT_FOUND)
+                    .body(Body::from("No poster"))
+                    .unwrap_or_else(|_| {
+                        Response::builder()
+                            .status(500)
+                            .body(Body::from("Internal Server Error"))
+                            .unwrap_or_default()
+                    });
+            }
             let content_type = resp
                 .headers()
                 .get("content-type")
                 .and_then(|h| h.to_str().ok())
                 .unwrap_or("image/jpeg")
                 .to_string();
+            // Only proxy real image payloads (avoid HTML error pages as "images").
+            let is_image = content_type.starts_with("image/");
             if let Ok(bytes) = resp.bytes().await {
-                let mut res = Response::new(Body::from(bytes));
-                if let Ok(val) = axum::http::HeaderValue::from_str(&content_type) {
-                    res.headers_mut()
-                        .insert(axum::http::header::CONTENT_TYPE, val);
+                if is_image && !bytes.is_empty() {
+                    let mut res = Response::new(Body::from(bytes));
+                    if let Ok(val) = axum::http::HeaderValue::from_str(&content_type) {
+                        res.headers_mut()
+                            .insert(axum::http::header::CONTENT_TYPE, val);
+                    }
+                    res.headers_mut().insert(
+                        axum::http::header::CACHE_CONTROL,
+                        axum::http::HeaderValue::from_static("private, max-age=300"),
+                    );
+                    return res;
                 }
-                res.headers_mut().insert(
-                    axum::http::header::CACHE_CONTROL,
-                    axum::http::HeaderValue::from_static("private, max-age=300"),
-                );
-                return res;
             }
         }
         Ok(Err(_)) | Err(_) => {}
     }
     Response::builder()
-        .status(StatusCode::INTERNAL_SERVER_ERROR)
+        .status(StatusCode::NOT_FOUND)
         .body(Body::empty())
         .unwrap_or_else(|_| Response::builder().status(500).body(Body::from("Internal Server Error")).unwrap_or_default())
 }

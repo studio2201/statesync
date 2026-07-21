@@ -38,50 +38,43 @@ pub const JS_ACTIONS: &str = r#"    const logsDiv = $('syncLogs');
     const banner = $('lastFullSyncBanner');
     if (banner && status.last_full_sync) {
       const fs = status.last_full_sync;
+      const st = forceStateKey(fs.state);
       banner.textContent = '';
       const left = document.createElement('span');
-      if (fs.finished_at && (fs.state === 'completed' || fs.state === 'failed')) {
+      if (fs.finished_at && (st === 'completed' || st === 'failed')) {
         const age = Date.now() - new Date(fs.finished_at).getTime();
         const ago = formatAgo(age);
-        const statusColor = fs.state === 'completed' ? 'var(--green)' : 'var(--red)';
-        let story = 'Last full sync <span style="color:' + statusColor + '">' + fs.state + '</span> ' + ago + '. ';
-        story += 'Scanned ' + fs.processed + ' items, synced ' + fs.succeeded;
-        if (fs.skipped > 0) story += ', skipped ' + fs.skipped;
+        const statusColor = st === 'completed' ? 'var(--green)' : 'var(--red)';
+        const label = st === 'completed' ? 'finished cleanly' : 'finished with errors';
+        let story = 'Last force sync <span style="color:' + statusColor + '">' + label + '</span> ' + ago + '. ';
+        story += 'Looked at ' + (fs.processed || 0) + ' items, pushed ' + (fs.succeeded || 0);
+        if (fs.skipped > 0) story += ', skipped ' + fs.skipped + ' (already matched)';
         if (fs.failed > 0) story += ', failed ' + fs.failed;
         story += '.';
         left.innerHTML = story;
-      } else if (fs.started_at) {
-        left.textContent = 'Full sync in progress · ' + (fs.processed || 0) + ' items so far';
+      } else if (st === 'running' || (fs.started_at && !fs.finished_at)) {
+        left.textContent = 'Force sync is running right now · ' + (fs.processed || 0) + ' items so far. Live play sync is paused until it finishes.';
       } else {
-        left.textContent = 'No force sync yet. Use Force sync to push historical played state.';
+        left.textContent = 'No force sync yet. Use Force sync once to push historical watched state; live plays sync automatically after that.';
       }
       banner.appendChild(left);
     }
     const live = $('forceSyncLive');
     if (live) {
       const fs = status.last_full_sync;
-      if (fs && fs.state === 'running' && fs.started_at && !fs.finished_at) {
-        const totalPairs = fs.total_pairs || 1;
-        const processed = fs.processed || 0;
-        const pct = Math.min(100, Math.floor(processed / totalPairs * 100));
-        const elapsed = Math.max(1, Math.round((Date.now() - new Date(fs.started_at).getTime()) / 1000));
-        const rate = elapsed > 0 ? (processed / elapsed).toFixed(1) : '0';
-        live.style.display = 'flex';
-        const bar = $('fsProgressBar');
-        if (bar) { bar.value = pct; bar.max = 100; }
-        const txt = $('fsProgressText');
-        if (txt) txt.textContent = pct + '% · ' + processed + ' / ' + totalPairs + ' (' + rate + '/s)';
-        const cu = $('fsCurrentUser');
-        if (cu) cu.textContent = fs.current_user ? 'currently: ' + fs.current_user : '';
-      } else {
+      const st = fs ? forceStateKey(fs.state) : '';
+      if (fs && (st === 'running' || (fs.started_at && !fs.finished_at))) {
+        applyForceSyncLiveUi(fs);
+      } else if (!window._forceSyncOptimistic) {
         live.style.display = 'none';
       }
     }
     const forceBtn = $('forceSyncBtn');
     if (forceBtn) {
       const noServers = !currentConfig.servers || currentConfig.servers.length === 0;
-      const inProgress = status.last_full_sync &&
-                        (status.last_full_sync.state === 'running' || (status.last_full_sync.started_at && !status.last_full_sync.finished_at));
+      const fs = status.last_full_sync;
+      const st = fs ? forceStateKey(fs.state) : '';
+      const inProgress = !!(fs && (st === 'running' || (fs.started_at && !fs.finished_at))) || !!window._forceSyncOptimistic;
       forceBtn.disabled = noServers || inProgress;
     }
     const footer = $('versionFooter');

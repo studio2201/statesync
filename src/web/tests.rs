@@ -41,6 +41,16 @@ async fn test_serve_favicon() {
     let resp = handlers::serve_favicon().await.into_response();
     assert_eq!(resp.status(), axum::http::StatusCode::OK);
     assert_eq!(resp.headers().get("content-type").unwrap().to_str().unwrap(), "image/jpeg");
+    let bytes = axum::body::to_bytes(resp.into_body(), 1024 * 1024)
+        .await
+        .expect("favicon body");
+    assert!(
+        bytes.len() > 1000,
+        "favicon must embed real JPEG bytes, got {} bytes",
+        bytes.len()
+    );
+    // JPEG magic number
+    assert_eq!(&bytes[..2], &[0xFF, 0xD8]);
 }
 
 #[tokio::test]

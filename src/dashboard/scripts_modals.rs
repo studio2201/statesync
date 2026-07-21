@@ -293,19 +293,86 @@ async function refreshUsers() {
   loadDashboard();
 }
 let _forceSyncTimer = null;
+window._forceSyncOptimistic = false;
+/** Normalize API state (Running / running) for comparisons. */
+function forceStateKey(state) {
+  return String(state || '').toLowerCase();
+}
+function applyForceSyncLiveUi(fs) {
+  const live = $('forceSyncLive');
+  if (!live || !fs) return;
+  const totalPairs = fs.total_pairs || 0;
+  const processed = fs.processed || 0;
+  const denom = totalPairs > 0 ? totalPairs : Math.max(processed, 1);
+  const pct = totalPairs > 0 ? Math.min(100, Math.floor(processed / totalPairs * 100)) : 0;
+  const startedMs = fs.started_at ? new Date(fs.started_at).getTime() : Date.now();
+  const elapsed = Math.max(0, Math.round((Date.now() - startedMs) / 1000));
+  const rate = elapsed > 0 ? (processed / elapsed).toFixed(1) : '0';
+  live.style.display = 'flex';
+  const title = $('fsStoryTitle');
+  if (title) title.textContent = 'Force sync in progress';
+  const bar = $('fsProgressBar');
+  if (bar) { bar.value = pct; bar.max = 100; }
+  const txt = $('fsProgressText');
+  if (txt) {
+    txt.textContent = totalPairs > 0
+      ? (pct + '% · ' + processed + ' / ' + totalPairs + ' · ' + rate + '/s')
+      : (processed + ' items · starting…');
+  }
+  const cu = $('fsCurrentUser');
+  if (cu) {
+    cu.textContent = fs.current_user
+      ? ('Working on user: ' + fs.current_user)
+      : (processed === 0 ? 'Building user pairs and loading played history…' : 'Matching titles across servers…');
+  }
+  const detail = $('fsStoryDetail');
+  if (detail) {
+    const parts = [];
+    parts.push('Live play sync is paused while this runs.');
+    parts.push('Pushed ' + (fs.succeeded || 0) + ', already matched ' + (fs.skipped || 0) + ', failed ' + (fs.failed || 0) + '.');
+    if (fs.last_error) parts.push('Last error: ' + fs.last_error);
+    if (elapsed > 0) parts.push('Elapsed ' + elapsed + 's.');
+    detail.textContent = parts.join(' ');
+  }
+  void denom;
+}
 async function forceSync() {
   const btn = $('forceSyncBtn');
   if (btn && btn.disabled) return;
   if (btn) btn.disabled = true;
-  showToast('Force sync started');
+  window._forceSyncOptimistic = true;
+  // Show the story immediately — do not wait for the first poll.
+  applyForceSyncLiveUi({
+    state: 'Running',
+    started_at: new Date().toISOString(),
+    finished_at: null,
+    total_pairs: 0,
+    processed: 0,
+    succeeded: 0,
+    skipped: 0,
+    failed: 0,
+    current_user: null,
+    last_error: null
+  });
+  const statusHint = $('forceSyncStatus');
+  if (statusHint) statusHint.textContent = 'Force sync started — scanning played history on every linked user…';
+  showToast('Force sync started — backfilling watched history');
   try {
-    await authedFetch('/api/sync/force', {
+    const res = await authedFetch('/api/sync/force', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ direction: 'both' })
     });
+    if (!res.ok && res.status !== 202) {
+      const body = await res.json().catch(() => ({}));
+      throw new Error(body.message || ('HTTP ' + res.status));
+    }
     pollForceSync();
+    loadDashboard();
   } catch (err) {
+    window._forceSyncOptimistic = false;
+    const live = $('forceSyncLive');
+    if (live) live.style.display = 'none';
     showToast('Force sync failed: ' + err.message);
     if (btn) btn.disabled = false;
   }
@@ -313,7 +380,9 @@ async function forceSync() {
 async function cancelForceSync() {
   const btn = $('fsCancelBtn');
   if (btn) btn.disabled = true;
-  showToast('Cancel requested');
+  showToast('Cancel requested — finishing current item…');
+  const detail = $('fsStoryDetail');
+  if (detail) detail.textContent = 'Cancel requested. Waiting for the current item to finish, then stopping.';
   try {
     await authedFetch('/api/sync/force/cancel', { method: 'POST' });
   } catch (err) {
@@ -327,29 +396,69 @@ async function pollForceSync() {
     const res = await authedFetch('/api/sync/force/status');
     const s = await res.json();
     renderForceSync(s);
-    if (s.state === 'running') {
+    const st = forceStateKey(s.state);
+    if (st === 'running' || (s.started_at && !s.finished_at && st !== 'completed' && st !== 'failed' && st !== 'idle')) {
+      window._forceSyncOptimistic = false;
+      applyForceSyncLiveUi(s);
       _forceSyncTimer = setTimeout(pollForceSync, 1000);
     } else {
+      window._forceSyncOptimistic = false;
       _forceSyncTimer = null;
+      const live = $('forceSyncLive');
+      // Keep banner visible briefly with final numbers, then dashboard refresh owns it
+      if (st === 'completed' || st === 'failed') {
+        applyForceSyncLiveUi(Object.assign({}, s, { finished_at: s.finished_at || new Date().toISOString() }));
+        const title = $('fsStoryTitle');
+        if (title) title.textContent = st === 'completed' ? 'Force sync finished' : 'Force sync finished with errors';
+        setTimeout(() => { if ($('forceSyncLive')) $('forceSyncLive').style.display = 'none'; }, 4000);
+      } else if (live) {
+        live.style.display = 'none';
+      }
       const btn = $('forceSyncBtn');
       if (btn) btn.disabled = false;
+      const cancelBtn = $('fsCancelBtn');
+      if (cancelBtn) cancelBtn.disabled = false;
+      loadDashboard();
     }
   } catch (err) {
     console.error(err);
+    _forceSyncTimer = setTimeout(pollForceSync, 2000);
   }
 }
 function renderForceSync(s) {
   const div = $('forceSyncStatus');
   if (!div) return;
-  if (s.state === 'idle' && !s.started_at) {
+  const st = forceStateKey(s.state);
+  if (st === 'idle' && !s.started_at) {
     div.textContent = 'Force sync has not been run yet.';
     return;
   }
   const elapsed = s.finished_at && s.started_at
     ? Math.max(1, Math.round((new Date(s.finished_at) - new Date(s.started_at)) / 1000))
     : (s.started_at ? Math.round((Date.now() - new Date(s.started_at).getTime()) / 1000) : 0);
-  div.textContent = s.state + ': processed ' + s.processed + ' · ok ' + s.succeeded + ' · skip ' + s.skipped + ' · fail ' + s.failed + ' (' + elapsed + 's)'
+  const verb = st === 'running' ? 'Running' : (st === 'completed' ? 'Done' : (st === 'failed' ? 'Failed' : s.state));
+  div.textContent = verb + ': looked at ' + s.processed + ' · pushed ' + s.succeeded + ' · skipped ' + s.skipped + ' · failed ' + s.failed + ' (' + elapsed + 's)'
     + (s.last_error ? ' · ' + s.last_error : '');
+}
+function toggleHowSync() {
+  const body = $('howSyncBody');
+  const btn = $('toggleHowSyncBtn');
+  if (!body || !btn) return;
+  const hidden = body.style.display === 'none';
+  body.style.display = hidden ? 'block' : 'none';
+  btn.textContent = hidden ? 'Collapse' : 'Expand';
+  localStorage.setItem('how-sync-expanded', hidden ? 'true' : 'false');
+}
+function initHowSyncToggle() {
+  const expanded = localStorage.getItem('how-sync-expanded');
+  // Default expanded so the overview is visible on first visit
+  const show = expanded !== 'false';
+  const body = $('howSyncBody');
+  const btn = $('toggleHowSyncBtn');
+  if (body && btn) {
+    body.style.display = show ? 'block' : 'none';
+    btn.textContent = show ? 'Collapse' : 'Expand';
+  }
 }
 function toggleLogs() {
   const logsDiv = $('syncLogs');
@@ -384,6 +493,7 @@ document.addEventListener('keydown', (e) => {
   }
 });
 initLogsToggle();
+initHowSyncToggle();
 document.addEventListener('DOMContentLoaded', () => {
   loadDashboard();
   setInterval(loadDashboard, 3000);

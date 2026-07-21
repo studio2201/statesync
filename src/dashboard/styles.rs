@@ -156,10 +156,59 @@ select {
   width: 100%; background: #070a0e; border: 1px solid var(--border);
   color: var(--bright); padding: 9px 10px; border-radius: 6px; font-size: 13px;
 }
-.status-Connected, .status-Synchronizing { color: var(--green); font-weight: 600; font-size: 12px; }
-.status-Error { color: var(--red); font-weight: 600; font-size: 12px; }
-.status-Offline, .status-Reconnecting, .status-Validating, .status-Scanning, .status-Connecting {
+/* Machine status codes (backend) + first-principles display classes */
+.status-Connected, .status-Synchronizing, .status-live { color: var(--green); font-weight: 600; font-size: 12px; }
+.status-Error, .status-failed { color: var(--red); font-weight: 600; font-size: 12px; }
+.status-Offline, .status-Reconnecting, .status-Validating, .status-Scanning, .status-Connecting,
+.status-pending {
   color: var(--muted); font-weight: 600; font-size: 12px;
+}
+.poster-thumb {
+  width: 30px; height: 45px; object-fit: cover; border-radius: 4px;
+  border: 1px solid var(--border); flex-shrink: 0; background: rgba(0,0,0,0.35);
+}
+.poster-missing {
+  width: 30px; height: 45px; border-radius: 4px; border: 1px dashed var(--border);
+  flex-shrink: 0; background: rgba(0,0,0,0.2);
+}
+.banner-live {
+  border-color: var(--accent) !important;
+  background: rgba(59, 158, 255, 0.08) !important;
+}
+.how-sync-card .how-lead {
+  font-size: 13px; color: var(--text); margin-bottom: 14px; line-height: 1.5;
+}
+.how-sync-card .how-lead strong { color: var(--bright); font-weight: 600; }
+.how-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+.how-step {
+  background: rgba(0,0,0,0.25);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 12px;
+}
+.how-num {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 22px; height: 22px; border-radius: 999px;
+  background: rgba(59, 158, 255, 0.15); color: var(--accent);
+  font-size: 11px; font-weight: 700; margin-bottom: 8px;
+}
+.how-title { color: var(--bright); font-weight: 600; font-size: 13px; margin-bottom: 4px; }
+.how-step p { font-size: 12px; color: var(--muted); line-height: 1.45; margin: 0; }
+.how-legend {
+  display: flex; flex-wrap: wrap; gap: 8px 14px;
+  margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--border);
+  font-size: 11px; color: var(--muted);
+}
+.how-legend strong { color: var(--bright); font-weight: 600; }
+@media (max-width: 900px) {
+  .how-grid { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 560px) {
+  .how-grid { grid-template-columns: 1fr; }
 }
 .toast {
   position: fixed; bottom: 20px; right: 20px;

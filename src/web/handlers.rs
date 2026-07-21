@@ -11,30 +11,30 @@ pub async fn serve_index() -> Html<String> {
     Html(crate::dashboard::render_dashboard().into_string())
 }
 
-/// Missing documentation.
+/// PWA manifest — uses the same JPEG brand mark as the tab favicon.
 pub async fn serve_manifest() -> impl IntoResponse {
     (
         [("content-type", "application/manifest+json")],
-        r##"{"name":"StateSync","short_name":"StateSync","start_url":"/","display":"standalone","background_color":"#03060f","theme_color":"#03060f","icons":[{"src":"/icon.svg","sizes":"192x192","type":"image/svg+xml"},{"src":"/icon.svg","sizes":"512x512","type":"image/svg+xml"}]}"##,
+        r##"{"name":"StateSync","short_name":"StateSync","start_url":"/","display":"standalone","background_color":"#0b0f14","theme_color":"#0b0f14","icons":[{"src":"/favicon.jpg","sizes":"192x192","type":"image/jpeg"},{"src":"/favicon.jpg","sizes":"512x512","type":"image/jpeg"},{"src":"/icon.svg","sizes":"any","type":"image/svg+xml","purpose":"any"}]}"##,
     )
 }
 
-/// Missing documentation.
+/// Fallback SVG mark when JPEG is unavailable.
 pub async fn serve_icon() -> impl IntoResponse {
     (
         [("content-type", "image/svg+xml")],
-        r##"<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" fill="#03060f"/><circle cx="50" cy="50" r="30" stroke="#00f0ff" stroke-width="6" fill="none"/></svg>"##,
+        r##"<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" rx="18" fill="#0b0f14"/><circle cx="50" cy="50" r="28" stroke="#3b9eff" stroke-width="6" fill="none"/><circle cx="50" cy="50" r="8" fill="#3b9eff"/></svg>"##,
     )
 }
 
-/// Missing documentation.
+/// Serves the embedded JPEG favicon used in the browser tab and dashboard header.
 pub async fn serve_favicon() -> impl IntoResponse {
     (
         [
             ("content-type", "image/jpeg"),
             ("cache-control", "public, max-age=86400, immutable"),
         ],
-        &[] as &[u8],
+        include_bytes!("../favicon.jpg").as_slice(),
     )
 }
 

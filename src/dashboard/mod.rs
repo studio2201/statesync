@@ -29,15 +29,16 @@ pub fn render_dashboard() -> Markup {
                 meta name="theme-color" content="#0b0f14";
                 title { "StateSync" }
                 link rel="manifest" href="/manifest.json";
-                link rel="apple-touch-icon" href="/icon.svg";
+                link rel="icon" href="/favicon.jpg" type="image/jpeg";
                 link rel="shortcut icon" href="/favicon.jpg" type="image/jpeg";
+                link rel="apple-touch-icon" href="/favicon.jpg";
                 style { (maud::PreEscaped(styles::CSS)) }
             }
             body {
                 div class="container" {
                     div class="header" {
                         div class="brand" {
-                            img src="/favicon.jpg" alt="";
+                            img src="/favicon.jpg" alt="StateSync" width="32" height="32";
                             span { "StateSync" }
                         }
                         div class="actions" {
@@ -49,16 +50,72 @@ pub fn render_dashboard() -> Markup {
                     }
 
                     div id="lastFullSyncBanner" class="banner" {}
-                    div id="forceSyncLive" class="banner" style="display:none;border-color:var(--accent)" {
+                    div id="forceSyncLive" class="banner banner-live" style="display:none" {
                         div style="flex:1" {
-                            div style="display:flex;justify-content:space-between;gap:10px;margin-bottom:6px" {
-                                strong style="color:var(--bright)" { "Full sync in progress" }
+                            div style="display:flex;justify-content:space-between;gap:10px;margin-bottom:6px;align-items:center" {
+                                strong id="fsStoryTitle" style="color:var(--bright)" { "Force sync running" }
                                 span id="fsProgressText" style="color:var(--accent)" {}
                             }
                             progress id="fsProgressBar" value="0" max="100" style="width:100%;height:8px" {}
                             div id="fsCurrentUser" class="form-hint" {}
+                            div id="fsStoryDetail" class="form-hint" style="margin-top:6px;line-height:1.5" {}
                         }
                         button class="btn btn-danger" id="fsCancelBtn" onclick="cancelForceSync()" { "Cancel" }
+                    }
+
+                    div class="card how-sync-card" {
+                        div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:10px;flex-wrap:wrap" {
+                            h2 style="margin:0" { "How sync works" }
+                            button class="btn" id="toggleHowSyncBtn" onclick="toggleHowSync()" { "Collapse" }
+                        }
+                        div id="howSyncBody" {
+                            p class="how-lead" {
+                                "StateSync never moves video files. It only copies "
+                                strong { "who watched what, how far, and whether it is marked played" }
+                                " between Emby and Jellyfin."
+                            }
+                            div class="how-grid" {
+                                div class="how-step" {
+                                    div class="how-num" { "1" }
+                                    div class="how-title" { "Connect" }
+                                    p { "You add each server’s address and API key. StateSync opens a live event stream to every server that can send updates." }
+                                }
+                                div class="how-step" {
+                                    div class="how-num" { "2" }
+                                    div class="how-title" { "Match people" }
+                                    p { "Same username on both servers matches automatically. Different names need a manual link (Link users)." }
+                                }
+                                div class="how-step" {
+                                    div class="how-num" { "3" }
+                                    div class="how-title" { "Match titles" }
+                                    p { "Items are matched by IMDb / TMDb IDs — not by file path or library folder. Same movie, different libraries, still works." }
+                                }
+                                div class="how-step" {
+                                    div class="how-num" { "4" }
+                                    div class="how-title" { "Live sync" }
+                                    p { "When someone plays, pauses, or finishes, StateSync pushes progress to the other server for that linked user. Near-duplicate updates within the threshold are ignored." }
+                                }
+                                div class="how-step" {
+                                    div class="how-num" { "5" }
+                                    div class="how-title" { "Force sync" }
+                                    p { "A full historical backfill: walks played history on each side and pushes missing played / progress state. Live play events pause while this runs." }
+                                }
+                                div class="how-step" {
+                                    div class="how-num" { "6" }
+                                    div class="how-title" { "What is not synced" }
+                                    p { "Watchlists, ratings, collections, home-screen layout, passwords, and library structure stay local to each server." }
+                                }
+                            }
+                            div class="how-legend" {
+                                span { strong { "Live" } " — event stream open; ready for plays" }
+                                span { strong { "Checking access" } " — testing API key" }
+                                span { strong { "Loading data" } " — fetching users / library index" }
+                                span { strong { "Connecting" } " — opening the link" }
+                                span { strong { "Reconnecting" } " — link dropped; trying again" }
+                                span { strong { "Offline" } " — no link right now" }
+                                span { strong { "Failed" } " — last attempt errored" }
+                            }
+                        }
                     }
 
                     div class="row-grid" {
@@ -72,7 +129,7 @@ pub fn render_dashboard() -> Markup {
                         }
                         div class="stack" {
                             div class="card" {
-                                h2 { "Active streams" }
+                                h2 { "Now playing" }
                                 div id="activeSessions" {
                                     div class="empty" { "No one is playing anything right now." }
                                 }
@@ -221,9 +278,11 @@ mod tests {
     fn test_render_dashboard_contains_headings() {
         let html_str = render_dashboard().into_string();
         assert!(html_str.contains("Mapped users"));
-        assert!(html_str.contains("Active streams"));
+        assert!(html_str.contains("Now playing"));
         assert!(html_str.contains("Media servers"));
         assert!(html_str.contains("Activity log"));
+        assert!(html_str.contains("How sync works"));
+        assert!(html_str.contains("/favicon.jpg"));
         // No decorative bracket chrome
         assert!(!html_str.contains("[ MAPPED USERS ]"));
     }

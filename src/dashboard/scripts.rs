@@ -9,15 +9,42 @@ async function authedFetch(url, opts) {
   opts = opts || {};
   return fetch(url, opts);
 }
+/** First-principles labels for media-server link state (what is actually true). */
+function serverStatusLabel(raw) {
+  const s = String(raw || 'Offline');
+  const map = {
+    'Synchronizing': 'Live',
+    'Connected': 'Live',
+    'Validating': 'Checking access',
+    'Scanning': 'Loading data',
+    'Connecting': 'Connecting',
+    'Reconnecting': 'Reconnecting',
+    'Offline': 'Offline',
+    'Error': 'Failed'
+  };
+  return map[s] || s;
+}
+function serverStatusClass(raw) {
+  const s = String(raw || 'Offline');
+  if (s === 'Synchronizing' || s === 'Connected') return 'status-live';
+  if (s === 'Error') return 'status-failed';
+  return 'status-pending';
+}
+/** Load a now-playing poster. Prefer direct same-origin src (CSP-safe). */
 async function loadPoster(url, img) {
-  try {
-    const r = await authedFetch(url);
-    if (!r.ok) return;
-    const blob = await r.blob();
-    const obj = URL.createObjectURL(blob);
-    img.onload = () => { try { URL.revokeObjectURL(obj); } catch (_) {} };
-    img.src = obj;
-  } catch (_) {}
+  if (!url || !img) return;
+  // Direct src works without blob: CSP and avoids silent failures on re-render.
+  img.onerror = () => {
+    img.style.display = 'none';
+    if (img.parentNode) {
+      const ph = document.createElement('div');
+      ph.className = 'poster-missing';
+      ph.title = 'Poster unavailable';
+      img.parentNode.insertBefore(ph, img);
+    }
+  };
+  img.src = url;
+  img.className = (img.className ? img.className + ' ' : '') + 'poster-thumb';
 }
 /** Keep only scheme://host:port — strip /web/…, #!, query strings. */
 function normalizeServerUrl(url) {
@@ -71,8 +98,10 @@ async function loadDashboard() {
 
         const left = document.createElement('div'); left.className = 'server-info';
         const statusSpanEl = document.createElement('span');
-        statusSpanEl.className = 'status-' + sStatus.websocket_status;
-        statusSpanEl.textContent = sStatus.websocket_status;
+        const rawWs = sStatus.websocket_status || 'Offline';
+        statusSpanEl.className = serverStatusClass(rawWs);
+        statusSpanEl.textContent = serverStatusLabel(rawWs);
+        statusSpanEl.title = 'Raw: ' + rawWs;
         const leftInner = document.createElement('div'); leftInner.className = 'server-meta';
         const nameEl = document.createElement('div'); nameEl.className = 'name';
         nameEl.textContent = (srv.name || nameFromUrl(srv.url)) + ' ';
@@ -85,8 +114,10 @@ async function loadDashboard() {
 
         const right = document.createElement('div'); right.className = 'server-info'; right.style.flex = '0 0 auto';
         const metaSpan = document.createElement('span'); metaSpan.style.fontSize = '12px'; metaSpan.style.color = 'var(--muted)';
-        if (['Scanning','Validating','Connecting','Reconnecting'].includes(sStatus.websocket_status)) {
-          metaSpan.textContent = sStatus.websocket_status + '…';
+        if (['Scanning','Validating','Connecting','Reconnecting'].includes(rawWs)) {
+          metaSpan.textContent = serverStatusLabel(rawWs) + '…';
+        } else if (rawWs === 'Error') {
+          metaSpan.textContent = 'see activity log';
         } else {
           metaSpan.textContent = (sStatus.users_count || 0) + ' users';
         }
@@ -110,10 +141,15 @@ async function loadDashboard() {
         const left = document.createElement('div'); left.className = 'server-info';
         if (sess.poster_url) {
           const img = document.createElement('img');
-          img.alt = '';
-          img.style.cssText = 'width:30px;height:45px;object-fit:cover;border-radius:4px;border:1px solid var(--border);flex-shrink:0;';
+          img.alt = sess.item || '';
+          img.className = 'poster-thumb';
+          img.loading = 'lazy';
           loadPoster(sess.poster_url, img);
           left.appendChild(img);
+        } else {
+          const ph = document.createElement('div');
+          ph.className = 'poster-missing';
+          left.appendChild(ph);
         }
         const meta = document.createElement('div'); meta.className = 'server-meta';
         const itemEl = document.createElement('div'); itemEl.className = 'name'; itemEl.textContent = sess.item;
