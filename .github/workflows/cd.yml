@@ -20,6 +20,13 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
+      - name: Read version from Cargo.toml
+        id: ver
+        run: |
+          VERSION=$(grep '^version = ' Cargo.toml | head -1 | sed -E 's/^version = "([^"]+)".*/\1/')
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "Cargo.toml version=$VERSION"
+
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
 
@@ -33,20 +40,24 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      # Tag from Cargo.toml on every master build. (type=semver only works on
+      # git tag refs, and tags created by GITHUB_TOKEN do not re-trigger CD.)
       - name: Extract Metadata (tags, labels)
         id: meta
         uses: docker/metadata-action@v5
         with:
           images: ghcr.io/${{ github.repository }}
           tags: |
-            type=semver,pattern={{version}}
-            type=sha,format=short
             type=raw,value=latest,enable=${{ github.ref == 'refs/heads/master' }}
+            type=raw,value=${{ steps.ver.outputs.version }}
+            type=raw,value=v${{ steps.ver.outputs.version }}
+            type=sha,format=short
           labels: |
             org.opencontainers.image.title=StateSync
             org.opencontainers.image.description=Emby/Jellyfin playstate sync bridge
             org.opencontainers.image.source=https://github.com/${{ github.repository }}
             org.opencontainers.image.licenses=MIT
+            org.opencontainers.image.version=${{ steps.ver.outputs.version }}
 
       - name: Build and Push Docker Image (with SBOM + provenance)
         id: build
@@ -59,3 +70,8 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           sbom: true
           provenance: mode=max
+
+      - name: Print published tags
+        run: |
+          echo "Published tags:"
+          echo "${{ steps.meta.outputs.tags }}"

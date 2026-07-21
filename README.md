@@ -154,7 +154,9 @@ It does not rewrite your libraries. It only updates user watch state.
 
 ## Links
 
-- Image: `ghcr.io/studio2201/statesync:latest`
+- Image: `ghcr.io/studio2201/statesync:latest` (also tagged `v0.28.x` each release)
+- If Unraid does not pull a new image: force-update / remove the local image, then re-apply
+- Package must be **public** under GitHub → Packages → statesync → Package settings → Change visibility
 - Issues: https://github.com/studio2201/statesync/issues
 
 ## License
