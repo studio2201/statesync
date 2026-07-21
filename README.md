@@ -1,18 +1,17 @@
 # StateSync
 
-Syncs **watch progress** between Emby and Jellyfin.
+Copies **watched**, **resume point**, and **favorites** between Emby and Jellyfin  
+(and Emby↔Emby or Jellyfin↔Jellyfin). Same person, same title — both servers agree.
 
-Pause, resume, or finish something on one server → the same position shows up on the other.
+It does **not** move video files, ratings, playlists, or library structure.
 
 ---
 
 ## What you need
 
-1. An Emby server and/or a Jellyfin server (one of each is the usual case)
+1. One or more Emby and/or Jellyfin servers
 2. An **API key** from each server’s admin UI
-3. A machine that can reach both over your LAN (Unraid, Docker, etc.)
-
-StateSync does **not** move video files. It only copies *where you left off* and *played* status.
+3. A machine that can reach them over your LAN (Unraid, Docker, etc.)
 
 ---
 
@@ -22,24 +21,23 @@ StateSync does **not** move video files. It only copies *where you left off* and
 2. **Network Type: `br0`** (same custom network Emby/Jellyfin use)
 3. Optional: give StateSync its own fixed IP on that network
 4. Appdata: `/mnt/user/appdata/statesync`
-5. Apply, open `http://STATESYNC-IP:4601` (or the IP Unraid shows for the container)
+5. Apply, open `http://STATESYNC-IP:4601`
 
 No login.
 
-### Networking (read this if “can’t connect to Emby”)
+### Networking (if “can’t connect”)
 
 If Emby or Jellyfin has its **own LAN IP** on Unraid **br0** (macvlan):
 
 | StateSync network | Can reach Emby on br0? |
-|-------------------|-------------------------|
-| `br0` (same as Emby) | **Yes** — put StateSync here |
-| `bridge` (default docker0) | **Usually no** |
-| `host` | **Usually no** (host cannot talk to its own macvlan containers) |
+|-------------------|------------------------|
+| `br0` (same as Emby) | **Yes** |
+| `bridge` (docker0) | **Usually no** |
+| `host` | **Usually no** (host can’t talk to its own macvlan containers) |
 
-Your PC can open Emby’s IP in a browser. That does **not** mean a container on `bridge`/`host` can. Put StateSync on **br0** next to Emby, then use Emby’s br0 IP in **Add server**.
+Your PC can open the media server in a browser. That does **not** mean a container on `bridge`/`host` can. Put StateSync on **br0**, then use the media server’s br0 IP.
 
-You can paste a full browser URL; only host:port is kept.
-
+---
 
 ## Install (Docker Compose)
 
@@ -69,73 +67,74 @@ docker compose up -d
 ## First setup (web UI)
 
 1. Open the dashboard
-2. Click **Add server**
-3. Pick **Emby** or **Jellyfin**
-4. Enter the server address and API key
-5. **Test connection**, then **Save**
-6. Repeat for the other server
+2. **Add server** → address + API key (paste a full browser URL if you want)
+3. **Test connection** or **Save** — Emby vs Jellyfin is **detected automatically**
+4. Add the other server(s)
+5. If usernames differ, **Link users**
+6. Optional: **Force sync** once to backfill history
 
 ### Server address
 
-Use something StateSync can reach from the **container**:
+Use something StateSync can reach **from the container**:
 
 | Good | Bad |
 |------|-----|
-| `http://10.0.0.5:8096` | `localhost` (that’s the container itself) |
-| `http://emby.lan:8096` | Hostnames only your Unraid box knows, if Docker can’t resolve them |
+| `http://10.0.0.5:8096` | `localhost` (the container itself) |
+| `http://10.0.0.5:8920` | Hostnames Docker can’t resolve |
 
-You can paste a full browser URL (for example the API keys page). StateSync keeps only **host + port** and drops paths like `/web/index.html#!/…`.
+Full browser URLs are fine. Only **host + port** is kept. Same IP, different ports get distinct auto-names (`10.0.0.5:8096` vs `10.0.0.5:8920`).
 
 ### API key
 
-Create one in Emby or Jellyfin admin settings, then paste it into StateSync. Keep it private; it lives in `config.json`.
+Create one in Emby or Jellyfin admin settings. It lives in `config.json` — keep it private.
+
+---
+
+## What syncs
+
+| | Live (while watching) | Force sync (backfill) |
+|--|----------------------|------------------------|
+| **Played** | Yes | Yes — skips if target already watched |
+| **Position** | Yes | Yes — in-progress; skips if already equal |
+| **Favorites** | Yes | Yes — skips if already favorited |
+
+**Not synced:** ratings, playlists, collections, hidden items, layout, passwords, libraries.
+
+Titles match by **IMDb / TMDb**. People match by **username** or **Link users**.
+
+Dashboard status **Live** means the event stream is open (healthy).
 
 ---
 
 ## After it works
 
-- **Live sync** — while something is playing, progress is mirrored in near real time
-- **Mapped users** — same person on both servers should share a name, or map names under **Settings**
-- **Force sync** — one-time catch-up of older “played” history (optional; use after first install if you want history filled in)
+- **Now playing** — who’s watching, with posters  
+- **Force sync** — historical catch-up; shows phases and *why* items were skipped  
+- **Settings** — turn live/force fields on or off; threshold for near-duplicate progress  
+- **Activity log** — copyable story for support  
 
-Config file (if you prefer editing by hand):
+Config file:
 
-`/config/config.json` inside the container  
-(Unraid: `/mnt/user/appdata/statesync/config.json`)
+`/config/config.json` (Unraid: `/mnt/user/appdata/statesync/config.json`)
 
 ---
 
 ## Common problems
 
-**“Failed to get users list”**  
-StateSync can’t talk to that server. Check:
-
-1. Address is a **LAN IP** (or a hostname that works *from Docker*), not `localhost`
-2. Port is correct (often `8096`)
-3. API key is valid
-4. Type is Emby vs Jellyfin correctly
+**“Failed to get users list” / can’t connect**  
+1. Address is a **LAN IP** reachable *from Docker*, not `localhost`  
+2. Correct port  
+3. Valid API key  
+4. StateSync on the same network path as the media server (often **br0**)
 
 **Users don’t match**  
-If Alice is `alice` on one box and `Alice Home` on the other, add a mapping in **Settings** (one line, names separated by commas).
+Same username matches automatically. Different names → **Link users** (or Settings text mappings).
 
-**Nothing happens while watching**  
-Both servers should be online (status on the dashboard). Give it a few seconds after pause/seek. Force sync is for history, not a substitute for live WebSocket connection.
+**Nothing while watching**  
+Both servers should show **Live**. Wait a few seconds after pause/seek. Force is for history, not a substitute for a live link.
 
----
-
-## Optional settings (advanced)
-
-Most people leave these alone.
-
-| Variable | Default | Meaning |
-|----------|---------|---------|
-| `STATESYNC_BIND` | `0.0.0.0:4601` | Where the web UI listens |
-| `STATESYNC_ALLOW_INSECURE_HTTP` | `true` | Allow `http://` to media servers on the LAN |
-| `STATESYNC_ACCEPT_INVALID_CERTS` | `false` | Only if you use broken/self-signed HTTPS on purpose |
-| `STATESYNC_SYNC_THRESHOLD_SECONDS` | `5` | Ignore tiny duplicate progress updates |
-| `PUID` / `PGID` / `UMASK` | `99` / `100` / `022` | File ownership (Unraid “nobody” style) |
-| `RUST_LOG` | `info` | Log noise (`debug` for troubleshooting) |
-| `TZ` | `UTC` | Log timestamps |
+**Force mostly “already matched”**  
+Good — target already had that state. Second runs should be fast.
 
 ---
 
@@ -144,31 +143,46 @@ Most people leave these alone.
 ```bash
 statesync --help
 statesync --version
-statesync --validate      # check config + connections
-statesync --sync-force    # full historical played-item push
-statesync --dry-run       # see user/item mapping without writing
+statesync --validate       # config + connection check
+statesync --sync-force     # full backfill (played / position / favorites per Settings)
+statesync --tui            # terminal dashboard (same story as the web UI)
+statesync --dry-run        # mapping / cache check without writing play state
+statesync --reload         # ask the running service to reload config
 ```
+
+Force prints phases and skip reasons (already matched, no provider id, not in other library).
 
 ---
 
 ## How it works (short)
 
-1. Connects to each media server (HTTP API + WebSocket)
-2. Watches for playback / “played” changes
-3. Matches titles by **IMDb / TMDb** IDs (not folder names)
-4. Matches people by **username** (or your mappings)
-5. Writes the same progress to the other server
+1. Connects to each server (HTTP + live event stream)  
+2. Detects Emby vs Jellyfin  
+3. Watches play / played / favorite changes  
+4. Matches titles by IMDb/TMDb, people by name or link  
+5. Writes only the fields you enabled — skips when already equal  
 
-It does not rewrite your libraries. It only updates user watch state.
+---
+
+## Optional environment
+
+| Variable | Default | Meaning |
+|----------|---------|---------|
+| `STATESYNC_BIND` | `0.0.0.0:4601` | Web UI listen address |
+| `STATESYNC_SYNC_THRESHOLD_SECONDS` | `5` | Ignore near-duplicate progress |
+| `STATESYNC_FORCE_RATE` | `5` | Force items/sec (1–50) |
+| `STATESYNC_LOG_RETENTION` | `100` | In-memory activity log lines |
+| `STATESYNC_ACCEPT_INVALID_CERTS` | `false` | Self-signed HTTPS only if you must |
+| `RUST_LOG` | `info` | Log level |
+| `TZ` | `UTC` | Timestamps |
 
 ---
 
 ## Links
 
-- Image: `ghcr.io/studio2201/statesync:latest` (also tagged `v0.28.x` each release)
-- If Unraid does not pull a new image: force-update / remove the local image, then re-apply
-- Package must be **public** under GitHub → Packages → statesync → Package settings → Change visibility
-- Issues: https://github.com/studio2201/statesync/issues
+- Image: `ghcr.io/studio2201/statesync:latest` (also `0.28.x` / `v0.28.x` each release)
+- Unraid not pulling new image: force-update / remove local image, re-apply  
+- Issues: https://github.com/studio2201/statesync/issues  
 
 ## License
 

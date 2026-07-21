@@ -106,38 +106,33 @@ pub async fn init_clients_parallel(
 }
 
 pub fn print_help() {
-    println!("statesync - Emby/Jellyfin Playstate Sync Bridge\n");
+    println!("StateSync — watched, resume, and favorites across Emby / Jellyfin\n");
     println!("Usage:");
     println!("  statesync [command]\n");
     println!("Commands:");
-    println!("  -h, --help       Show this help menu");
-    println!("  -v, --version    Print application version");
-    println!("  --validate       Validate config.json and test server connections");
-    println!("  --reload         Trigger reload of config.json on the running service");
-    println!("  --tui            Launch the interactive terminal dashboard");
-    println!("  --dry-run        Load config, init caches, run mapping dry-run; exit 0/1");
-    println!(
-        "  --sync-force     Force a full played-items sync between all servers (see --sync-force --help)"
-    );
+    println!("  -h, --help       Show this help");
+    println!("  -v, --version    Print version");
+    println!("  --validate       Check config.json and test each server connection");
+    println!("  --reload         Tell the running service to reload config");
+    println!("  --tui            Live terminal dashboard (story + status)");
+    println!("  --dry-run        Load caches / user mapping check; no play-state writes");
+    println!("  --sync-force     Full backfill (played, position, favorites per Settings)");
     println!();
-    println!("Environment Variables:");
-    println!("  STATESYNC_BIND                 Listen address (default: 0.0.0.0:4601)");
-    println!(
-        "  STATESYNC_ALLOW_INSECURE_HTTP  Set 'true' to permit http:// URLs to upstream servers."
-    );
-    println!(
-        "  STATESYNC_ACCEPT_INVALID_CERTS Set 'true' to skip TLS cert verification (self-signed)."
-    );
-    println!(
-        "  STATESYNC_FUZZY_USER_MATCH     Set 'true' to enable substring username matching."
-    );
-    println!("  STATESYNC_SERVER_<N>_*         Per-server env-var config (see README).");
-    println!("  STATESYNC_SYNC_THRESHOLD_SECONDS   Sync threshold (default 5).");
-    println!("  STATESYNC_HTTP_RETRY           'off' to disable retry with backoff.");
-    println!("  STATESYNC_LOG_RETENTION        Number of log entries kept in memory (default 30).");
-    println!("  STATESYNC_FORCE_RATE           Items/sec during --sync-force, 1..50 (default 5).");
-    println!("  RUST_LOG                       tracing log filter (overrides default 'info').");
-    println!("  TZ                             Container timezone.");
+    println!("  Force prints phases and skip reasons (already matched, no provider id,");
+    println!("  not in other library). Prefer --direction=both (default).");
+    println!();
+    println!("Common environment:");
+    println!("  STATESYNC_BIND                    Listen address (default 0.0.0.0:4601)");
+    println!("  STATESYNC_SYNC_THRESHOLD_SECONDS  Ignore near-duplicate progress (default 5)");
+    println!("  STATESYNC_FORCE_RATE              Force items/sec, 1..50 (default 5)");
+    println!("  STATESYNC_LOG_RETENTION           Activity log lines in memory (default 100)");
+    println!("  STATESYNC_ACCEPT_INVALID_CERTS    true = skip TLS verify (self-signed LAN)");
+    println!("  STATESYNC_FUZZY_USER_MATCH        true = soft username match (off by default)");
+    println!("  STATESYNC_SERVER_<N>_*            Env-based servers (see README)");
+    println!("  RUST_LOG                          Log filter (default info)");
+    println!("  TZ                                Timezone");
+    println!();
+    println!("Dashboard: http://<host>:4601  ·  no login");
 }
 
 /// Docker / Unraid-friendly default (all interfaces).
@@ -180,10 +175,5 @@ pub async fn drain_ws_handles(handles: Vec<tokio::task::JoinHandle<()>>, timeout
             let _ = h.await;
         }
     };
-    if tokio::time::timeout(timeout, drain).await.is_err() {
-        warn!(
-            "WebSocket loops did not exit within {:?}; continuing with reload",
-            timeout
-        );
-    }
+    let _ = tokio::time::timeout(timeout, drain).await;
 }

@@ -108,7 +108,7 @@ fn test_draw_tui_from_json() {
         "servers": [
             {
                 "name": "Server1",
-                "websocket_status": "Connected",
+                "websocket_status": "Synchronizing",
                 "users_count": 5,
                 "media_count": 100
             },
@@ -128,11 +128,19 @@ fn test_draw_tui_from_json() {
                 "is_paused": false
             }
         ],
+        "last_full_sync": {
+            "state": "Completed",
+            "succeeded": 10,
+            "skipped": 50,
+            "failed": 0,
+            "skip_reasons": { "already_equal": 40, "no_provider": 10 }
+        },
         "sync_logs": [
             {
                 "timestamp": "12:00:00",
                 "level": "success",
-                "message": "Synced watch state"
+                "message": "Synced watch state",
+                "detail": "source=A → target=B"
             }
         ]
     });
