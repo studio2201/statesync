@@ -49,20 +49,37 @@ pub async fn send_with_retry(req: reqwest::RequestBuilder, label: &str) -> Resul
 }
 
 impl MediaClient {
+    /// Builds a full URL path for an API endpoint on the target media server.
+    /// Deduplicates `/emby` prefixes if configured or present in URL.
     pub fn url_path(&self, path: &str) -> String {
-        let prefix = if self.is_emby { "/emby" } else { "" };
-        format!("{}{}{}", self.url, prefix, path)
+        let clean_url = self.url.trim_end_matches('/');
+        let clean_path = if path.starts_with('/') { &path[1..] } else { path };
+        if self.is_emby {
+            if clean_url.ends_with("/emby") || clean_path.starts_with("emby/") {
+                format!("{}/{}", clean_url, clean_path)
+            } else {
+                format!("{}/emby/{}", clean_url, clean_path)
+            }
+        } else {
+            format!("{}/{}", clean_url, clean_path)
+        }
     }
 
+    /// Adds authentication headers expected by Emby and Jellyfin servers and reverse proxies.
     pub fn add_auth_headers(
         &self,
         mut builder: reqwest::RequestBuilder,
     ) -> reqwest::RequestBuilder {
-        if self.is_emby {
-            builder = builder.header("X-Emby-Token", &self.api_key);
-        } else {
-            builder = builder.header("X-MediaBrowser-Token", &self.api_key);
-        }
+        let auth_val = format!(
+            r#"MediaBrowser Client="StateSync", Device="StateSync", DeviceId="statesync-sidecar", Version="{}", Token="{}"#,
+            env!("CARGO_PKG_VERSION"),
+            self.api_key
+        );
+        builder = builder
+            .header("Authorization", &auth_val)
+            .header("X-Emby-Token", &self.api_key)
+            .header("X-MediaBrowser-Token", &self.api_key)
+            .header("X-Emby-Authorization", &auth_val);
         builder
     }
 }

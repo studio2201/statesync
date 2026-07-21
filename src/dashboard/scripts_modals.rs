@@ -65,11 +65,17 @@ async function autoFetchServerName() {
 function openSettingsModal() { $('settingsModal').style.display = 'flex'; }
 function closeModal(id) { $(id).style.display = 'none'; }
 function testConnection() {
-  const type = $('serverType').value, url = $('serverUrl').value, api_key = $('serverKey').value;
-  if (!url || !api_key) return showToast('LINK DATA INCOMPLETE');
+  const type = $('serverType').value;
+  const url = $('serverUrl').value.trim();
+  const api_key = $('serverKey').value.trim();
+  if (!url || !api_key) return showToast('LINK DATA INCOMPLETE (URL & API KEY REQUIRED)');
   showToast('PINGING LINK ADDRESS...');
   authedFetch('/api/test_connection', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ url, api_key, is_emby: type === 'emby' }) })
-    .then(async r => showToast((await r.json()).message.toUpperCase())).catch(() => showToast('LINK RESPONSE FAILED'));
+    .then(async r => {
+      const d = await r.json();
+      showToast((d.message || d.status || 'UNKNOWN').toUpperCase());
+    })
+    .catch((err) => showToast('LINK RESPONSE FAILED: ' + (err.message || 'UNREACHABLE').toUpperCase()));
 }
 $('serverForm').addEventListener('submit', async (e) => {
   e.preventDefault();

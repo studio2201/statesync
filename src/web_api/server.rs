@@ -18,27 +18,29 @@ pub struct TestConnRequest {
 }
 
 pub async fn test_connection(Json(req): Json<TestConnRequest>) -> Json<serde_json::Value> {
-    if req.url.len() > 512 || !(req.url.starts_with("http://") || req.url.starts_with("https://")) {
+    let clean_url = req.url.trim().to_string();
+    let clean_key = req.api_key.trim().to_string();
+    if clean_url.len() > 512 || !(clean_url.starts_with("http://") || clean_url.starts_with("https://")) {
         return Json(json!({
             "status": "error",
-            "message": "Invalid URL (must be http(s):// and <= 512 chars)"
+            "message": "Invalid URL (must start with http:// or https:// and <= 512 chars)"
         }));
     }
-    if req.api_key.len() > 256 {
+    if clean_key.len() > 256 {
         return Json(json!({
             "status": "error",
             "message": "API key too long"
         }));
     }
-    let client = MediaClient::new(req.url, req.api_key, req.is_emby);
+    let client = MediaClient::new(clean_url, clean_key, req.is_emby);
     match client.get_users().await {
         Ok(users) => Json(json!({
             "status": "ok",
             "message": format!("Success! Connected to server and found {} users.", users.len())
         })),
-        Err(_) => Json(json!({
+        Err(e) => Json(json!({
             "status": "error",
-            "message": "Connection failed (see server logs for details)"
+            "message": format!("Connection failed: {:#}", e)
         })),
     }
 }
