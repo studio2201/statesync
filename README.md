@@ -2,43 +2,40 @@
 
 **Watched, resume, and favorites — synced across Emby and Jellyfin.**
 
+## Install (one line)
+
 ```bash
-docker run -d --name statesync -p 4601:4601 -v statesync-config:/config \
-  ghcr.io/studio2201/statesync:latest
+docker run -d --name statesync -p 4601:4601 -v statesync-config:/config ghcr.io/studio2201/statesync:latest
 ```
 
-Open **http://localhost:4601** → **Add server** (paste address + API key) twice → play something.
+No env vars. No login. Open **http://localhost:4601**.
 
-StateSync detects Emby vs Jellyfin, matches people and titles, and keeps watch state in sync. No login.
+## One perfect example
+
+```text
+1. Run the install command above.
+2. Dashboard → Add server → paste Emby (or Jellyfin) URL + API key → Save
+   (type auto-detects; browser paths like …/web/index.html are stripped to host:port).
+3. Add the other server the same way.
+4. If usernames differ → Link users.
+5. Play something on one server → watch it appear on the other.
+   Optional: Preview force → Force sync for older history.
+```
+
+That is the whole product path.
 
 ---
 
-## One perfect flow
+## Deploy targets
 
-1. Run the container (command above).  
-2. Add your Emby (or Jellyfin) URL + API key → Save (type is auto-detected).  
-3. Add the other server.  
-4. If usernames differ, click **Link users**.  
-5. Optional: **Preview force** then **Force sync** for history.  
+| Target | How |
+|--------|-----|
+| **Docker / any host** | One-liner above (`ghcr.io/studio2201/statesync`) |
+| **Unraid** | Community Apps / import `unraid/unraid-template.xml` — appdata → `/mnt/user/appdata/statesync`, port **4601**, shell **sh** (BusyBox ash). If Emby/Jellyfin use **br0**, put StateSync on **br0** too so it can reach them. |
+| **Compose** | `container/docker-compose.yml` (volume + port only) |
+| **Binary** | GitHub Release `statesync-linux-x86_64.tar.gz` (static musl) |
 
-That’s it. Live plays sync automatically; force fills in the past.
-
----
-
-## Install elsewhere
-
-**Unraid:** import `statesync.xml`, network **br0** (same as Emby/Jellyfin if they use macvlan), appdata → `/mnt/user/appdata/statesync`.
-
-**Compose:**
-
-```yaml
-services:
-  statesync:
-    image: ghcr.io/studio2201/statesync:latest
-    ports: ["4601:4601"]
-    volumes: ["./config:/config"]
-    restart: unless-stopped
-```
+Image tags: `latest`, `0.28.x`, `v0.28.x`.
 
 ---
 
@@ -46,34 +43,42 @@ services:
 
 | | Live | Force |
 |--|------|--------|
-| Played | ✓ | ✓ (skips if already matched) |
+| Played | ✓ | ✓ (skip if already equal) |
 | Position | ✓ | ✓ |
 | Favorites | ✓ | ✓ |
 
-**Clear watched** is a per-user button (all servers for that person) — not force sync.  
-**Not synced:** ratings, playlists, libraries, files.
+**Clear watched** is a dedicated per-user action (all servers), not force.  
+**Not synced:** ratings, playlists, libraries, media files.
 
 ---
 
-## CLI
+## Runtime defaults (zero config)
+
+| | Default |
+|--|---------|
+| Bind | `0.0.0.0:4601` |
+| Config | `/config/config.json` (created on first save) |
+| Auth | off |
+| Base image | **Alpine Linux** + BusyBox **ash** (Unraid console works) |
+| User | PUID/PGID `99:100` when unset (Unraid-friendly) |
+
+Optional knobs only if you need them: see [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 ```bash
 statesync --validate
-statesync --sync-force --dry-run   # preview
+statesync --sync-force --dry-run
 statesync --sync-force
 statesync --tui
 ```
 
 ---
 
-## Docs & ops
+## Links
 
-- Networking (Unraid br0): if the container can’t reach Emby, put StateSync on **br0** next to it.  
-- Config: `/config/config.json`  
-- Image tags: `latest`, `0.28.x`, `v0.28.x`  
 - Issues: https://github.com/studio2201/statesync/issues  
-
-Architecture and env vars: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md). In-app: **How sync works**.
+- Packages: https://github.com/studio2201/statesync/pkgs/container/statesync  
+- Releases: https://github.com/studio2201/statesync/releases  
+- In-app: **How sync works**
 
 ## License
 

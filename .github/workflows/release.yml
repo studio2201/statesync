@@ -9,7 +9,7 @@ permissions:
 
 jobs:
   release:
-    name: Tag & Release
+    name: Tag, assets & GitHub Release
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
@@ -35,6 +35,22 @@ jobs:
             echo "Tag $TAG does not exist; will create."
           fi
 
+      - name: Build static musl binary (release asset)
+        if: steps.check.outputs.exists == 'false'
+        run: |
+          docker run --rm \
+            -v "$PWD":/usr/src/statesync \
+            -w /usr/src/statesync \
+            docker.io/clux/muslrust:stable \
+            cargo build --release --target x86_64-unknown-linux-musl
+          install -m 0755 \
+            target/x86_64-unknown-linux-musl/release/statesync \
+            statesync-linux-x86_64
+          tar -czf "statesync-linux-x86_64-${{ steps.read_version.outputs.version }}.tar.gz" \
+            statesync-linux-x86_64
+          cp unraid/unraid-template.xml "statesync-unraid-${{ steps.read_version.outputs.version }}.xml"
+          cp container/docker-compose.yml "docker-compose-${{ steps.read_version.outputs.version }}.yml"
+
       - name: Create git tag and push
         if: steps.check.outputs.exists == 'false'
         run: |
@@ -45,7 +61,7 @@ jobs:
           git tag -a "$TAG" -m "Release v$VERSION"
           git push origin "$TAG"
 
-      - name: Create GitHub Release
+      - name: Create GitHub Release with assets
         if: steps.check.outputs.exists == 'false'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -53,19 +69,33 @@ jobs:
           TAG: ${{ steps.read_version.outputs.tag }}
         run: |
           NOTES=$(cat <<EOF
-          ## statesync v${VERSION}
+          ## StateSync v${VERSION}
 
-          Container image:
+          **Install (one line):**
+          \`\`\`bash
+          docker run -d --name statesync -p 4601:4601 -v statesync-config:/config ghcr.io/studio2201/statesync:latest
           \`\`\`
+
+          **Container (GHCR):**
+          \`\`\`bash
           docker pull ghcr.io/studio2201/statesync:${TAG}
           docker pull ghcr.io/studio2201/statesync:latest
           \`\`\`
 
-          See the [README](https://github.com/studio2201/statesync#readme) and the
-          [commits in this release](https://github.com/studio2201/statesync/commits/${TAG}).
+          **Assets in this release**
+          - \`statesync-linux-x86_64-${VERSION}.tar.gz\` — static musl binary
+          - \`statesync-unraid-${VERSION}.xml\` — zero-config Unraid template
+          - \`docker-compose-${VERSION}.yml\` — compose (port + volume only)
+
+          Base image: **Alpine Linux** with BusyBox **ash** (Unraid console: \`docker exec -it statesync sh\`).
+
+          See the [README](https://github.com/studio2201/statesync#readme).
           EOF
           )
           gh release create "$TAG" \
-            --title "statesync v${VERSION}" \
+            --title "StateSync v${VERSION}" \
             --notes "$NOTES" \
-            --target master
+            --target master \
+            "statesync-linux-x86_64-${VERSION}.tar.gz" \
+            "statesync-unraid-${VERSION}.xml" \
+            "docker-compose-${VERSION}.yml"

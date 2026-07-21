@@ -1,19 +1,10 @@
-version: '3.8'
-
+# Zero-configuration compose: image + port + config volume only.
 services:
   statesync:
     image: ghcr.io/studio2201/statesync:latest
     container_name: statesync
     restart: unless-stopped
-    # Binds to 0.0.0.0 by default — accessible on the LAN.
-    # For loopback-only, change to "127.0.0.1:4601:4601"
     ports:
       - "4601:4601"
     volumes:
       - ./config:/config
-    environment:
-      - RUST_LOG=info
-      - TZ=UTC
-      # Allow http:// to upstream servers by default (LAN-friendly).
-      # Set to "false" to require https:// only.
-      - STATESYNC_ALLOW_INSECURE_HTTP=true

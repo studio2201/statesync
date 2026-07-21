@@ -54,10 +54,11 @@ jobs:
             type=sha,format=short
           labels: |
             org.opencontainers.image.title=StateSync
-            org.opencontainers.image.description=Emby/Jellyfin playstate sync bridge
+            org.opencontainers.image.description=Emby/Jellyfin watched/resume/favorites sync (Alpine + ash)
             org.opencontainers.image.source=https://github.com/${{ github.repository }}
             org.opencontainers.image.licenses=MIT
             org.opencontainers.image.version=${{ steps.ver.outputs.version }}
+            org.opencontainers.image.base.name=docker.io/library/alpine:3.20
 
       - name: Build and Push Docker Image (with SBOM + provenance)
         id: build
