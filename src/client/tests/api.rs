@@ -26,19 +26,29 @@ async fn test_get_users_error() {
         std::env::set_var("STATESYNC_HTTP_RETRY", "off");
     }
     let mut server = mockito::Server::new_async().await;
+    // Both path variants fail
     let mock_err = server.mock("GET", "/Users?StartIndex=0&Limit=500")
+        .with_status(500)
+        .create_async().await;
+    let mock_err_emby = server.mock("GET", "/emby/Users?StartIndex=0&Limit=500")
         .with_status(500)
         .create_async().await;
     let client = MediaClient::new(server.url(), "key".to_string(), false);
     let res = client.get_users().await;
     assert!(res.is_err());
     mock_err.assert_async().await;
-    let mock_404 = server.mock("GET", "/Users?StartIndex=0&Limit=500")
-        .with_status(404)
+    mock_err_emby.assert_async().await;
+
+    // Emby prefers /emby/Users first
+    let mock_emby_ok = server.mock("GET", "/emby/Users?StartIndex=0&Limit=500")
+        .with_status(200)
+        .with_body(r#"{"Items":[{"Name":"Alice","Id":"u1"}],"TotalRecordCount":1}"#)
         .create_async().await;
-    let res_404 = client.get_users().await;
-    assert!(res_404.is_err());
-    mock_404.assert_async().await;
+    let client_emby = MediaClient::new(server.url(), "key".to_string(), true);
+    let users = client_emby.get_users().await.unwrap();
+    assert_eq!(users.get("alice").map(|s| s.as_str()), Some("u1"));
+    mock_emby_ok.assert_async().await;
+
     let mock_empty = server.mock("GET", "/Users?StartIndex=0&Limit=500")
         .with_status(200)
         .with_body(r#"{}"#)

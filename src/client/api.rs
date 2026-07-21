@@ -48,46 +48,38 @@ impl MediaClient {
         Ok(data)
     }
 
-    /// Missing documentation.
+    /// Fetch users from Emby/Jellyfin.
+    ///
+    /// Tries both `/Users` and `/emby/Users` (order depends on `is_emby`) so
+    /// reverse-proxy and native installs both work.
     pub async fn get_users(&self) -> Result<HashMap<String, String>> {
         let mut map = HashMap::new();
         let mut start_index: usize = 0;
         let page_size: usize = 500;
-        let clean_url = self.url.trim_end_matches('/');
-        let alt_prefix = if self.is_emby { "" } else { "/emby" };
+        // Prefer the prefix that matches server type, then fall back.
+        let prefixes: &[&str] = if self.is_emby {
+            &["/emby", ""]
+        } else {
+            &["", "/emby"]
+        };
+        // Remember which prefix worked so pagination stays consistent.
+        let mut working_prefix: Option<&'static str> = None;
 
         loop {
-            let path = format!("/Users?StartIndex={}&Limit={}", start_index, page_size);
-            let primary_url = self.url_path(&path);
-            let mut resp = send_with_retry(
-                self.add_auth_headers(self.client.get(&primary_url)),
-                "get_users",
-            )
-            .await;
-
-            if let Err(ref e) = resp {
-                if e.to_string().contains("404") {
-                    let alt_url = format!(
-                        "{}{}/Users?StartIndex={}&Limit={}",
-                        clean_url, alt_prefix, start_index, page_size
-                    );
-                    if let Ok(alt_resp) = send_with_retry(
-                        self.add_auth_headers(self.client.get(&alt_url)),
-                        "get_users_alt",
+            let page = start_index / page_size;
+            let resp = self
+                .get_users_page(start_index, page_size, prefixes, &mut working_prefix)
+                .await
+                .with_context(|| {
+                    format!(
+                        "Failed to get users list from {} (page {}). \
+                         If StateSync runs in Docker bridge mode, use a LAN IP \
+                         (e.g. http://192.168.1.10:8096), not a local hostname \
+                         that only Unraid can resolve. Also check API key and type.",
+                        self.url, page
                     )
-                    .await
-                    {
-                        resp = Ok(alt_resp);
-                    }
-                }
-            }
+                })?;
 
-            let resp = resp.with_context(|| {
-                format!(
-                    "Failed to get users list (page {})",
-                    start_index / page_size
-                )
-            })?;
             let data: serde_json::Value = resp
                 .json()
                 .await
@@ -120,6 +112,47 @@ impl MediaClient {
             }
         }
         Ok(map)
+    }
+
+    async fn get_users_page(
+        &self,
+        start_index: usize,
+        page_size: usize,
+        prefixes: &[&'static str],
+        working_prefix: &mut Option<&'static str>,
+    ) -> Result<reqwest::Response> {
+        let try_prefixes: Vec<&'static str> = if let Some(p) = *working_prefix {
+            vec![p]
+        } else {
+            prefixes.to_vec()
+        };
+        let mut last_err: Option<anyhow::Error> = None;
+        for prefix in try_prefixes {
+            let path = if prefix.is_empty() {
+                format!("/Users?StartIndex={}&Limit={}", start_index, page_size)
+            } else {
+                format!(
+                    "{}/Users?StartIndex={}&Limit={}",
+                    prefix, start_index, page_size
+                )
+            };
+            let url = self.url_path(&path);
+            match send_with_retry(
+                self.add_auth_headers(self.client.get(&url)),
+                "get_users",
+            )
+            .await
+            {
+                Ok(resp) => {
+                    *working_prefix = Some(prefix);
+                    return Ok(resp);
+                }
+                Err(e) => {
+                    last_err = Some(e);
+                }
+            }
+        }
+        Err(last_err.unwrap_or_else(|| anyhow!("get_users: no path succeeded")))
     }
 
     /// Missing documentation.
