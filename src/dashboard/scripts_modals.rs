@@ -230,9 +230,6 @@ document.addEventListener('keydown', (e) => {
     });
   }
 });
-const savedTheme = localStorage.getItem('hud-theme') || 'cyberpunk';
-setTheme(savedTheme);
-if ($('themeSelector')) $('themeSelector').value = savedTheme;
 initLogsToggle();
 document.addEventListener('DOMContentLoaded', () => {
   loadDashboard();

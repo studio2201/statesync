@@ -1,6 +1,6 @@
 //! Style definitions for the StateSync web dashboard.
 
-/// CSS stylesheet embedded into the HTML dashboard.
+/// CSS stylesheet embedded into the HTML dashboard (dark mode only).
 pub const CSS: &str = r#":root {
   --bg: #0b0f14;
   --card: #121820;
@@ -16,6 +16,7 @@ pub const CSS: &str = r#":root {
 body {
   background: var(--bg);
   color: var(--text);
+  color-scheme: dark;
   font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
   font-size: 14px;
   line-height: 1.45;

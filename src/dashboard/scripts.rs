@@ -19,7 +19,6 @@ async function loadPoster(url, img) {
     img.src = obj;
   } catch (_) {}
 }
-function setTheme(n) { document.body.className = n === 'cyberpunk' ? '' : `theme-${n}`; localStorage.setItem('hud-theme', n); }
 function nameFromUrl(url) {
   try {
     let u = (url || '').trim();

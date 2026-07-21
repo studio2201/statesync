@@ -91,15 +91,6 @@ pub fn render_dashboard() -> Markup {
 
                     div class="footer" {
                         div id="versionFooter" {}
-                        div style="display:flex;gap:8px;align-items:center" {
-                            label for="themeSelector" { "Theme" }
-                            select id="themeSelector" onchange="setTheme(this.value)" {
-                                option value="cyberpunk" { "Default" }
-                                option value="matrix" { "Green" }
-                                option value="amber" { "Amber" }
-                                option value="dracula" { "Purple" }
-                            }
-                        }
                     }
                 }
 
