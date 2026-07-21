@@ -10,9 +10,9 @@ When a user pauses, resumes, or finishes a show on one server, the same position
 
 1. **Docker tab** → **Template Repositories** → add `https://github.com/studio2201/statesync` (or import `statesync.xml` / `unraid/unraid-template.xml` from this repo)
 2. **Add Container** → pick **statesync**
-3. Confirm **Config Volume** is `/mnt/user/appdata/statesync`, network is **host**, then **Apply**
+3. Confirm **Network Type = bridge**, **Web UI Port = 4601**, **Config** = `/mnt/user/appdata/statesync`, then **Apply**
 4. Open `http://<your-unraid-ip>:4601` — no login required
-5. **Add server** → URL + API key → **Save**
+5. **Add server** → use Emby/Jellyfin **LAN IPs** (not `localhost`) + API key → **Save**
 
 Config persists at `/mnt/user/appdata/statesync/config.json`. Defaults `PUID=99` / `PGID=100` so appdata shows as `nobody` in the Unraid file manager.
 

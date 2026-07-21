@@ -3,7 +3,7 @@
   <Name>statesync</Name>
   <Repository>ghcr.io/studio2201/statesync:latest</Repository>
   <Registry>https://github.com/studio2201/statesync/pkgs/container/statesync</Registry>
-  <Network>host</Network>
+  <Network>bridge</Network>
   <MyIP />
   <Shell>sh</Shell>
   <Privileged>false</Privileged>
@@ -21,15 +21,15 @@
   <DonateText />
   <DonateLink />
   <Requires />
-  <Description>StateSync keeps Emby and Jellyfin playback progress in sync. Open http://YOUR-UNRAID-IP:4601 — no login. Add servers with URL + API key only.</Description>
-  <Config Name="Web UI Port" Target="4601" Default="4601" Mode="tcp" Description="Dashboard port." Type="Port" Display="always" Required="true" Mask="false">4601</Config>
-  <Config Name="Appdata" Target="/config" Default="/mnt/user/appdata/statesync" Mode="rw" Description="config.json path." Type="Path" Display="always" Required="true" Mask="false">/mnt/user/appdata/statesync</Config>
-  <Config Name="Timezone" Target="TZ" Default="America/New_York" Mode="" Description="Log timestamps." Type="Variable" Display="always" Required="false" Mask="false">America/New_York</Config>
-  <Config Name="PUID" Target="PUID" Default="99" Mode="" Description="User ID (nobody)." Type="Variable" Display="advanced" Required="false" Mask="false">99</Config>
-  <Config Name="PGID" Target="PGID" Default="100" Mode="" Description="Group ID (users)." Type="Variable" Display="advanced" Required="false" Mask="false">100</Config>
-  <Config Name="UMASK" Target="UMASK" Default="022" Mode="" Description="File umask." Type="Variable" Display="advanced" Required="false" Mask="false">022</Config>
-  <Config Name="Log Level" Target="RUST_LOG" Default="info" Mode="" Description="info or debug." Type="Variable" Display="advanced" Required="false" Mask="false">info</Config>
-  <Config Name="Bind Address" Target="STATESYNC_BIND" Default="0.0.0.0:4601" Mode="" Description="Listen address." Type="Variable" Display="advanced" Required="false" Mask="false">0.0.0.0:4601</Config>
-  <Config Name="Allow HTTP to media servers" Target="STATESYNC_ALLOW_INSECURE_HTTP" Default="true" Mode="" Description="Allow http:// to Emby/Jellyfin." Type="Variable" Display="advanced" Required="false" Mask="false">true</Config>
-  <Config Name="Accept Invalid TLS Certs" Target="STATESYNC_ACCEPT_INVALID_CERTS" Default="false" Mode="" Description="Self-signed HTTPS only if needed." Type="Variable" Display="advanced" Required="false" Mask="false">false</Config>
+  <Description>StateSync keeps Emby and Jellyfin playback progress in sync. Network is BRIDGE — maps host port 4601 to container 4601. Open http://YOUR-UNRAID-IP:4601 (no login). Add servers with URL + API key. Use host IPs for Emby/Jellyfin (e.g. http://192.168.x.x:8096), not localhost.</Description>
+  <Config Name="Web UI Port" Target="4601" Default="4601" Mode="tcp" Description="Host port mapped to container 4601. Open http://UNRAID-IP:THIS_PORT after start." Type="Port" Display="always" Required="true" Mask="false">4601</Config>
+  <Config Name="Appdata" Target="/config" Default="/mnt/user/appdata/statesync" Mode="rw" Description="Where config.json is stored. Persists across updates." Type="Path" Display="always" Required="true" Mask="false">/mnt/user/appdata/statesync</Config>
+  <Config Name="Timezone" Target="TZ" Default="America/New_York" Mode="" Description="Timezone for log timestamps." Type="Variable" Display="always" Required="false" Mask="false">America/New_York</Config>
+  <Config Name="PUID" Target="PUID" Default="99" Mode="" Description="User ID. Default 99 = Unraid nobody." Type="Variable" Display="advanced" Required="false" Mask="false">99</Config>
+  <Config Name="PGID" Target="PGID" Default="100" Mode="" Description="Group ID. Default 100 = Unraid users." Type="Variable" Display="advanced" Required="false" Mask="false">100</Config>
+  <Config Name="UMASK" Target="UMASK" Default="022" Mode="" Description="File creation mask. Default 022." Type="Variable" Display="advanced" Required="false" Mask="false">022</Config>
+  <Config Name="Log Level" Target="RUST_LOG" Default="info" Mode="" Description="Log verbosity: info or debug." Type="Variable" Display="advanced" Required="false" Mask="false">info</Config>
+  <Config Name="Bind Address" Target="STATESYNC_BIND" Default="0.0.0.0:4601" Mode="" Description="Listen address inside the container. Leave as 0.0.0.0:4601 for bridge mode." Type="Variable" Display="advanced" Required="false" Mask="false">0.0.0.0:4601</Config>
+  <Config Name="Allow HTTP to media servers" Target="STATESYNC_ALLOW_INSECURE_HTTP" Default="true" Mode="" Description="Allow plain http to Emby/Jellyfin on LAN." Type="Variable" Display="advanced" Required="false" Mask="false">true</Config>
+  <Config Name="Accept Invalid TLS Certs" Target="STATESYNC_ACCEPT_INVALID_CERTS" Default="false" Mode="" Description="true only for self-signed HTTPS you trust." Type="Variable" Display="advanced" Required="false" Mask="false">false</Config>
 </Container>
