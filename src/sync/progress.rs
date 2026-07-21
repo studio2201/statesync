@@ -129,10 +129,10 @@ pub async fn sync_progress_to_targets(
 
             let mut state = state_lock.lock().await;
             if let Some(last_sync) = state.last_syncs.get(&history_key) {
-                let tick_diff = (last_sync.position_ticks - position).abs();
+                let tick_diff = last_sync.position_ticks.abs_diff(position);
                 let time_diff = last_sync.timestamp.elapsed();
 
-                if tick_diff < (config.sync_threshold_seconds * 10_000_000) as i64
+                if tick_diff < (config.sync_threshold_seconds as u64 * 10_000_000)
                     && time_diff < Duration::from_secs(5)
                     && !played
                 {
@@ -182,6 +182,11 @@ pub async fn sync_progress_to_targets(
                     timestamp: now,
                 },
             );
+
+            if state.last_syncs.len() > 10_000 {
+                let cutoff = std::time::Instant::now() - std::time::Duration::from_secs(86400);
+                state.last_syncs.retain(|_, v| v.timestamp > cutoff);
+            }
 
             let client_target_clone = client_target.clone();
             let target_name_clone = target_name.clone();

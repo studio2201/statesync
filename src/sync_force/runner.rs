@@ -17,9 +17,6 @@ pub(super) fn rate_from_env() -> u32 {
 pub async fn run_force_sync(ctx: ForceContext) -> ForceSyncStatus {
     {
         let mut running = ctx.tracker.running.lock().await;
-        if *running {
-            return ctx.tracker.status.lock().await.clone();
-        }
         *running = true;
     }
     ctx.tracker

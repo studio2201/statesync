@@ -138,30 +138,6 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_run_force_sync_already_running() {
-        let tracker = std::sync::Arc::new(SyncForceTracker::default());
-        {
-            let mut running = tracker.running.lock().await;
-            *running = true;
-            let mut status = tracker.status.lock().await;
-            status.state = ForceSyncState::Running;
-            status.processed = 99;
-        }
-
-        let ctx = crate::sync_force::ForceContext {
-            direction: crate::sync_force::Direction::Both,
-            config: crate::config::default_config(),
-            clients: vec![],
-            state: std::sync::Arc::new(tokio::sync::Mutex::new(crate::state::AppState::new(vec![]))),
-            tracker: tracker.clone(),
-        };
-
-        let result = crate::sync_force::run_force_sync(ctx).await;
-        assert_eq!(result.state, ForceSyncState::Running);
-        assert_eq!(result.processed, 99);
-    }
-
-    #[tokio::test]
     async fn test_force_sync_pair_cancelled_immediately() {
         let server = mockito::Server::new_async().await;
         let client = std::sync::Arc::new(crate::client::MediaClient::new(server.url(), "key".to_string(), false));

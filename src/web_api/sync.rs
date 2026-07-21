@@ -98,7 +98,7 @@ pub async fn post_sync_force(
         st.sync_force.clone()
     };
     {
-        let running = tracker.running.lock().await;
+        let mut running = tracker.running.lock().await;
         if *running {
             return Response::builder()
                 .status(StatusCode::CONFLICT)
@@ -107,10 +107,12 @@ pub async fn post_sync_force(
                 ))
                 .unwrap();
         }
+        *running = true;
     }
     let config = match Config::load() {
         Ok(c) => c,
         Err(e) => {
+            *tracker.running.lock().await = false;
             return Response::builder()
                 .status(StatusCode::INTERNAL_SERVER_ERROR)
                 .body(Body::from(format!(
@@ -121,6 +123,7 @@ pub async fn post_sync_force(
         }
     };
     if config.servers.is_empty() {
+        *tracker.running.lock().await = false;
         return Response::builder()
             .status(StatusCode::BAD_REQUEST)
             .body(Body::from(
