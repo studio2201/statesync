@@ -75,27 +75,16 @@ pub async fn process_played_items_batch(
             status.skip_reasons.other += 1;
             continue;
         }
-        // Skip if target already has equivalent state (trust at scale — no rewrite).
-        const POS_EQ_TICKS: u64 = 50_000_000; // 5 seconds
         if let Ok(tgt_ud) = target_client
             .get_item_user_data(tgt_user_id, &target_item_id)
             .await
         {
-            let mut need_write = false;
-            if force_played && !tgt_ud.played {
-                need_write = true;
-            }
-            if force_position {
-                let tgt_pos = tgt_ud.playback_position_ticks.unwrap_or(0);
-                if source_pos.abs_diff(tgt_pos) > POS_EQ_TICKS {
-                    // Only push position when meaningfully ahead or different mid-watch.
-                    if source_pos > 0 || tgt_pos > 0 {
-                        need_write = true;
-                    }
-                }
-            }
-            // Already played on target and position close enough (or position not in scope).
-            if !need_write {
+            if super::force_equal::played_state_already_equal(
+                force_played,
+                force_position,
+                source_pos,
+                &tgt_ud,
+            ) {
                 *skipped_total += 1;
                 *processed_total += 1;
                 status.by_field.played.skip += 1;

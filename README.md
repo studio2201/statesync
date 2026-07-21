@@ -73,7 +73,7 @@ statesync --tui
 - Image tags: `latest`, `0.28.x`, `v0.28.x`  
 - Issues: https://github.com/studio2201/statesync/issues  
 
-Architecture and env vars: see [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) (if present) or in-app **How sync works**.
+Architecture and env vars: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md). In-app: **How sync works**.
 
 ## License
 
