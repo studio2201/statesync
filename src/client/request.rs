@@ -50,19 +50,10 @@ pub async fn send_with_retry(req: reqwest::RequestBuilder, label: &str) -> Resul
 
 impl MediaClient {
     /// Builds a full URL path for an API endpoint on the target media server.
-    /// Deduplicates `/emby` prefixes if configured or present in URL.
     pub fn url_path(&self, path: &str) -> String {
         let clean_url = self.url.trim_end_matches('/');
         let clean_path = if path.starts_with('/') { &path[1..] } else { path };
-        if self.is_emby {
-            if clean_url.ends_with("/emby") || clean_path.starts_with("emby/") {
-                format!("{}/{}", clean_url, clean_path)
-            } else {
-                format!("{}/emby/{}", clean_url, clean_path)
-            }
-        } else {
-            format!("{}/{}", clean_url, clean_path)
-        }
+        format!("{}/{}", clean_url, clean_path)
     }
 
     /// Adds authentication headers expected by Emby and Jellyfin servers and reverse proxies.
