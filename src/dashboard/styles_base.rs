@@ -173,24 +173,53 @@ select {
 .banner-live {
   border-color: var(--accent) !important;
   background: rgba(59, 158, 255, 0.08) !important;
-  align-items: flex-start;
-  gap: 12px;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0;
+}
+/* Fixed header row: title/counts left, buttons right — buttons do not move when expanded. */
+.fs-live-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  width: 100%;
+  margin-bottom: 6px;
+}
+.fs-live-top-text {
+  display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px 12px;
+  min-width: 0; flex: 1;
 }
 .fs-live-actions {
-  display: flex; flex-direction: column; gap: 6px; flex-shrink: 0;
+  display: flex; flex-direction: row; gap: 6px; flex-shrink: 0;
+  align-items: center;
+}
+.fs-btn-details {
+  min-width: 7.5rem; /* same width for Details / Hide so control does not shift */
+  text-align: center;
+}
+.fs-progress {
+  width: 100%; height: 8px; display: block;
 }
 .fs-story-expanded {
   border-top: 1px solid var(--border);
-  margin-top: 8px;
-  padding-top: 4px;
+  margin-top: 10px;
+  padding-top: 8px;
+  width: 100%;
+}
+.fs-fact-block {
+  font-size: 12px; color: var(--text); line-height: 1.45;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+.fs-fact-block .fs-fact {
+  margin: 2px 0;
+  color: var(--muted);
+}
+.fs-fact-block .fs-fact strong {
+  color: var(--bright); font-weight: 600; margin-right: 6px;
 }
 .fs-failure-list {
-  color: var(--red); line-height: 1.45;
+  color: var(--red); line-height: 1.4; margin-top: 8px; font-size: 12px;
 }
-.fs-failure-list .fs-fail-line {
-  margin: 4px 0; padding-left: 0;
-}
-@media (max-width: 560px) {
-  .fs-live-actions { flex-direction: row; width: 100%; justify-content: flex-end; }
-}
+.fs-failure-list .fs-fail-line { margin: 3px 0; }
 "#;

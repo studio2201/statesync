@@ -54,8 +54,8 @@ async function forceSync(dryRun, onlyUser) {
       ? ('Preview started' + (onlyUser ? (' for "' + onlyUser + '"') : ' for every linked person'))
       : ('Force sync started' + (onlyUser ? (' for "' + onlyUser + '"') : ' for every linked person')),
     story_detail: dryRun
-      ? 'Preview only. We compare Emby/Jellyfin library catalogs (what each app knows about a title) — not your media files. Nothing is written.'
-      : 'Catch-up between Emby/Jellyfin libraries only — not your media files. Live play sync is paused until this finishes.'
+      ? 'Libraries only. No writes.'
+      : 'Libraries only. Live sync paused.'
   });
   const statusHint = $('forceSyncStatus');
   if (statusHint) {

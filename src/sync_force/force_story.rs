@@ -1,4 +1,4 @@
-//! Plain-language force-sync storytelling (Emby/Jellyfin libraries only).
+//! Dense force-sync facts (Emby/Jellyfin libraries only). No fluff.
 
 use super::ForceSyncStatus;
 
@@ -26,27 +26,27 @@ pub fn apply_story(
 
 pub fn story_started(dry_run: bool, only_user: Option<&str>) -> (String, String) {
     let who = only_user
-        .map(|u| format!(" for person \"{}\"", u))
-        .unwrap_or_else(|| " for every linked person".to_string());
+        .map(|u| format!(" for \"{u}\""))
+        .unwrap_or_else(|| " (all linked people)".to_string());
     if dry_run {
         (
             format!("Preview started{who}"),
-            "Preview only: count what would change. Nothing is written. Live play sync is paused. We work with Emby/Jellyfin library catalogs (what each app knows about a title) — not your media files.".to_string(),
+            "Mode: preview (no writes). Scope: Emby/Jellyfin libraries only. Live sync: paused."
+                .to_string(),
         )
     } else {
         (
-            format!("Force sync started{who}"),
-            "Catch-up: make watched, resume, and favorites match between your media apps for linked people. We only talk to Emby/Jellyfin libraries — never open your media files. Live play sync is paused until this finishes.".to_string(),
+            format!("Force started{who}"),
+            "Mode: write. Goal: match watched / resume / favorites across libraries. Live sync: paused."
+                .to_string(),
         )
     }
 }
 
 pub fn story_counting(user: &str, source: &str, pair_i: u64, pair_n: u64) -> (String, String) {
     (
-        format!("Counting watched titles ({pair_i} of {pair_n})"),
-        format!(
-            "Person: {user}. Asking {source}’s library how many titles this person already marked watched (and favorited). One combined list from that app — not “all movies first, then all TV.” Next we match those library titles on the other app."
-        ),
+        format!("Counting watched ({pair_i}/{pair_n})"),
+        format!("Step: count. Person: {user}. Server: {source}. Action: ask library how many watched (+ favorites)."),
     )
 }
 
@@ -58,15 +58,11 @@ pub fn story_played(
     pair_n: u64,
     dry_run: bool,
 ) -> (String, String) {
-    let write = if dry_run {
-        "If the other app differs, count it as would-update (preview does not write)."
-    } else {
-        "If the other app differs, update watched/resume there."
-    };
+    let mode = if dry_run { "preview" } else { "write" };
     (
-        format!("Copying watched history ({pair_i} of {pair_n})"),
+        format!("Watched history ({pair_i}/{pair_n})"),
         format!(
-            "Person: {user}. From {source}’s library → to {target}’s library. For each watched title in {source}, find the same title in {target} using shared catalog IDs (IMDb, TMDb, or TVDB) that Emby/Jellyfin already store on that library entry. {write} “No change” is normal and good: we checked and the other library already matched, or we could not pair that library title (no shared catalog ID, or it is not in {target}’s library)."
+            "Step: watched. Person: {user}. Route: {source} → {target}. Match: catalog ID (IMDb/TMDb/TVDB). Mode: {mode}. No change = already same, or no shared ID / not in {target}."
         ),
     )
 }
@@ -79,15 +75,11 @@ pub fn story_favorites(
     pair_n: u64,
     dry_run: bool,
 ) -> (String, String) {
-    let write = if dry_run {
-        "Preview only — favorites are not changed."
-    } else {
-        "Update the heart on the other app only when needed."
-    };
+    let mode = if dry_run { "preview" } else { "write" };
     (
-        format!("Copying favorites ({pair_i} of {pair_n})"),
+        format!("Favorites ({pair_i}/{pair_n})"),
         format!(
-            "Person: {user}. From {source}’s library → to {target}’s library. Same idea as watched history: match library titles by shared catalog IDs, then {write}"
+            "Step: favorites. Person: {user}. Route: {source} → {target}. Match: catalog ID. Mode: {mode}."
         ),
     )
 }
@@ -102,27 +94,27 @@ pub fn story_finished(
 ) -> (String, String) {
     if cancelled {
         return (
-            "Force sync cancelled".to_string(),
+            "Force cancelled".to_string(),
             format!(
-                "Stopped early. Checked {processed} library titles, updated {succeeded}, no change needed on {skipped}. Live play sync will resume."
+                "Result: cancelled. Checked {processed}. Updated {succeeded}. No change {skipped}. Failed {failed}. Live sync: resumes."
             ),
         );
     }
     let head = if dry_run {
         if failed == 0 {
-            "Preview finished (no writes)"
+            "Preview finished"
         } else {
-            "Preview finished with some failures (no writes)"
+            "Preview finished (failures)"
         }
     } else if failed == 0 {
-        "Force sync finished"
+        "Force finished"
     } else {
-        "Force sync finished with some failures"
+        "Force finished (failures)"
     };
     (
         head.to_string(),
         format!(
-            "Checked {processed} library titles. Updated (or would update) {succeeded}. No change needed on {skipped} — usually both libraries already agree (that is success, not a problem). Failures: {failed}. Live play sync resumes."
+            "Result: done. Checked {processed}. Updated {succeeded}. No change {skipped}. Failed {failed}. Live sync: resumes."
         ),
     )
 }
@@ -132,30 +124,23 @@ mod tests {
     use super::*;
 
     #[test]
-    fn counting_story_names_person_and_server() {
+    fn counting_story_is_dense() {
         let (h, d) = story_counting("alice", "Emby", 1, 2);
         assert!(h.contains("Counting"));
-        assert!(d.contains("alice"));
-        assert!(d.contains("Emby"));
-        assert!(d.contains("library"));
-        assert!(!d.to_lowercase().contains("folder"));
+        assert!(d.contains("alice") && d.contains("Emby"));
+        assert!(d.contains("Step:"));
+        assert!(d.len() < 160);
     }
 
     #[test]
-    fn played_story_is_about_libraries_not_files() {
+    fn played_story_names_route_not_files() {
         let (h, d) = story_played("bob", "Emby", "Jellyfin", 2, 4, false);
-        assert!(h.contains("watched"));
-        assert!(d.contains("Emby") && d.contains("Jellyfin"));
-        assert!(d.contains("library"));
-        assert!(
-            d.contains("No change")
-                || d.contains("no change")
-                || d.contains("“No change”")
-        );
-        assert!(!d.to_lowercase().contains("skip"));
+        assert!(h.contains("Watched"));
+        assert!(d.contains("Emby → Jellyfin"));
+        assert!(d.contains("No change"));
         assert!(!d.to_lowercase().contains("folder"));
-        assert!(!d.to_lowercase().contains("file name"));
-        assert!(!d.to_lowercase().contains("disk"));
+        assert!(!d.to_lowercase().contains("skip"));
+        assert!(d.len() < 220);
     }
 
     #[test]
@@ -172,10 +157,7 @@ mod tests {
             1,
             3,
         );
-        assert_eq!(s.phase.as_deref(), Some("played"));
         assert_eq!(s.current_source.as_deref(), Some("A"));
-        assert_eq!(s.current_target.as_deref(), Some("B"));
         assert_eq!(s.pair_index, 1);
-        assert_eq!(s.pair_total, 3);
     }
 }

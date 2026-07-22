@@ -153,11 +153,21 @@ function setForceStoryExpanded(show) {
   const body = $('fsStoryExpanded');
   const btn = $('fsStoryToggleBtn');
   if (body) body.style.display = show ? 'block' : 'none';
-  if (btn) btn.textContent = show ? 'Hide details' : 'Details';
+  // Fixed label width via CSS; keep short so the control stays put.
+  if (btn) btn.textContent = show ? 'Hide' : 'Details';
   localStorage.setItem('force-story-expanded', show ? 'true' : 'false');
 }
 function toggleForceStory() {
   setForceStoryExpanded(!isForceStoryExpanded());
+}
+function fsFactLine(label, value) {
+  const row = document.createElement('div');
+  row.className = 'fs-fact';
+  const k = document.createElement('strong');
+  k.textContent = label;
+  row.appendChild(k);
+  row.appendChild(document.createTextNode(value));
+  return row;
 }
 function applyForceSyncLiveUi(fs) {
   const live = $('forceSyncLive');
@@ -176,15 +186,14 @@ function applyForceSyncLiveUi(fs) {
   const st = forceStateKey(fs.state);
   const done = st === 'completed' || st === 'failed' || !!fs.finished_at;
   live.style.display = 'flex';
-  // Keep expand preference; default collapsed (no long story until Details).
   setForceStoryExpanded(isForceStoryExpanded());
   const dry = !!fs.dry_run || (fs.scope && fs.scope.indexOf('dry-run') >= 0);
   const title = $('fsStoryTitle');
   if (title) {
     if (fs.story_headline) title.textContent = fs.story_headline;
-    else if (done && st === 'completed') title.textContent = dry ? 'Preview finished (no writes)' : 'Force sync finished';
-    else if (done && st === 'failed') title.textContent = dry ? 'Preview finished with errors' : 'Force sync finished with errors';
-    else title.textContent = (dry ? 'Force preview · ' : 'Force sync · ') + forcePhaseLabel(fs.phase);
+    else if (done && st === 'completed') title.textContent = dry ? 'Preview finished' : 'Force finished';
+    else if (done && st === 'failed') title.textContent = dry ? 'Preview finished (failures)' : 'Force finished (failures)';
+    else title.textContent = (dry ? 'Preview · ' : 'Force · ') + forcePhaseLabel(fs.phase);
   }
   const bar = $('fsProgressBar');
   if (bar) {
@@ -197,64 +206,70 @@ function applyForceSyncLiveUi(fs) {
   const txt = $('fsProgressText');
   if (txt) {
     if (preparing && !done) {
-      txt.textContent = 'elapsed ' + elapsed + 's';
+      txt.textContent = elapsed + 's';
     } else if (totalPairs > 0) {
-      txt.textContent = pct + '% · checked ' + processed + ' of ~' + totalPairs
-        + ' · updated ' + succeeded + ' · no change ' + skipped
-        + (failed ? ' · failed ' + failed : '')
+      txt.textContent = pct + '% · ' + processed + '/' + totalPairs
+        + ' · ↑' + succeeded + ' · =' + skipped
+        + (failed ? ' · ✕' + failed : '')
         + ' · ' + rate + '/s · ' + elapsed + 's';
     } else {
-      txt.textContent = 'checked ' + processed + ' · updated ' + succeeded + ' · no change ' + skipped
-        + (failed ? ' · failed ' + failed : '')
+      txt.textContent = processed + ' · ↑' + succeeded + ' · =' + skipped
+        + (failed ? ' · ✕' + failed : '')
         + ' · ' + rate + '/s · ' + elapsed + 's';
     }
   }
-  // Compact “what is happening now” — always visible when the card is shown.
+  // Always-visible line: who + route only.
   const cu = $('fsCurrentUser');
   if (cu) {
     const bits = [];
-    if (fs.current_user) bits.push('Person: ' + fs.current_user);
-    if (fs.current_source && fs.current_target) {
-      bits.push('Route: ' + fs.current_source + ' → ' + fs.current_target);
-    } else if (fs.current_source) {
-      bits.push('Server: ' + fs.current_source);
-    }
-    if (fs.pair_total > 0 && fs.pair_index > 0) {
-      bits.push('Direction ' + fs.pair_index + ' of ' + fs.pair_total);
-    }
-    if (bits.length) {
-      cu.textContent = bits.join(' · ');
-    } else if (!done) {
-      cu.textContent = dry
-        ? 'Preview in progress — no writes will be made.'
-        : 'Working — live play sync is paused until this finishes.';
-    } else {
-      cu.textContent = '';
-    }
+    if (fs.current_user) bits.push(fs.current_user);
+    if (fs.current_source && fs.current_target) bits.push(fs.current_source + ' → ' + fs.current_target);
+    else if (fs.current_source) bits.push(fs.current_source);
+    if (fs.pair_total > 0 && fs.pair_index > 0) bits.push(fs.pair_index + '/' + fs.pair_total);
+    if (dry) bits.push('preview');
+    if (!done) bits.push('live paused');
+    cu.textContent = bits.join(' · ');
   }
-  // Long story text only when expanded.
+  // Details: dense facts only (what / who / route / counts / failures).
   const detail = $('fsStoryDetail');
   if (detail) {
-    const parts = [];
-    if (fs.story_detail) parts.push(fs.story_detail);
+    detail.textContent = '';
     const sr = fs.skip_reasons || {};
-    const skipBits = [];
-    if (sr.already_equal) skipBits.push(sr.already_equal + ' already the same in both libraries (good)');
-    if (sr.no_provider) skipBits.push(sr.no_provider + ' could not pair — source library title has no shared catalog ID (IMDb/TMDb/TVDB)');
-    if (sr.no_match) skipBits.push(sr.no_match + ' could not pair — title not in the other app’s library');
-    if (sr.other) skipBits.push(sr.other + ' other no-change');
-    if (skipBits.length) {
-      parts.push('Why no change so far: ' + skipBits.join('; ') + '.');
+    const mode = dry ? 'preview (no writes)' : 'write';
+    const route = (fs.current_source && fs.current_target)
+      ? (fs.current_source + ' → ' + fs.current_target)
+      : (fs.current_source || '—');
+    detail.appendChild(fsFactLine('Step', forcePhaseLabel(fs.phase) + (fs.story_headline ? (' — ' + fs.story_headline) : '')));
+    detail.appendChild(fsFactLine('Person', fs.current_user || '—'));
+    detail.appendChild(fsFactLine('Route', route + (fs.pair_total > 0 ? (' · ' + (fs.pair_index || 0) + '/' + fs.pair_total) : '')));
+    detail.appendChild(fsFactLine('Mode', mode));
+    detail.appendChild(fsFactLine('Match', 'library catalog IDs: IMDb · TMDb · TVDB'));
+    detail.appendChild(fsFactLine('Counts',
+      'checked ' + processed
+      + (totalPairs ? (' / ~' + totalPairs) : '')
+      + ' · updated ' + succeeded
+      + ' · no change ' + skipped
+      + ' · failed ' + failed
+      + ' · ' + rate + '/s · ' + elapsed + 's'
+    ));
+    const nc = [];
+    if (sr.already_equal) nc.push(sr.already_equal + ' already same');
+    if (sr.no_provider) nc.push(sr.no_provider + ' no catalog ID');
+    if (sr.no_match) nc.push(sr.no_match + ' not in other library');
+    if (sr.other) nc.push(sr.other + ' other');
+    if (nc.length) detail.appendChild(fsFactLine('No change', nc.join(' · ')));
+    const bf = fs.by_field || {};
+    const pl = bf.played || {};
+    const fv = bf.favorite || {};
+    if ((pl.ok || pl.skip || pl.fail) || (fv.ok || fv.skip || fv.fail)) {
+      detail.appendChild(fsFactLine('By field',
+        'watched ↑' + (pl.ok || 0) + ' =' + (pl.skip || 0) + ' ✕' + (pl.fail || 0)
+        + ' · favorites ↑' + (fv.ok || 0) + ' =' + (fv.skip || 0) + ' ✕' + (fv.fail || 0)
+      ));
     }
-    if (!done) {
-      parts.push(dry
-        ? 'This is a preview: counts only.'
-        : 'Live play sync stays paused until this run ends.');
-    }
-    if (fs.last_error) parts.push('Last failure: ' + fs.last_error);
-    detail.textContent = parts.join(' ');
+    if (fs.scope && fs.scope.length) detail.appendChild(fsFactLine('Scope', fs.scope.join(', ')));
+    if (fs.story_detail) detail.appendChild(fsFactLine('Note', fs.story_detail));
   }
-  // Structured failure list (Details only) — same facts as activity log lines.
   const failBox = $('fsFailureList');
   if (failBox) {
     failBox.textContent = '';
@@ -264,16 +279,12 @@ function applyForceSyncLiveUi(fs) {
       head.style.fontWeight = '600';
       head.style.color = 'var(--bright)';
       head.style.marginBottom = '4px';
-      head.textContent = 'Failures (' + fs.errors.length + ', newest last) — also in Activity log:';
+      head.textContent = 'Failures (' + fs.errors.length + ')';
       failBox.appendChild(head);
-      const recent = fs.errors.slice(-12);
-      recent.forEach(function (e) {
+      fs.errors.slice(-12).forEach(function (e) {
         const line = document.createElement('div');
         line.className = 'fs-fail-line';
-        const who = e.user ? e.user : '—';
-        const where = e.server ? e.server : '—';
-        const why = e.message ? e.message : 'unknown error';
-        line.textContent = 'Who: ' + who + ' · Where: ' + where + ' · Why: ' + why;
+        line.textContent = (e.user || '—') + ' · ' + (e.server || '—') + ' · ' + (e.message || 'error');
         failBox.appendChild(line);
       });
     } else {
