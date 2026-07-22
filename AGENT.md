@@ -118,6 +118,18 @@ satisfied without compromise.
     - `cargo audit` (document allowed advisories if any)
     - `cargo +nightly udeps --all-targets` when available
 
+### Brand and org visual style
+
+13. **Icons:** Follow [graphics/BRAND.md](graphics/BRAND.md). studio2201 app
+    icons are square neon **line glyphs** on dark navy/charcoal, 2–3 colors
+    (cyan/green/purple), **no text**. Canonical StateSync icon is
+    `graphics/statesync_icon.jpg` only — never replace with character art.
+14. **Headers/mascots:** Allowed for README banners only; must stay separate
+    from the app icon. No embedded text in any image asset.
+15. **Reference ground truth:** sibling org icons under
+    `../pulse/assets/icon.png`, `../beam/assets/icon.png`, etc., when present
+    on disk. Prefer matching those over inventing a new icon language.
+
 ### Product domain (StateSync)
 
 - StateSync syncs **watched**, **resume**, and **favorites** across
