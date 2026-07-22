@@ -12,7 +12,7 @@
   <Overview>StateSync: watched / resume / favorites across Emby and Jellyfin. Alpine + ash console. No login. Zero required env vars.</Overview>
   <Category>MediaApp:Video MediaApp:Other</Category>
   <WebUI>http://[IP]:[PORT:4601]</WebUI>
-  <TemplateURL>https://raw.githubusercontent.com/studio2201/unraid-templates/main/templates/statesync.xml</TemplateURL>
+  <TemplateURL>https://raw.githubusercontent.com/studio2201/unraid-templates/master/templates/statesync.xml</TemplateURL>
   <Icon>https://raw.githubusercontent.com/studio2201/statesync/master/graphics/statesync_icon.jpg</Icon>
   <ExtraParams />
   <PostArgs />
