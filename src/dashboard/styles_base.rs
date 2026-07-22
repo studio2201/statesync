@@ -173,5 +173,18 @@ select {
 .banner-live {
   border-color: var(--accent) !important;
   background: rgba(59, 158, 255, 0.08) !important;
+  align-items: flex-start;
+  gap: 12px;
+}
+.fs-live-actions {
+  display: flex; flex-direction: column; gap: 6px; flex-shrink: 0;
+}
+.fs-story-expanded {
+  border-top: 1px solid var(--border);
+  margin-top: 8px;
+  padding-top: 4px;
+}
+@media (max-width: 560px) {
+  .fs-live-actions { flex-direction: row; width: 100%; justify-content: flex-end; }
 }
 "#;

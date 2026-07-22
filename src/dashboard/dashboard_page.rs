@@ -37,16 +37,21 @@ pub fn render_dashboard() -> Markup {
 
                     div id="lastFullSyncBanner" class="banner" {}
                     div id="forceSyncLive" class="banner banner-live" style="display:none" {
-                        div style="flex:1" {
-                            div style="display:flex;justify-content:space-between;gap:10px;margin-bottom:6px;align-items:center" {
+                        div class="fs-live-main" style="flex:1;min-width:0" {
+                            div style="display:flex;justify-content:space-between;gap:10px;margin-bottom:6px;align-items:center;flex-wrap:wrap" {
                                 strong id="fsStoryTitle" style="color:var(--bright)" { "Force sync running" }
-                                span id="fsProgressText" style="color:var(--accent)" {}
+                                span id="fsProgressText" style="color:var(--accent);font-size:12px" {}
                             }
                             progress id="fsProgressBar" value="0" max="100" style="width:100%;height:8px" {}
-                            div id="fsCurrentUser" class="form-hint" {}
-                            div id="fsStoryDetail" class="form-hint" style="margin-top:6px;line-height:1.5" {}
+                            div id="fsCurrentUser" class="form-hint" style="margin-top:6px" {}
+                            div id="fsStoryExpanded" class="fs-story-expanded" style="display:none" {
+                                div id="fsStoryDetail" class="form-hint" style="margin-top:8px;line-height:1.5" {}
+                            }
                         }
-                        button class="btn btn-danger" id="fsCancelBtn" onclick="cancelForceSync()" { "Cancel" }
+                        div class="fs-live-actions" {
+                            button class="btn" id="fsStoryToggleBtn" type="button" onclick="toggleForceStory()" { "Details" }
+                            button class="btn btn-danger" id="fsCancelBtn" type="button" onclick="cancelForceSync()" { "Cancel" }
+                        }
                     }
 
                             (super::dashboard_how::how_sync_card())

@@ -145,6 +145,20 @@ function forcePhaseLabel(phase) {
   if (p === 'cancelled') return 'Cancelled';
   return 'Force sync';
 }
+/** Collapsed by default: bar + what is happening. Expand for full story text. */
+function isForceStoryExpanded() {
+  return localStorage.getItem('force-story-expanded') === 'true';
+}
+function setForceStoryExpanded(show) {
+  const body = $('fsStoryExpanded');
+  const btn = $('fsStoryToggleBtn');
+  if (body) body.style.display = show ? 'block' : 'none';
+  if (btn) btn.textContent = show ? 'Hide details' : 'Details';
+  localStorage.setItem('force-story-expanded', show ? 'true' : 'false');
+}
+function toggleForceStory() {
+  setForceStoryExpanded(!isForceStoryExpanded());
+}
 function applyForceSyncLiveUi(fs) {
   const live = $('forceSyncLive');
   if (!live || !fs) return;
@@ -162,6 +176,8 @@ function applyForceSyncLiveUi(fs) {
   const st = forceStateKey(fs.state);
   const done = st === 'completed' || st === 'failed' || !!fs.finished_at;
   live.style.display = 'flex';
+  // Keep expand preference; default collapsed (no long story until Details).
+  setForceStoryExpanded(isForceStoryExpanded());
   const dry = !!fs.dry_run || (fs.scope && fs.scope.indexOf('dry-run') >= 0);
   const title = $('fsStoryTitle');
   if (title) {
@@ -180,7 +196,6 @@ function applyForceSyncLiveUi(fs) {
   }
   const txt = $('fsProgressText');
   if (txt) {
-    // Numbers only here — plain-language story is in headline + body.
     if (preparing && !done) {
       txt.textContent = 'elapsed ' + elapsed + 's';
     } else if (totalPairs > 0) {
@@ -194,6 +209,7 @@ function applyForceSyncLiveUi(fs) {
         + ' · ' + rate + '/s · ' + elapsed + 's';
     }
   }
+  // Compact “what is happening now” — always visible when the card is shown.
   const cu = $('fsCurrentUser');
   if (cu) {
     const bits = [];
@@ -216,6 +232,7 @@ function applyForceSyncLiveUi(fs) {
       cu.textContent = '';
     }
   }
+  // Long story text only when expanded.
   const detail = $('fsStoryDetail');
   if (detail) {
     const parts = [];
