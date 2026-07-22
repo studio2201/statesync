@@ -44,7 +44,9 @@ pub async fn run_force_sync(ctx: ForceContext) -> ForceSyncStatus {
             .status
             .lock()
             .unwrap_or_else(|e| e.into_inner());
-        *status = ForceSyncStatus {
+        let (story_h, story_d) =
+            super::force_story::story_started(ctx.dry_run, ctx.only_user.as_deref());
+        let mut running = ForceSyncStatus {
             state: ForceSyncState::Running,
             started_at: Some(started.to_rfc3339()),
             finished_at: None,
@@ -62,29 +64,30 @@ pub async fn run_force_sync(ctx: ForceContext) -> ForceSyncStatus {
             scope: scope.clone(),
             skip_reasons: Default::default(),
             dry_run: ctx.dry_run,
+            current_source: None,
+            current_target: None,
+            pair_index: 0,
+            pair_total: 0,
+            story_headline: Some(story_h.clone()),
+            story_detail: Some(story_d.clone()),
         };
+        // Keep machine fields aligned with the plain-language story.
+        running.phase = Some("preparing".to_string());
+        *status = running;
     }
     {
         let mut st = ctx.state.lock().await;
-        let who = ctx
-            .only_user
-            .as_deref()
-            .map(|u| format!(" for '{}'", u))
-            .unwrap_or_default();
-        let headline = if ctx.dry_run {
-            format!("Force sync preview started{who} (dry run — no writes)")
-        } else {
-            format!("Force sync started{who}")
-        };
+        let (headline, detail) =
+            super::force_story::story_started(ctx.dry_run, ctx.only_user.as_deref());
         st.log_event_detail(
             "info",
             &headline,
             Some(format!(
-                "scope={} · live play sync paused until finished",
+                "{detail} Scope: {}.",
                 if scope.is_empty() {
                     "none".to_string()
                 } else {
-                    scope.join(",")
+                    scope.join(", ")
                 }
             )),
         );

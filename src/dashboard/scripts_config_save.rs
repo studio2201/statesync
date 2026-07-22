@@ -138,7 +138,7 @@ function forceStateKey(state) {
 function forcePhaseLabel(phase) {
   const p = String(phase || '').toLowerCase();
   if (p === 'preparing') return 'Preparing';
-  if (p === 'played') return 'Played history';
+  if (p === 'played') return 'Watched history';
   if (p === 'favorites') return 'Favorites';
   if (p === 'finishing') return 'Finishing';
   if (p === 'done') return 'Done';
@@ -154,7 +154,7 @@ function applyForceSyncLiveUi(fs) {
   const skipped = fs.skipped || 0;
   const failed = fs.failed || 0;
   const phase = String(fs.phase || '').toLowerCase();
-  const preparing = phase === 'preparing' || (processed === 0 && !fs.finished_at && totalPairs === 0);
+  const preparing = phase === 'preparing';
   const pct = totalPairs > 0 ? Math.min(100, Math.floor(processed / totalPairs * 100)) : 0;
   const startedMs = fs.started_at ? new Date(fs.started_at).getTime() : Date.now();
   const elapsed = Math.max(0, Math.round((Date.now() - startedMs) / 1000));
@@ -165,13 +165,13 @@ function applyForceSyncLiveUi(fs) {
   const dry = !!fs.dry_run || (fs.scope && fs.scope.indexOf('dry-run') >= 0);
   const title = $('fsStoryTitle');
   if (title) {
-    if (done && st === 'completed') title.textContent = dry ? 'Force preview finished (no writes)' : 'Force sync finished';
-    else if (done && st === 'failed') title.textContent = dry ? 'Force preview finished with errors' : 'Force sync finished with errors';
+    if (fs.story_headline) title.textContent = fs.story_headline;
+    else if (done && st === 'completed') title.textContent = dry ? 'Preview finished (no writes)' : 'Force sync finished';
+    else if (done && st === 'failed') title.textContent = dry ? 'Preview finished with errors' : 'Force sync finished with errors';
     else title.textContent = (dry ? 'Force preview · ' : 'Force sync · ') + forcePhaseLabel(fs.phase);
   }
   const bar = $('fsProgressBar');
   if (bar) {
-    // Keep bar alive during prepare / early work so it does not look frozen at 0.
     if (done) bar.value = 100;
     else if (preparing) bar.value = Math.min(8, 2 + (elapsed % 6));
     else if (totalPairs > 0) bar.value = Math.max(pct, processed > 0 ? 1 : 0);
@@ -180,62 +180,61 @@ function applyForceSyncLiveUi(fs) {
   }
   const txt = $('fsProgressText');
   if (txt) {
+    // Numbers only here — plain-language story is in headline + body.
     if (preparing && !done) {
-      txt.textContent = 'counting libraries · ' + elapsed + 's elapsed (this can take a minute)';
+      txt.textContent = 'elapsed ' + elapsed + 's';
     } else if (totalPairs > 0) {
-      txt.textContent = pct + '% · looked at ' + processed + ' / ~' + totalPairs
+      txt.textContent = pct + '% · looked at ' + processed + ' of ~' + totalPairs
         + ' · pushed ' + succeeded + ' · skipped ' + skipped
         + (failed ? ' · failed ' + failed : '')
         + ' · ' + rate + '/s · ' + elapsed + 's';
     } else {
       txt.textContent = 'looked at ' + processed + ' · pushed ' + succeeded + ' · skipped ' + skipped
         + (failed ? ' · failed ' + failed : '')
-        + ' · ' + rate + '/s · ' + elapsed + 's'
-        + (done ? '' : ' · working…');
+        + ' · ' + rate + '/s · ' + elapsed + 's';
     }
   }
   const cu = $('fsCurrentUser');
   if (cu) {
-    if (fs.current_user) {
-      if (String(fs.current_user).indexOf('counting') === 0) {
-        cu.textContent = fs.current_user + ' — still preparing, not stuck';
-      } else {
-        cu.textContent = (phase === 'favorites' ? 'Favorites for: ' : 'Working on user: ') + fs.current_user;
-      }
-    } else if (phase === 'preparing' || (processed === 0 && !done)) {
-      cu.textContent = 'Building pairs and counting watched history on each server…';
-    } else if (phase === 'favorites') {
-      cu.textContent = 'Copying hearts across servers…';
-    } else if (phase === 'played') {
-      cu.textContent = 'Matching titles and pushing played state…';
+    const bits = [];
+    if (fs.current_user) bits.push('Person: ' + fs.current_user);
+    if (fs.current_source && fs.current_target) {
+      bits.push('Route: ' + fs.current_source + ' → ' + fs.current_target);
+    } else if (fs.current_source) {
+      bits.push('Server: ' + fs.current_source);
+    }
+    if (fs.pair_total > 0 && fs.pair_index > 0) {
+      bits.push('Direction ' + fs.pair_index + ' of ' + fs.pair_total);
+    }
+    if (bits.length) {
+      cu.textContent = bits.join(' · ');
+    } else if (!done) {
+      cu.textContent = dry
+        ? 'Preview in progress — no writes will be made.'
+        : 'Working — live play sync is paused until this finishes.';
     } else {
       cu.textContent = '';
     }
   }
   const detail = $('fsStoryDetail');
   if (detail) {
-    const bf = fs.by_field || {};
-    const played = bf.played || {};
-    const fav = bf.favorite || {};
     const parts = [];
-    if (!done) parts.push(dry ? 'Preview only — no server data is changed.' : 'Live play sync is paused while this runs.');
-    if (fs.scope && fs.scope.length) parts.push('Scope: ' + fs.scope.join(', ') + '.');
-    parts.push((dry ? 'Would push ' : 'Pushed ') + (fs.succeeded || 0) + ', skipped ' + (fs.skipped || 0) + ', failed ' + (fs.failed || 0) + '.');
-    if (played.ok || played.skip || played.fail) {
-      parts.push('Played ' + (played.ok || 0) + ' ok / ' + (played.skip || 0) + ' skip / ' + (played.fail || 0) + ' fail.');
-    }
-    if (fav.ok || fav.skip || fav.fail) {
-      parts.push('Favorites ' + (fav.ok || 0) + ' ok / ' + (fav.skip || 0) + ' skip / ' + (fav.fail || 0) + ' fail.');
-    }
+    if (fs.story_detail) parts.push(fs.story_detail);
     const sr = fs.skip_reasons || {};
     const skipBits = [];
-    if (sr.already_equal) skipBits.push(sr.already_equal + ' already matched');
-    if (sr.no_provider) skipBits.push(sr.no_provider + ' no IMDb/TMDb');
-    if (sr.no_match) skipBits.push(sr.no_match + ' not in other library');
-    if (sr.other) skipBits.push(sr.other + ' other');
-    if (skipBits.length) parts.push('Skips: ' + skipBits.join(', ') + '.');
+    if (sr.already_equal) skipBits.push(sr.already_equal + ' already the same on both servers');
+    if (sr.no_provider) skipBits.push(sr.no_provider + ' missing IMDb/TMDb id on source');
+    if (sr.no_match) skipBits.push(sr.no_match + ' title not found on destination');
+    if (sr.other) skipBits.push(sr.other + ' other skip');
+    if (skipBits.length) {
+      parts.push('Why skips so far: ' + skipBits.join('; ') + '.');
+    }
+    if (!done) {
+      parts.push(dry
+        ? 'This is a preview: counts only.'
+        : 'Live play sync stays paused until this run ends.');
+    }
     if (fs.last_error) parts.push('Last error: ' + fs.last_error);
-    if (elapsed > 0) parts.push('Elapsed ' + elapsed + 's.');
     detail.textContent = parts.join(' ');
   }
 }

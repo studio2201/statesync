@@ -49,15 +49,21 @@ async function forceSync(dryRun, onlyUser) {
     current_user: onlyUser,
     last_error: null,
     dry_run: dryRun,
-    scope: scope
+    scope: scope,
+    story_headline: dryRun
+      ? ('Preview started' + (onlyUser ? (' for "' + onlyUser + '"') : ' for every linked person'))
+      : ('Force sync started' + (onlyUser ? (' for "' + onlyUser + '"') : ' for every linked person')),
+    story_detail: dryRun
+      ? 'Preview counts what would change. No data is written. Next: count watched titles on each server. Not a Movies-then-TV walk — one combined list per person per server.'
+      : 'Catch-up for past watched history, resume, and favorites. Live play sync is paused. Next: count watched titles on each server. Order is each person and each server direction — not one library at a time.'
   });
   const statusHint = $('forceSyncStatus');
   if (statusHint) {
     statusHint.textContent = onlyUser
-      ? ((dryRun ? 'Preview force for ' : 'Force sync for ') + onlyUser + '…')
+      ? ((dryRun ? 'Preview for person "' : 'Force sync for person "') + onlyUser + '"…')
       : (dryRun
-        ? 'Preview force — counting what would change (no writes)…'
-        : 'Force sync started — scanning history on every linked user…');
+        ? 'Preview started — counting watched titles (no writes)…'
+        : 'Force sync started — counting watched titles on each linked server…');
   }
   showToast(onlyUser
     ? ((dryRun ? 'Preview force for ' : 'Force sync for ') + onlyUser)

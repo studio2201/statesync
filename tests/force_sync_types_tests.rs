@@ -32,30 +32,26 @@ fn test_force_sync_direction_equality() {
 
 #[test]
 fn test_force_sync_status_fields() {
-    let status = ForceSyncStatus {
-        state: ForceSyncState::Completed,
-        started_at: Some("start".to_string()),
-        finished_at: Some("finish".to_string()),
-        direction: Some(Direction::EmbyToJellyfin),
-        total_pairs: 10,
-        processed: 10,
-        succeeded: 8,
-        skipped: 1,
-        failed: 1,
-        current_user: None,
-        last_error: Some("err".to_string()),
-        errors: vec![],
-        phase: None,
-        by_field: Default::default(),
-        scope: Vec::new(),
-        skip_reasons: Default::default(),
-        dry_run: false,
-    };
+    let mut status = ForceSyncStatus::idle();
+    status.state = ForceSyncState::Completed;
+    status.started_at = Some("start".to_string());
+    status.finished_at = Some("finish".to_string());
+    status.direction = Some(Direction::EmbyToJellyfin);
+    status.total_pairs = 10;
+    status.processed = 10;
+    status.succeeded = 8;
+    status.skipped = 1;
+    status.failed = 1;
+    status.last_error = Some("err".to_string());
+    status.current_source = Some("Emby".into());
+    status.current_target = Some("Jellyfin".into());
+    status.story_headline = Some("Force sync finished".into());
     assert_eq!(status.state, ForceSyncState::Completed);
     assert_eq!(status.total_pairs, 10);
     assert_eq!(status.succeeded, 8);
     assert_eq!(status.skipped, 1);
     assert_eq!(status.failed, 1);
+    assert_eq!(status.current_source.as_deref(), Some("Emby"));
 }
 
 #[test]

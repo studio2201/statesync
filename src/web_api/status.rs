@@ -166,6 +166,12 @@ pub async fn get_status(
         "scope": tracker_status.scope,
         "skip_reasons": tracker_status.skip_reasons,
         "dry_run": tracker_status.dry_run,
+        "current_source": tracker_status.current_source,
+        "current_target": tracker_status.current_target,
+        "pair_index": tracker_status.pair_index,
+        "pair_total": tracker_status.pair_total,
+        "story_headline": tracker_status.story_headline,
+        "story_detail": tracker_status.story_detail,
     });
 
     Json(json!({

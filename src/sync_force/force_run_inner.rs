@@ -3,6 +3,9 @@ use std::time::Duration;
 use tokio::sync::Semaphore;
 use tracing::info;
 
+use super::force_story::{
+    apply_story, story_counting, story_favorites, story_finished, story_played,
+};
 use super::runner::rate_from_env;
 use super::sync_loop::{force_sync_favorites_pair, force_sync_pair};
 use super::{ForceContext, ForceSyncError, ForceSyncState, ForceSyncStatus, write_status};
@@ -16,19 +19,30 @@ pub(super) async fn run_force_sync_inner(
     let pairs =
         super::force_pair_plan::plan_force_pairs(config, &ctx.state, ctx.only_user.as_deref())
             .await;
+    let pair_n = pairs.len() as u64;
 
     let mut total_items = 0u64;
-    for (src_idx, _, src_username, src_user_id, _) in &pairs {
-        // Publish heartbeat while counting so the bar is not frozen at 0%.
+    for (i, (src_idx, _, src_username, src_user_id, _)) in pairs.iter().enumerate() {
+        let src_name = config.servers[*src_idx].name.as_str();
+        let (h, d) = story_counting(src_username, src_name, (i as u64) + 1, pair_n.max(1));
         {
             let mut st = ctx
                 .tracker
                 .status
                 .lock()
                 .unwrap_or_else(|e| e.into_inner());
-            st.phase = Some("preparing".to_string());
-            st.current_user = Some(format!("counting · {}", src_username));
-            st.total_pairs = total_items.max(pairs.len() as u64);
+            apply_story(
+                &mut st,
+                "preparing",
+                h,
+                d,
+                Some(src_username),
+                Some(src_name),
+                None,
+                (i as u64) + 1,
+                pair_n,
+            );
+            st.total_pairs = total_items.max(pair_n);
         }
         let source_client = ctx.clients[*src_idx].clone();
         if config.sync.force_played || config.sync.force_position {
@@ -55,10 +69,22 @@ pub(super) async fn run_force_sync_inner(
         status.total_pairs = if total_items > 0 {
             total_items
         } else {
-            pairs.len() as u64
+            pair_n
         };
         status.phase = Some("preparing".to_string());
-        status.current_user = None;
+        if pairs.is_empty() {
+            apply_story(
+                &mut status,
+                "preparing",
+                "Nothing to force-sync",
+                "No person×server routes were built. Check that servers are connected, people are linked (same name or Link users), and ignore/allow lists are not excluding everyone.",
+                None,
+                None,
+                None,
+                0,
+                0,
+            );
+        }
     }
 
     info!(
@@ -85,22 +111,48 @@ pub(super) async fn run_force_sync_inner(
 
     let mut cancelled = false;
 
-    // Phase: played history
     if config.sync.force_played || config.sync.force_position {
-        status.phase = Some("played".to_string());
-        write_status(&ctx.tracker, &status);
         {
             let mut st = ctx.state.lock().await;
-            st.log_event("info", "Force sync: scanning played history");
+            st.log_event(
+                "info",
+                "Force sync: starting watched-history pass (all linked routes)",
+            );
         }
-        for (src_idx, tgt_idx, src_username, src_user_id, tgt_user_id) in &pairs {
+        for (i, (src_idx, tgt_idx, src_username, src_user_id, tgt_user_id)) in
+            pairs.iter().enumerate()
+        {
             if ctx.tracker.cancel.load(Ordering::SeqCst) {
                 cancelled = true;
                 break;
             }
-            status.current_user = Some(src_username.clone());
-            status.phase = Some("played".to_string());
+            let src_name = config.servers[*src_idx].name.as_str();
+            let tgt_name = config.servers[*tgt_idx].name.as_str();
+            let pair_i = (i as u64) + 1;
+            let (h, d) = story_played(
+                src_username,
+                src_name,
+                tgt_name,
+                pair_i,
+                pair_n.max(1),
+                ctx.dry_run,
+            );
+            apply_story(
+                &mut status,
+                "played",
+                h.clone(),
+                d.clone(),
+                Some(src_username),
+                Some(src_name),
+                Some(tgt_name),
+                pair_i,
+                pair_n,
+            );
             write_status(&ctx.tracker, &status);
+            {
+                let mut st = ctx.state.lock().await;
+                st.log_event_detail("info", &h, Some(d));
+            }
 
             cancelled = force_sync_pair(
                 *src_idx,
@@ -126,22 +178,48 @@ pub(super) async fn run_force_sync_inner(
         }
     }
 
-    // Phase: favorites
     if !cancelled && config.sync.force_favorites {
-        status.phase = Some("favorites".to_string());
-        write_status(&ctx.tracker, &status);
         {
             let mut st = ctx.state.lock().await;
-            st.log_event("info", "Force sync: copying favorites");
+            st.log_event(
+                "info",
+                "Force sync: starting favorites pass (all linked routes)",
+            );
         }
-        for (src_idx, tgt_idx, src_username, src_user_id, tgt_user_id) in &pairs {
+        for (i, (src_idx, tgt_idx, src_username, src_user_id, tgt_user_id)) in
+            pairs.iter().enumerate()
+        {
             if ctx.tracker.cancel.load(Ordering::SeqCst) {
                 cancelled = true;
                 break;
             }
-            status.current_user = Some(src_username.clone());
-            status.phase = Some("favorites".to_string());
+            let src_name = config.servers[*src_idx].name.as_str();
+            let tgt_name = config.servers[*tgt_idx].name.as_str();
+            let pair_i = (i as u64) + 1;
+            let (h, d) = story_favorites(
+                src_username,
+                src_name,
+                tgt_name,
+                pair_i,
+                pair_n.max(1),
+                ctx.dry_run,
+            );
+            apply_story(
+                &mut status,
+                "favorites",
+                h.clone(),
+                d.clone(),
+                Some(src_username),
+                Some(src_name),
+                Some(tgt_name),
+                pair_i,
+                pair_n,
+            );
             write_status(&ctx.tracker, &status);
+            {
+                let mut st = ctx.state.lock().await;
+                st.log_event_detail("info", &h, Some(d));
+            }
 
             cancelled = force_sync_favorites_pair(
                 *src_idx,
@@ -169,9 +247,7 @@ pub(super) async fn run_force_sync_inner(
 
     let now = chrono::Utc::now();
     status.finished_at = Some(now.to_rfc3339());
-    status.current_user = None;
     status.errors = errors.clone();
-    status.phase = Some("finishing".to_string());
     if cancelled {
         status.state = ForceSyncState::Failed;
         status.last_error = Some("Sync cancelled by user".to_string());
@@ -186,11 +262,25 @@ pub(super) async fn run_force_sync_inner(
     status.succeeded = succeeded_total;
     status.skipped = skipped_total;
     status.failed = failed_total;
-    status.phase = Some(if cancelled {
-        "cancelled".to_string()
-    } else {
-        "done".to_string()
-    });
+    let (fh, fd) = story_finished(
+        cancelled,
+        ctx.dry_run,
+        failed_total,
+        processed_total,
+        succeeded_total,
+        skipped_total,
+    );
+    apply_story(
+        &mut status,
+        if cancelled { "cancelled" } else { "done" },
+        fh.clone(),
+        fd.clone(),
+        None,
+        None,
+        None,
+        pair_n,
+        pair_n,
+    );
     write_status(&ctx.tracker, &status);
 
     {
@@ -202,31 +292,11 @@ pub(super) async fn run_force_sync_inner(
         } else {
             "error"
         };
-        let title = if ctx.dry_run {
-            if cancelled {
-                "Force preview cancelled"
-            } else if failed_total == 0 {
-                "Force preview finished (no writes)"
-            } else {
-                "Force preview finished with errors (no writes)"
-            }
-        } else if cancelled {
-            "Force sync cancelled"
-        } else if failed_total == 0 {
-            "Force sync finished"
-        } else {
-            "Force sync finished with errors"
-        };
         st.log_event_detail(
             level,
-            title,
+            &fh,
             Some(format!(
-                "processed={} {}={} skipped={} failed={} | played ok={} skip={} fail={} | favorites ok={} skip={} fail={} | skips: already_equal={} no_provider={} no_match={} other={} | {}s",
-                status.processed,
-                if ctx.dry_run { "would_push" } else { "succeeded" },
-                status.succeeded,
-                status.skipped,
-                status.failed,
+                "{fd} | played ok={} skip={} fail={} | favorites ok={} skip={} fail={} | already_equal={} no_provider={} no_match={} other={} | {}s",
                 status.by_field.played.ok,
                 status.by_field.played.skip,
                 status.by_field.played.fail,

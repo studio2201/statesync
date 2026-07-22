@@ -116,7 +116,7 @@ pub struct ForceSyncStatus {
     pub current_user: Option<String>,
     pub last_error: Option<String>,
     pub errors: Vec<ForceSyncError>,
-    /// Human phase for WUI: preparing | played | favorites | finishing
+    /// Machine phase: preparing | played | favorites | finishing | done | cancelled
     #[serde(default)]
     pub phase: Option<String>,
     /// Per-field counters (played / position / favorite).
@@ -131,6 +131,24 @@ pub struct ForceSyncStatus {
     /// True when this run did not write (preview only).
     #[serde(default)]
     pub dry_run: bool,
+    /// Source media server name for the active pair (first principles: where we read).
+    #[serde(default)]
+    pub current_source: Option<String>,
+    /// Destination media server name for the active pair (where we may write).
+    #[serde(default)]
+    pub current_target: Option<String>,
+    /// 1-based index of the active person/server direction among pair_total.
+    #[serde(default)]
+    pub pair_index: u64,
+    /// How many person×direction pairs this run will walk.
+    #[serde(default)]
+    pub pair_total: u64,
+    /// Short plain-language title for the live banner.
+    #[serde(default)]
+    pub story_headline: Option<String>,
+    /// Full plain-language explanation (who, route, what, what skip means).
+    #[serde(default)]
+    pub story_detail: Option<String>,
 }
 
 impl ForceSyncStatus {
@@ -153,6 +171,12 @@ impl ForceSyncStatus {
             scope: Vec::new(),
             skip_reasons: SkipReasons::default(),
             dry_run: false,
+            current_source: None,
+            current_target: None,
+            pair_index: 0,
+            pair_total: 0,
+            story_headline: None,
+            story_detail: None,
         }
     }
 }

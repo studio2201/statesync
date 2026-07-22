@@ -40,27 +40,18 @@ mod tests {
 
     #[test]
     fn running_status_carries_progress_counts() {
-        let status = ForceSyncStatus {
-            state: ForceSyncState::Running,
-            started_at: Some("now".to_string()),
-            finished_at: None,
-            direction: None,
-            total_pairs: 5,
-            processed: 2,
-            succeeded: 2,
-            skipped: 0,
-            failed: 0,
-            current_user: None,
-            last_error: None,
-            errors: Vec::new(),
-            phase: None,
-            by_field: Default::default(),
-            scope: Vec::new(),
-            skip_reasons: Default::default(),
-            dry_run: false,
-        };
+        let mut status = ForceSyncStatus::idle();
+        status.state = ForceSyncState::Running;
+        status.started_at = Some("now".to_string());
+        status.total_pairs = 5;
+        status.processed = 2;
+        status.succeeded = 2;
+        status.current_source = Some("Emby".into());
+        status.current_target = Some("Jellyfin".into());
+        status.story_headline = Some("Copying watched history".into());
         assert_eq!(status.processed, 2);
         assert_eq!(status.total_pairs, 5);
+        assert_eq!(status.current_source.as_deref(), Some("Emby"));
     }
 
     #[test]
