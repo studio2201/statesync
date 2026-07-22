@@ -110,6 +110,7 @@ pub const JS_SESSIONS_USERS: &str = r#"const activeDiv = $('activeSessions');
     const usersDiv = $('syncedUsers');
     if (!status.servers || status.servers.length === 0) {
       usersDiv.textContent = '';
+      window._mappedUsersList = [];
       const empty = document.createElement('div'); empty.className = 'empty'; empty.textContent = 'Add two servers to map users.';
       usersDiv.appendChild(empty);
     } else {
@@ -118,95 +119,62 @@ pub const JS_SESSIONS_USERS: &str = r#"const activeDiv = $('activeSessions');
       const users = (status.users || []).slice().sort((a, b) =>
         a.name.localeCompare(b.name, undefined, { sensitivity: 'base', numeric: true })
       );
+      const ignList = ((currentConfig.sync && currentConfig.sync.user_ignorelist) || [])
+        .map(n => String(n).trim().toLowerCase());
+      const isUserIgnored = (name) => {
+        const key = String(name).trim().toLowerCase();
+        if (ignList.indexOf(key) >= 0) return true;
+        if (currentConfig.user_mappings) {
+          for (let gi = 0; gi < currentConfig.user_mappings.length; gi++) {
+            const members = (currentConfig.user_mappings[gi] || []).map(n => String(n).trim().toLowerCase()).filter(Boolean);
+            if (members.indexOf(key) >= 0 && members.some(m => ignList.indexOf(m) >= 0)) return true;
+          }
+        }
+        return false;
+      };
+      window._mappedUsersList = users.map(u => ({ name: u.name, ignored: isUserIgnored(u.name) }));
+      // Server columns only — actions live under header Actions modal.
       const grid = document.createElement('div');
-      grid.style.cssText = 'display:grid;grid-template-columns:repeat(' + serverCount + ', 1fr) auto;gap:6px;align-items:center';
+      grid.style.cssText = 'display:grid;grid-template-columns:repeat(' + serverCount + ', 1fr);gap:6px;align-items:center';
       const headerRow2 = document.createElement('div');
-      headerRow2.style.cssText = 'display:grid;grid-template-columns:repeat(' + serverCount + ', 1fr) auto;gap:6px;margin-bottom:6px';
+      headerRow2.style.cssText = 'display:contents';
       status.servers.forEach(srv => {
         const h = document.createElement('div');
         h.style.cssText = 'text-align:center;color:var(--muted);font-weight:600;font-size:11px;padding-bottom:6px;border-bottom:1px solid var(--border);text-transform:uppercase';
         h.textContent = srv.name;
         headerRow2.appendChild(h);
       });
-      const hAct = document.createElement('div');
-      hAct.style.cssText = 'text-align:center;color:var(--muted);font-weight:600;font-size:11px;padding-bottom:6px;border-bottom:1px solid var(--border);text-transform:uppercase';
-      hAct.textContent = 'Actions';
-      headerRow2.appendChild(hAct);
-      usersDiv.appendChild(headerRow2);
+      grid.appendChild(headerRow2);
       users.forEach(u => {
-        const row = document.createElement('div');
-        row.style.cssText = 'display:contents';
+        const ignored = isUserIgnored(u.name);
+        const selected = window._selectedMappedUser === u.name;
         for (let i = 0; i < serverCount; i++) {
           const cell = document.createElement('div');
           const filled = u.servers.includes(i);
-          cell.className = 'user-cell' + (filled ? ' filled' : ' empty');
+          cell.className = 'user-cell' + (filled ? ' filled' : ' empty') + (selected ? ' selected' : '');
+          cell.style.cursor = 'pointer';
           if (filled) {
-            cell.textContent = u.name;
-            cell.title = u.servers.length > 1
-              ? u.name + ' is linked across servers'
-              : u.name + ' only on ' + status.servers[i].name + ' — use Link users';
+            cell.textContent = ignored ? (u.name + ' · ignored') : u.name;
+            cell.title = (ignored ? 'Ignored · ' : '') + 'Click to select · Actions in header';
           } else {
             cell.textContent = '·';
-            cell.title = 'No linked user on ' + status.servers[i].name;
+            cell.title = 'No linked user on ' + status.servers[i].name + ' — use Link users';
           }
-          row.appendChild(cell);
-        }
-        const act = document.createElement('div');
-        act.style.cssText = 'display:flex;justify-content:flex-end;gap:4px;flex-wrap:wrap';
-        const btnCss = 'font-size:11px;padding:4px 8px';
-        const ignList = ((currentConfig.sync && currentConfig.sync.user_ignorelist) || [])
-          .map(n => String(n).trim().toLowerCase());
-        // Linked aliases: if any mapping group member is ignored, show Un-ignore.
-        let ignored = ignList.indexOf(String(u.name).trim().toLowerCase()) >= 0;
-        if (!ignored && currentConfig.user_mappings) {
-          currentConfig.user_mappings.forEach(group => {
-            const members = (group || []).map(n => String(n).trim().toLowerCase()).filter(Boolean);
-            if (members.indexOf(String(u.name).trim().toLowerCase()) >= 0
-                && members.some(m => ignList.indexOf(m) >= 0)) ignored = true;
+          cell.addEventListener('click', () => {
+            window._selectedMappedUser = u.name;
+            loadDashboard();
           });
+          grid.appendChild(cell);
         }
-        const forceBtn = document.createElement('button');
-        forceBtn.className = 'btn'; forceBtn.style.cssText = btnCss;
-        forceBtn.textContent = 'Force';
-        forceBtn.title = 'Force sync this person only (played / resume / favorites)';
-        forceBtn.addEventListener('click', () => forceSyncForUser(u.name));
-        const ignBtn = document.createElement('button');
-        ignBtn.className = 'btn'; ignBtn.style.cssText = btnCss;
-        ignBtn.textContent = ignored ? 'Un-ignore' : 'Ignore';
-        ignBtn.title = ignored
-          ? 'Allow this person to sync again'
-          : 'Skip live and force sync for this person';
-        ignBtn.addEventListener('click', () => toggleIgnoreUser(u.name, !ignored));
-        const clr = document.createElement('button');
-        clr.className = 'btn btn-danger'; clr.style.cssText = btnCss;
-        clr.textContent = 'Clear watched';
-        clr.title = 'Mark all watched items unwatched for this person on every server';
-        clr.addEventListener('click', () => clearWatchedForUser(u.name));
-        if (ignored) {
-          const badge = document.createElement('span');
-          badge.className = 'badge'; badge.textContent = 'Ignored';
-          badge.title = 'Live + mesh force skip this person';
-          act.appendChild(badge);
-        }
-        act.appendChild(forceBtn); act.appendChild(ignBtn); act.appendChild(clr);
-        row.appendChild(act);
-        grid.appendChild(row);
       });
       usersDiv.appendChild(grid);
       const mappedCount = users.filter(u => u.servers.length > 1).length;
       const singleCount = users.length - mappedCount;
       const legend = document.createElement('div');
       legend.className = 'form-hint';
-      legend.style.cssText = 'margin-top:12px;display:flex;gap:16px;flex-wrap:wrap;align-items:center';
-      legend.textContent = users.length + ' rows · ' + mappedCount + ' linked · ' + singleCount + ' need a link';
-      if (singleCount > 0) {
-        const tip = document.createElement('button');
-        tip.className = 'btn';
-        tip.style.marginLeft = 'auto';
-        tip.textContent = 'Link users';
-        tip.onclick = openMapUsersModal;
-        legend.appendChild(tip);
-      }
+      legend.style.cssText = 'margin-top:12px';
+      legend.textContent = users.length + ' rows · ' + mappedCount + ' linked · ' + singleCount + ' need a link'
+        + (window._selectedMappedUser ? (' · selected: ' + window._selectedMappedUser) : ' · click a name, then Actions');
       usersDiv.appendChild(legend);
     }
 "#;

@@ -43,7 +43,7 @@ pub fn how_sync_card() -> Markup {
                                 div class="how-step" {
                                     div class="how-num" { "6" }
                                     div class="how-title" { "Clear watched" }
-                                    p { "Mapped users row actions: Force sync (that person only), Clear watched (wipe played flags), Ignore (skip live + mesh force). Confirm carefully." }
+                                    p { "Mapped users header Actions: pick a person (or click their name first), then Force sync, Ignore, or Clear watched. Confirm carefully." }
                                 }
                             }
                             div class="how-legend" {

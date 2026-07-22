@@ -120,6 +120,7 @@ body {
   background: rgba(0,0,0,0.2);
 }
 .user-cell.filled { color: var(--bright); border-color: #3a4a5c; }
+.user-cell.selected { outline: 1px solid var(--accent); background: rgba(59, 158, 255, 0.12); }
 .user-cell.empty { color: var(--muted); opacity: 0.7; }
 .log-feed {
   background: #070a0e;

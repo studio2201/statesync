@@ -91,32 +91,6 @@ async function forceSync(dryRun, onlyUser) {
     if (other) other.disabled = false;
   }
 }
-async function forceSyncForUser(name) {
-  if (!name) return;
-  if (!confirm('Force sync watched / resume / favorites for \"' + name + '\" only across all servers?')) return;
-  await forceSync(false, name);
-}
-async function toggleIgnoreUser(name, ignore) {
-  if (!name) return;
-  const verb = ignore ? 'Ignore' : 'Un-ignore';
-  if (ignore && !confirm(verb + ' \"' + name + '\"?\\n\\nLive sync and mesh force will skip this person (linked aliases too).')) return;
-  try {
-    const res = await authedFetch('/api/users/ignore', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name: name, ignore: !!ignore })
-    });
-    const body = await res.json().catch(() => ({}));
-    if (!res.ok) throw new Error(body.message || ('HTTP ' + res.status));
-    if (currentConfig.sync) {
-      currentConfig.sync.user_ignorelist = body.user_ignorelist || currentConfig.sync.user_ignorelist || [];
-    }
-    showToast(body.message || (verb + ' saved'));
-    setTimeout(loadDashboard, 400);
-  } catch (err) {
-    showToast(verb + ' failed: ' + err.message);
-  }
-}
 async function cancelForceSync() {
   const btn = $('fsCancelBtn');
   if (btn) btn.disabled = true;

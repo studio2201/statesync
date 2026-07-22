@@ -52,9 +52,12 @@ pub fn render_dashboard() -> Markup {
                             (super::dashboard_how::how_sync_card())
                     div class="row-grid" {
                         div class="card" {
-                            div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:12px" {
+                            div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap" {
                                 h2 style="margin:0" { "Mapped users" }
-                                button class="btn" onclick="openMapUsersModal()" { "Link users" }
+                                div style="display:flex;gap:8px;flex-wrap:wrap" {
+                                    button class="btn" onclick="openMapUsersModal()" { "Link users" }
+                                    button class="btn" id="userActionsBtn" onclick="openUserActionsModal()" { "Actions" }
+                                }
                             }
                             div id="syncedUsers" {}
                             div id="forceSyncStatus" class="form-hint" style="margin-top:10px" {}
@@ -157,7 +160,7 @@ pub fn render_dashboard() -> Markup {
                         div class="form-group" {
                             label { "Ignore users (optional)" }
                             textarea id="cfgUserIgnorelist" rows="3" placeholder="guest&#10;kids" {};
-                            p class="form-hint" { "Never live- or force-sync these people. Or use Ignore on Mapped users." }
+                            p class="form-hint" { "Never live- or force-sync these people. Or Mapped users → Actions → Ignore." }
                         }
                         div class="form-group" {
                             label { "Username mappings (advanced text)" }
@@ -202,6 +205,33 @@ pub fn render_dashboard() -> Markup {
                             div {}
                             div class="right" {
                                 button type="button" class="btn" onclick="closeModal('mapUsersModal')" { "Close" }
+                            }
+                        }
+                    }
+                }
+
+                div class="modal" id="userActionsModal" style="display:none" {
+                    div class="modal-content" style="max-width:420px" {
+                        h2 { "User actions" }
+                        p class="form-hint" style="margin-bottom:12px" {
+                            "Choose a person, then Force sync, Ignore, or Clear watched. Click a name in the table first to pre-select."
+                        }
+                        div class="form-group" {
+                            label { "User" }
+                            select id="userActionsSelect" onchange="refreshUserActionsIgnoreBtn()" {}
+                        }
+                        div class="modal-actions" style="margin-top:8px;flex-wrap:wrap;gap:8px" {
+                            div {}
+                            div class="right" style="display:flex;gap:8px;flex-wrap:wrap" {
+                                button type="button" class="btn" id="userActionsForceBtn" onclick="userActionsForce()" { "Force sync" }
+                                button type="button" class="btn" id="userActionsIgnoreBtn" onclick="userActionsToggleIgnore()" { "Ignore" }
+                                button type="button" class="btn btn-danger" id="userActionsClearBtn" onclick="userActionsClearWatched()" { "Clear watched" }
+                            }
+                        }
+                        div class="modal-actions" {
+                            div {}
+                            div class="right" {
+                                button type="button" class="btn" onclick="closeModal('userActionsModal')" { "Close" }
                             }
                         }
                     }
