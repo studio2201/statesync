@@ -55,9 +55,9 @@ pub const JS_ACTIONS: &str = r#"    const logsDiv = $('syncLogs');
           story += ' · favorites ' + (bf.favorite.ok || 0) + ' ok';
         }
         const sr = fs.skip_reasons || {};
-        if (sr.already_equal) story += ' · ' + sr.already_equal + ' already matched';
-        if (sr.no_provider) story += ' · ' + sr.no_provider + ' no provider id';
-        if (sr.no_match) story += ' · ' + sr.no_match + ' no library match';
+        if (sr.already_equal) story += ' · ' + sr.already_equal + ' already the same';
+        if (sr.no_provider) story += ' · ' + sr.no_provider + ' no Imdb/Tmdb in server metadata';
+        if (sr.no_match) story += ' · ' + sr.no_match + ' not on destination by Imdb/Tmdb';
         if (fs.scope && fs.scope.length) story += ' · scope ' + fs.scope.join('/');
         story += '.';
         left.innerHTML = story;

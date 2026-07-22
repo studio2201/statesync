@@ -198,7 +198,10 @@ pub(super) fn format_force_skip_story(status: &ForceSyncStatus) -> String {
         bits.push(format!("{} already matched", sr.already_equal));
     }
     if sr.no_provider > 0 {
-        bits.push(format!("{} no IMDb/TMDb", sr.no_provider));
+        bits.push(format!(
+            "{} no Imdb/Tmdb in server metadata",
+            sr.no_provider
+        ));
     }
     if sr.no_match > 0 {
         bits.push(format!("{} not in other library", sr.no_match));

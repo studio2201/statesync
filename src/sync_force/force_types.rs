@@ -88,7 +88,7 @@ pub struct ForceByField {
 /// Why force sync skipped an item (aggregated for WUI / activity log).
 #[derive(Debug, Clone, Default, serde::Serialize, serde::Deserialize, PartialEq, Eq)]
 pub struct SkipReasons {
-    /// No IMDb/TMDb on source item.
+    /// Source item had empty Imdb and Tmdb in Emby/Jellyfin ProviderIds (API metadata).
     #[serde(default)]
     pub no_provider: u64,
     /// Provider present but no matching item on target library.

@@ -42,7 +42,7 @@ pub fn how_sync_card() -> Markup {
                                 div class="how-step" {
                                     div class="how-num" { "3" }
                                     div class="how-title" { "Match titles" }
-                                    p { "Titles match by " strong { "IMDb / TMDb" } ", not file path or folder. Same movie on two libraries still syncs." }
+                                    p { "Titles match by " strong { "Imdb / Tmdb ids in Emby/Jellyfin item metadata" } " (API ProviderIds) — " strong { "not" } " folder names or file names. The UI can show a title as identified while those two fields are still empty (e.g. TVDB-only). Same movie on two libraries still syncs when both sides share an id." }
                                 }
                                 div class="how-step" {
                                     div class="how-num" { "4" }

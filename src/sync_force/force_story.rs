@@ -45,7 +45,7 @@ pub fn story_counting(user: &str, source: &str, pair_i: u64, pair_n: u64) -> (St
     (
         format!("Counting watched titles ({pair_i} of {pair_n})"),
         format!(
-            "Person: {user}. Server: {source}. Asking this server how many titles this person has already marked watched (and favorited). Emby/Jellyfin return one combined list — not Movies first, then shows, then music. Titles without IMDb/TMDb ids cannot be matched later."
+            "Person: {user}. Server: {source}. Asking this server how many titles this person has already marked watched (and favorited). Emby/Jellyfin return one combined list — not Movies first, then shows, then music. Folder names and file names are never read. Matching later uses only external ids that the media server already stores on each item (Imdb/Tmdb in API metadata)."
         ),
     )
 }
@@ -66,7 +66,7 @@ pub fn story_played(
     (
         format!("Copying watched history ({pair_i} of {pair_n})"),
         format!(
-            "Person: {user}. Route: {source} → {target}. Reading each watched title on {source} (server list order — mixed movies/episodes/etc.). For each title: find the same item on {target} by IMDb or TMDb id. {write} \"Skipped\" means we looked and did not need a write (already matched, missing id, or title not in the other library). This is not scanning one named library at a time."
+            "Person: {user}. Route: {source} → {target}. Reading each watched title on {source} (server list order — mixed movies/episodes/etc.). For each title, ask {source} for that item’s stored Imdb/Tmdb provider ids (library metadata — not the folder or file name). Then find the same ids on {target}. {write} \"Skipped\" means we looked and did not write: already the same, the source item had no Imdb/Tmdb in API metadata (it can still look identified in Emby via TVDB or other sources), or the title was not found on {target}. Not a per-library folder scan."
         ),
     )
 }
@@ -87,7 +87,7 @@ pub fn story_favorites(
     (
         format!("Copying favorites ({pair_i} of {pair_n})"),
         format!(
-            "Person: {user}. Route: {source} → {target}. Same matching rules as watched history (IMDb/TMDb). {write} \"Skipped\" still means we checked the title."
+            "Person: {user}. Route: {source} → {target}. Same matching as watched history: Imdb/Tmdb from each item’s server metadata API — never from disk paths. {write} \"Skipped\" still means we checked the title."
         ),
     )
 }
@@ -122,7 +122,7 @@ pub fn story_finished(
     (
         head.to_string(),
         format!(
-            "Looked at {processed} titles. Pushed (or would push) {succeeded}. Skipped {skipped} (checked, no write needed or could not match). Failed {failed}. High skips usually mean the two servers already agree, or some titles lack shared IMDb/TMDb ids. Live play sync resumes."
+            "Looked at {processed} titles. Pushed (or would push) {succeeded}. Skipped {skipped} (checked; no write needed, or could not match by Imdb/Tmdb metadata). Failed {failed}. High skips usually mean both servers already agree, or some items have no Imdb/Tmdb in Emby/Jellyfin’s item metadata (even when the UI shows them as identified via other sources). Folder/file names are never required. Live play sync resumes."
         ),
     )
 }
@@ -145,8 +145,9 @@ mod tests {
         let (h, d) = story_played("bob", "Emby", "Jellyfin", 2, 4, false);
         assert!(h.contains("watched"));
         assert!(d.contains("Emby → Jellyfin"));
-        assert!(d.contains("IMDb"));
+        assert!(d.contains("Imdb") || d.contains("Tmdb") || d.contains("metadata"));
         assert!(d.contains("Skipped"));
+        assert!(d.contains("not the folder") || d.contains("folder"));
     }
 
     #[test]
