@@ -76,4 +76,16 @@ pub struct PlayedItem {
     pub imdb_id: Option<String>,
     #[serde(default)]
     pub tmdb_id: Option<String>,
+    #[serde(default)]
+    pub tvdb_id: Option<String>,
+}
+
+impl PlayedItem {
+    pub fn provider_ids(&self) -> super::ProviderIds {
+        super::ProviderIds::from_parts(
+            self.imdb_id.clone().unwrap_or_default(),
+            self.tmdb_id.clone().unwrap_or_default(),
+            self.tvdb_id.clone().unwrap_or_default(),
+        )
+    }
 }

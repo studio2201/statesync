@@ -1,4 +1,4 @@
-use crate::client::MediaClient;
+use crate::client::{MediaClient, ProviderIds};
 use crate::config::Config;
 use crate::state::AppState;
 use std::sync::Arc;
@@ -12,7 +12,7 @@ pub async fn resolve_item_providers(
     user_lower: &str,
     state_lock: &Arc<Mutex<AppState>>,
     source_name: &str,
-) -> Option<(String, String)> {
+) -> Option<ProviderIds> {
     let state = state_lock.lock().await;
     if source_index >= state.caches.len() {
         return None;
@@ -38,22 +38,10 @@ pub async fn resolve_item_providers(
                 "Cache miss on '{}' for item {}. Resolving details dynamically...",
                 source_name, source_item_id
             );
-            if let Ok((imdb, tmdb)) = source_client.get_item_providers(&uid, source_item_id).await {
+            if let Ok(provs) = source_client.get_item_providers(&uid, source_item_id).await {
                 let mut state_write = state_lock.lock().await;
-                state_write.caches[source_index]
-                    .id_to_providers
-                    .insert(source_item_id.to_string(), (imdb.clone(), tmdb.clone()));
-                if !imdb.is_empty() {
-                    state_write.caches[source_index]
-                        .imdb_to_id
-                        .insert(imdb.clone(), source_item_id.to_string());
-                }
-                if !tmdb.is_empty() {
-                    state_write.caches[source_index]
-                        .tmdb_to_id
-                        .insert(tmdb.clone(), source_item_id.to_string());
-                }
-                Some((imdb, tmdb))
+                state_write.caches[source_index].index_item(source_item_id.to_string(), provs.clone());
+                Some(provs)
             } else {
                 None
             }
@@ -95,85 +83,66 @@ pub async fn resolve_target_user(
     target_user_id
 }
 
+/// Resolve target library item: in-memory ServerCache first, then HTTP search.
 pub async fn resolve_target_item(
     target_index: usize,
-    imdb_id: &str,
-    tmdb_id: &str,
+    providers: &ProviderIds,
     target_name: &str,
     target_user_id: Option<&str>,
     client_target: &Arc<MediaClient>,
     state_lock: &Arc<Mutex<AppState>>,
 ) -> Option<String> {
+    if providers.is_empty() {
+        return None;
+    }
     let mut state = state_lock.lock().await;
-    let mut target_item_id = None;
-    let mut is_negative_cached = false;
-    {
-        let target_cache = &state.caches[target_index];
-        if !imdb_id.is_empty() {
-            target_item_id = target_cache.imdb_to_id.get(imdb_id).cloned();
-        }
-        if target_item_id.is_none() && !tmdb_id.is_empty() {
-            target_item_id = target_cache.tmdb_to_id.get(tmdb_id).cloned();
-        }
-        if let Some(ref id) = target_item_id {
-            if id == "[ NOT_FOUND ]" {
-                is_negative_cached = true;
-                target_item_id = None;
-            }
+    if let Some(id) = state.caches[target_index].lookup_item_id(providers) {
+        return Some(id);
+    }
+    if state.caches[target_index].is_negative_cached(providers) {
+        return None;
+    }
+    drop(state);
+
+    let mut resolved: Option<(String, ProviderIds)> = None;
+    let mut resolved_err: Option<String> = None;
+    if let Some(t_uid) = target_user_id {
+        info!(
+            "Cache miss on target '{}' for ({}). Searching target library...",
+            target_name,
+            providers.display_short()
+        );
+        match client_target.find_item_by_provider(t_uid, providers).await {
+            Ok(res) => resolved = res,
+            Err(e) => resolved_err = Some(e.to_string()),
         }
     }
-
-    if target_item_id.is_none() && !is_negative_cached {
-        drop(state);
-        let mut resolved: Option<(String, String, String)> = None;
-        let mut resolved_err: Option<String> = None;
-        if let Some(t_uid) = target_user_id {
-            info!(
-                "Cache miss on target '{}' for (IMDb: {}, TMDb: {}). Searching target library...",
-                target_name, imdb_id, tmdb_id
-            );
-            match client_target
-                .find_item_by_provider(t_uid, imdb_id, tmdb_id)
-                .await
-            {
-                Ok(res) => resolved = res,
-                Err(e) => resolved_err = Some(e.to_string()),
-            }
+    let mut state = state_lock.lock().await;
+    if let Some((id, found)) = resolved {
+        // Prefer known source ids; fill gaps from search result.
+        let mut merged = providers.clone();
+        if merged.imdb.is_empty() {
+            merged.imdb = found.imdb;
         }
-        state = state_lock.lock().await;
-        if let Some((id, _imdb, _tmdb)) = resolved {
-            state.caches[target_index]
-                .id_to_providers
-                .insert(id.clone(), (imdb_id.to_string(), tmdb_id.to_string()));
-            if !imdb_id.is_empty() {
-                state.caches[target_index]
-                    .imdb_to_id
-                    .insert(imdb_id.to_string(), id.clone());
-            }
-            if !tmdb_id.is_empty() {
-                state.caches[target_index]
-                    .tmdb_to_id
-                    .insert(tmdb_id.to_string(), id.clone());
-            }
-            target_item_id = Some(id);
-        } else if resolved_err.is_none() {
-            if !imdb_id.is_empty() {
-                state.caches[target_index]
-                    .imdb_to_id
-                    .insert(imdb_id.to_string(), "[ NOT_FOUND ]".to_string());
-            }
-            if !tmdb_id.is_empty() {
-                state.caches[target_index]
-                    .tmdb_to_id
-                    .insert(tmdb_id.to_string(), "[ NOT_FOUND ]".to_string());
-            }
-        } else if let Some(err) = resolved_err {
+        if merged.tmdb.is_empty() {
+            merged.tmdb = found.tmdb;
+        }
+        if merged.tvdb.is_empty() {
+            merged.tvdb = found.tvdb;
+        }
+        state.caches[target_index].index_item(id.clone(), merged);
+        Some(id)
+    } else if resolved_err.is_none() {
+        state.caches[target_index].index_not_found(providers);
+        None
+    } else {
+        if let Some(err) = resolved_err {
             tracing::warn!(
                 "Target '{}' lookup error (will not poison cache): {}",
                 target_name,
                 err
             );
         }
+        None
     }
-    target_item_id
 }

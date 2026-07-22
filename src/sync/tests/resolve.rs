@@ -1,12 +1,13 @@
 use super::live_sync::{make_cache, make_config, make_server_config};
+use crate::client::ProviderIds;
 use crate::state::AppState;
 
 #[tokio::test]
 async fn test_resolve_item_providers_cache_hit() {
     let mut cache = make_cache("emby", vec![("alice", "u1")]);
-    cache.id_to_providers.insert(
+    cache.index_item(
         "item1".to_string(),
-        ("imdb123".to_string(), "tmdb456".to_string()),
+        ProviderIds::from_parts("imdb123", "tmdb456", ""),
     );
     let state = std::sync::Arc::new(tokio::sync::Mutex::new(AppState::new(vec![cache])));
     let client = std::sync::Arc::new(crate::client::MediaClient::new(
@@ -19,7 +20,10 @@ async fn test_resolve_item_providers_cache_hit() {
         crate::sync::resolve::resolve_item_providers(0, "item1", &client, "alice", &state, "emby")
             .await;
 
-    assert_eq!(res, Some(("imdb123".to_string(), "tmdb456".to_string())));
+    assert_eq!(
+        res,
+        Some(ProviderIds::from_parts("imdb123", "tmdb456", ""))
+    );
 }
 
 #[tokio::test]
@@ -46,13 +50,15 @@ async fn test_resolve_item_providers_cache_miss_success() {
             .await;
 
     mock_call.assert_async().await;
-    assert_eq!(res, Some(("imdb123".to_string(), "tmdb456".to_string())));
+    assert_eq!(
+        res,
+        Some(ProviderIds::from_parts("imdb123", "tmdb456", ""))
+    );
 
-    // Check if cache got updated
     let st = state.lock().await;
     assert_eq!(
         st.caches[0].id_to_providers.get("item1").unwrap(),
-        &("imdb123".to_string(), "tmdb456".to_string())
+        &ProviderIds::from_parts("imdb123", "tmdb456", "")
     );
 }
 
@@ -97,8 +103,7 @@ async fn test_resolve_target_item_cache_hit() {
 
     let res = crate::sync::resolve::resolve_target_item(
         0,
-        "imdb123",
-        "",
+        &ProviderIds::from_parts("imdb123", "", ""),
         "jellyfin",
         Some("u1"),
         &client,
@@ -107,6 +112,32 @@ async fn test_resolve_target_item_cache_hit() {
     .await;
 
     assert_eq!(res, Some("item_jf".to_string()));
+}
+
+#[tokio::test]
+async fn test_resolve_target_item_tvdb_cache_hit() {
+    let mut cache = make_cache("jellyfin", vec![]);
+    cache
+        .tvdb_to_id
+        .insert("73244".to_string(), "ep1".to_string());
+    let state = std::sync::Arc::new(tokio::sync::Mutex::new(AppState::new(vec![cache])));
+    let client = std::sync::Arc::new(crate::client::MediaClient::new(
+        "http://test".to_string(),
+        "key".to_string(),
+        false,
+    ));
+
+    let res = crate::sync::resolve::resolve_target_item(
+        0,
+        &ProviderIds::from_parts("", "", "73244"),
+        "jellyfin",
+        Some("u1"),
+        &client,
+        &state,
+    )
+    .await;
+
+    assert_eq!(res, Some("ep1".to_string()));
 }
 
 #[tokio::test]
@@ -124,8 +155,7 @@ async fn test_resolve_target_item_negative_cached() {
 
     let res = crate::sync::resolve::resolve_target_item(
         0,
-        "imdb123",
-        "",
+        &ProviderIds::from_parts("imdb123", "", ""),
         "jellyfin",
         Some("u1"),
         &client,
@@ -155,8 +185,7 @@ async fn test_resolve_target_item_dynamic_search_success() {
 
     let res = crate::sync::resolve::resolve_target_item(
         0,
-        "imdb123",
-        "",
+        &ProviderIds::from_parts("imdb123", "", ""),
         "jellyfin",
         Some("u1"),
         &client,
@@ -188,9 +217,9 @@ async fn test_sync_progress_to_targets_success() {
     let caches = vec![
         {
             let mut c = make_cache("emby", vec![("alice", "u1")]);
-            c.id_to_providers.insert(
+            c.index_item(
                 "item_emby".to_string(),
-                ("imdb123".to_string(), "".to_string()),
+                ProviderIds::from_parts("imdb123", "", ""),
             );
             c
         },
@@ -233,6 +262,6 @@ async fn test_sync_progress_to_targets_success() {
     mock_update.assert_async().await;
 
     let st = app_state.lock().await;
-    let key = ("alice".to_string(), "imdb123".to_string());
+    let key = ("alice".to_string(), "imdb:imdb123".to_string());
     assert!(st.last_syncs.contains_key(&key));
 }

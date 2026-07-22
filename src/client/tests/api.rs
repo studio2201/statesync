@@ -101,9 +101,9 @@ async fn test_get_item_providers() {
         .create_async()
         .await;
     let client = MediaClient::new(server.url(), "key".to_string(), false);
-    let (imdb, tmdb) = client.get_item_providers("u1", "item1").await.unwrap();
-    assert_eq!(imdb, "tt123");
-    assert_eq!(tmdb, "tm456");
+    let p = client.get_item_providers("u1", "item1").await.unwrap();
+    assert_eq!(p.imdb, "tt123");
+    assert_eq!(p.tmdb, "tm456");
     mock_ok.assert_async().await;
     let mock_missing = server
         .mock("GET", "/Users/u1/Items/item1")
@@ -111,9 +111,8 @@ async fn test_get_item_providers() {
         .with_body(r#"{"ProviderIds": {}}"#)
         .create_async()
         .await;
-    let (imdb2, tmdb2) = client.get_item_providers("u1", "item1").await.unwrap();
-    assert_eq!(imdb2, "");
-    assert_eq!(tmdb2, "");
+    let p2 = client.get_item_providers("u1", "item1").await.unwrap();
+    assert!(p2.is_empty());
     mock_missing.assert_async().await;
 }
 #[tokio::test]
@@ -142,9 +141,9 @@ async fn test_get_item_providers_lowercase_keys() {
         .create_async()
         .await;
     let client = MediaClient::new(server.url(), "key".to_string(), false);
-    let (imdb, tmdb) = client.get_item_providers("u1", "item1").await.unwrap();
-    assert_eq!(imdb, "tt12345");
-    assert_eq!(tmdb, "tm6789");
+    let p = client.get_item_providers("u1", "item1").await.unwrap();
+    assert_eq!(p.imdb, "tt12345");
+    assert_eq!(p.tmdb, "tm6789");
     mock_ok.assert_async().await;
 }
 #[tokio::test]
@@ -164,6 +163,7 @@ async fn test_get_item_name_missing() {
 }
 #[tokio::test]
 async fn test_find_item_by_provider() {
+    use crate::client::ProviderIds;
     let _guard = TEST_LOCK.lock().unwrap();
     let mut server = mockito::Server::new_async().await;
     let mock_imdb = server.mock("GET", "/Users/u1/Items?Recursive=true&Fields=ProviderIds&AnyProviderIdTypes=Imdb&ProviderIds=tt123")
@@ -172,12 +172,12 @@ async fn test_find_item_by_provider() {
         .create_async().await;
     let client = MediaClient::new(server.url(), "key".to_string(), false);
     let res = client
-        .find_item_by_provider("u1", "tt123", "")
+        .find_item_by_provider("u1", &ProviderIds::from_parts("tt123", "", ""))
         .await
         .unwrap()
         .unwrap();
     assert_eq!(res.0, "item_123");
-    assert_eq!(res.1, "tt123");
+    assert_eq!(res.1.imdb, "tt123");
     mock_imdb.assert_async().await;
     // TMDb lookup
     let mock_tmdb = server.mock("GET", "/Users/u1/Items?Recursive=true&Fields=ProviderIds&AnyProviderIdTypes=Tmdb&ProviderIds=tm456")
@@ -185,14 +185,30 @@ async fn test_find_item_by_provider() {
         .with_body(r#"{"Items": [{"Id": "item_456", "ProviderIds": {"Tmdb": "tm456"}}]}"#)
         .create_async().await;
     let res_tmdb = client
-        .find_item_by_provider("u1", "", "tm456")
+        .find_item_by_provider("u1", &ProviderIds::from_parts("", "tm456", ""))
         .await
         .unwrap()
         .unwrap();
     assert_eq!(res_tmdb.0, "item_456");
-    assert_eq!(res_tmdb.2, "tm456");
+    assert_eq!(res_tmdb.1.tmdb, "tm456");
     mock_tmdb.assert_async().await;
+    // TVDB lookup
+    let mock_tvdb = server.mock("GET", "/Users/u1/Items?Recursive=true&Fields=ProviderIds&AnyProviderIdTypes=Tvdb&ProviderIds=73244")
+        .with_status(200)
+        .with_body(r#"{"Items": [{"Id": "item_tv", "ProviderIds": {"Tvdb": "73244"}}]}"#)
+        .create_async().await;
+    let res_tvdb = client
+        .find_item_by_provider("u1", &ProviderIds::from_parts("", "", "73244"))
+        .await
+        .unwrap()
+        .unwrap();
+    assert_eq!(res_tvdb.0, "item_tv");
+    assert_eq!(res_tvdb.1.tvdb, "73244");
+    mock_tvdb.assert_async().await;
     // Empty providers lookup
-    let res_empty = client.find_item_by_provider("u1", "", "").await.unwrap();
+    let res_empty = client
+        .find_item_by_provider("u1", &ProviderIds::default())
+        .await
+        .unwrap();
     assert!(res_empty.is_none());
 }

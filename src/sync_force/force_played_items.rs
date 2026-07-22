@@ -36,9 +36,8 @@ pub async fn process_played_items_batch(
             break;
         }
         let started_item = Instant::now();
-        let imdb = item.imdb_id.clone().unwrap_or_default();
-        let tmdb = item.tmdb_id.clone().unwrap_or_default();
-        if imdb.is_empty() && tmdb.is_empty() {
+        let providers = item.provider_ids();
+        if providers.is_empty() {
             *skipped_total += 1;
             *processed_total += 1;
             status.by_field.played.skip += 1;
@@ -57,13 +56,19 @@ pub async fn process_played_items_batch(
         }
         // Hold concurrency slot only for network work — not for rate-limit sleep.
         let permit = semaphore.acquire().await;
-        let resolved = target_client
-            .find_item_by_provider(tgt_user_id, &imdb, &tmdb)
-            .await
-            .ok()
-            .flatten();
-        let target_item_id = match resolved {
-            Some((id, _i, _t)) => id,
+        // Cache-first (in-memory ServerCache), then HTTP only on miss.
+        let target_name = ctx.config.servers[tgt_idx].name.clone();
+        let target_item_id = crate::sync::resolve::resolve_target_item(
+            tgt_idx,
+            &providers,
+            &target_name,
+            Some(tgt_user_id),
+            &target_client,
+            &ctx.state,
+        )
+        .await;
+        let target_item_id = match target_item_id {
+            Some(id) => id,
             None => {
                 drop(permit);
                 *skipped_total += 1;
@@ -154,26 +159,21 @@ pub async fn process_played_items_batch(
         match update_res {
             Ok(Ok(())) => {
                 if !dry_run {
-                    let key = (
-                        src_username.to_lowercase(),
-                        if !imdb.is_empty() {
-                            imdb.clone()
-                        } else {
-                            tmdb.clone()
-                        },
-                    );
-                    let mut st = ctx.state.lock().await;
-                    let prev_fav = st.last_syncs.get(&key).and_then(|v| v.favorite);
-                    st.last_syncs.insert(
-                        key,
-                        SyncHistoryValue {
-                            position_ticks: source_pos,
-                            timestamp: Instant::now(),
-                            played: true,
-                            favorite: prev_fav,
-                        },
-                    );
-                    drop(st);
+                    if let Some(hk) = providers.history_key() {
+                        let key = (src_username.to_lowercase(), hk);
+                        let mut st = ctx.state.lock().await;
+                        let prev_fav = st.last_syncs.get(&key).and_then(|v| v.favorite);
+                        st.last_syncs.insert(
+                            key,
+                            SyncHistoryValue {
+                                position_ticks: source_pos,
+                                timestamp: Instant::now(),
+                                played: true,
+                                favorite: prev_fav,
+                            },
+                        );
+                        drop(st);
+                    }
                 }
                 *succeeded_total += 1;
                 *processed_total += 1;
@@ -190,11 +190,7 @@ pub async fn process_played_items_batch(
                         user: src_user_id.to_string(),
                         server: ctx.config.servers[tgt_idx].name.clone(),
                         item_id: Some(target_item_id),
-                        provider: if !imdb.is_empty() {
-                            Some(imdb)
-                        } else {
-                            Some(tmdb)
-                        },
+                        provider: providers.history_key(),
                         message: e.to_string(),
                     },
                 );
@@ -210,11 +206,7 @@ pub async fn process_played_items_batch(
                         user: src_user_id.to_string(),
                         server: ctx.config.servers[tgt_idx].name.clone(),
                         item_id: Some(target_item_id),
-                        provider: if !imdb.is_empty() {
-                            Some(imdb)
-                        } else {
-                            Some(tmdb)
-                        },
+                        provider: providers.history_key(),
                         message: format!("update timeout after {:?}", FORCE_UPDATE_TIMEOUT),
                     },
                 );

@@ -5,12 +5,14 @@ pub mod api;
 pub mod api_items;
 pub mod played;
 pub mod played_lists;
+pub mod provider_ids;
 pub mod request;
 pub mod types;
 
 #[cfg(test)]
 mod tests;
 
+pub use provider_ids::ProviderIds;
 pub use types::{
     NowPlayingItem, PlayState, PlayedItem, SessionInfo, UserDataChangedInfo, UserDataEntry,
     WsMessage,

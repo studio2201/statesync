@@ -25,13 +25,7 @@ pub fn make_server_config(name: &str, is_emby: bool) -> ServerConfig {
 }
 
 pub fn make_cache(name: &str, users: Vec<(&str, &str)>) -> ServerCache {
-    let mut cache = ServerCache {
-        name: name.to_string(),
-        users: std::collections::HashMap::new(),
-        imdb_to_id: std::collections::HashMap::new(),
-        tmdb_to_id: std::collections::HashMap::new(),
-        id_to_providers: std::collections::HashMap::new(),
-    };
+    let mut cache = ServerCache::empty(name.to_string());
     for (uname, uid) in users {
         cache.users.insert(uname.to_string(), uid.to_string());
     }
@@ -103,19 +97,23 @@ async fn force_sync_in_progress_blocks_live_sync() {
 #[test]
 fn cache_miss_path_populates_provider_maps() {
     let mut cache = make_cache("emby", vec![("alice", "u1")]);
-    cache.id_to_providers.insert(
+    cache.index_item(
         "item1".to_string(),
-        ("tt1234567".to_string(), "tm1".to_string()),
+        crate::client::ProviderIds::from_parts("tt1234567", "tm1", "73244"),
     );
-    cache
-        .imdb_to_id
-        .insert("tt1234567".to_string(), "item1".to_string());
-    cache
-        .tmdb_to_id
-        .insert("tm1".to_string(), "item1".to_string());
-    assert_eq!(cache.id_to_providers.get("item1").unwrap().0, "tt1234567");
+    assert_eq!(
+        cache.id_to_providers.get("item1").unwrap().imdb,
+        "tt1234567"
+    );
     assert!(cache.imdb_to_id.contains_key("tt1234567"));
     assert!(cache.tmdb_to_id.contains_key("tm1"));
+    assert!(cache.tvdb_to_id.contains_key("73244"));
+    assert_eq!(
+        cache
+            .lookup_item_id(&crate::client::ProviderIds::from_parts("", "", "73244"))
+            .as_deref(),
+        Some("item1")
+    );
 }
 
 #[tokio::test]

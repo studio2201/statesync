@@ -1,4 +1,5 @@
 use super::MediaClient;
+use super::ProviderIds;
 use super::request::send_with_retry;
 use anyhow::{Context, Result};
 use percent_encoding::{AsciiSet, CONTROLS, utf8_percent_encode};
@@ -21,28 +22,41 @@ const PATH_SEGMENT: &AsciiSet = &CONTROLS
     .add(b'}');
 
 impl MediaClient {
+    /// Search library by Imdb, then Tmdb, then Tvdb (first hit wins).
     pub async fn find_item_by_provider(
         &self,
         user_id: &str,
-        imdb_id: &str,
-        tmdb_id: &str,
-    ) -> Result<Option<(String, String, String)>> {
-        let uid = utf8_percent_encode(user_id, PATH_SEGMENT);
-        let mut path = format!("/Users/{}/Items?Recursive=true&Fields=ProviderIds", uid);
-        if !imdb_id.is_empty() {
-            path.push_str(&format!(
-                "&AnyProviderIdTypes=Imdb&ProviderIds={}",
-                utf8_percent_encode(imdb_id, PATH_SEGMENT)
-            ));
-        } else if !tmdb_id.is_empty() {
-            path.push_str(&format!(
-                "&AnyProviderIdTypes=Tmdb&ProviderIds={}",
-                utf8_percent_encode(tmdb_id, PATH_SEGMENT)
-            ));
-        } else {
-            return Ok(None);
+        providers: &ProviderIds,
+    ) -> Result<Option<(String, ProviderIds)>> {
+        let attempts: [(&str, &str); 3] = [
+            ("Imdb", providers.imdb.as_str()),
+            ("Tmdb", providers.tmdb.as_str()),
+            ("Tvdb", providers.tvdb.as_str()),
+        ];
+        for (ptype, pid) in attempts {
+            if pid.is_empty() {
+                continue;
+            }
+            if let Some(hit) = self.find_item_one_provider(user_id, ptype, pid).await? {
+                return Ok(Some(hit));
+            }
         }
+        Ok(None)
+    }
 
+    async fn find_item_one_provider(
+        &self,
+        user_id: &str,
+        provider_type: &str,
+        provider_id: &str,
+    ) -> Result<Option<(String, ProviderIds)>> {
+        let uid = utf8_percent_encode(user_id, PATH_SEGMENT);
+        let path = format!(
+            "/Users/{}/Items?Recursive=true&Fields=ProviderIds&AnyProviderIdTypes={}&ProviderIds={}",
+            uid,
+            provider_type,
+            utf8_percent_encode(provider_id, PATH_SEGMENT)
+        );
         let url = self.url_path(&path);
         let resp = send_with_retry(
             self.add_auth_headers(self.client.get(&url)),
@@ -59,17 +73,8 @@ impl MediaClient {
         if let Some(items) = data.get("Items").and_then(|i| i.as_array()) {
             if let Some(item) = items.first() {
                 if let Some(id) = item.get("Id").and_then(|id| id.as_str()) {
-                    let mut imdb = String::new();
-                    let mut tmdb = String::new();
-                    if let Some(providers) = item.get("ProviderIds") {
-                        if let Some(val) = providers.get("Imdb").and_then(|v| v.as_str()) {
-                            imdb = val.to_string();
-                        }
-                        if let Some(val) = providers.get("Tmdb").and_then(|v| v.as_str()) {
-                            tmdb = val.to_string();
-                        }
-                    }
-                    return Ok(Some((id.to_string(), imdb, tmdb)));
+                    let found = ProviderIds::from_json(item.get("ProviderIds"));
+                    return Ok(Some((id.to_string(), found)));
                 }
             }
         }

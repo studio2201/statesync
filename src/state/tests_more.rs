@@ -3,13 +3,7 @@ use std::collections::HashMap;
 
 #[test]
 fn merge_users_preserves_existing_entries() {
-    let mut cache = ServerCache {
-        name: "emby".to_string(),
-        users: HashMap::new(),
-        imdb_to_id: HashMap::new(),
-        tmdb_to_id: HashMap::new(),
-        id_to_providers: HashMap::new(),
-    };
+    let mut cache = ServerCache::empty("emby".to_string());
     cache.users.insert("alice".to_string(), "u1".to_string());
     cache.users.insert("bob".to_string(), "u2".to_string());
     cache.users.insert("carol".to_string(), "u3".to_string());
@@ -28,13 +22,7 @@ fn merge_users_preserves_existing_entries() {
 
 #[test]
 fn merge_users_empty_fresh_is_noop() {
-    let mut cache = ServerCache {
-        name: "emby".to_string(),
-        users: HashMap::new(),
-        imdb_to_id: HashMap::new(),
-        tmdb_to_id: HashMap::new(),
-        id_to_providers: HashMap::new(),
-    };
+    let mut cache = ServerCache::empty("emby".to_string());
     cache.users.insert("alice".to_string(), "u1".to_string());
     cache.merge_users(HashMap::new());
     assert_eq!(cache.users.len(), 1);
@@ -186,6 +174,6 @@ async fn test_init_server_cache_with_data() {
     assert_eq!(cache.imdb_to_id.get("tt123").unwrap(), "item_1");
     assert_eq!(cache.tmdb_to_id.get("tm456").unwrap(), "item_1");
     let provs = cache.id_to_providers.get("item_1").unwrap();
-    assert_eq!(provs.0, "tt123");
-    assert_eq!(provs.1, "tm456");
+    assert_eq!(provs.imdb, "tt123");
+    assert_eq!(provs.tmdb, "tm456");
 }

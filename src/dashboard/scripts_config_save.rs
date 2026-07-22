@@ -240,8 +240,8 @@ function applyForceSyncLiveUi(fs) {
     const sr = fs.skip_reasons || {};
     const skipBits = [];
     if (sr.already_equal) skipBits.push(sr.already_equal + ' already the same on both servers');
-    if (sr.no_provider) skipBits.push(sr.no_provider + ' source item had no Imdb/Tmdb in Emby/Jellyfin metadata (not about folder or file names; UI can still show the title as identified via TVDB or other ids)');
-    if (sr.no_match) skipBits.push(sr.no_match + ' same Imdb/Tmdb not found on the destination server');
+    if (sr.no_provider) skipBits.push(sr.no_provider + ' source item had no Imdb/Tmdb/Tvdb in Emby/Jellyfin metadata (not folder/file names)');
+    if (sr.no_match) skipBits.push(sr.no_match + ' same Imdb/Tmdb/Tvdb not found on the destination server');
     if (sr.other) skipBits.push(sr.other + ' other skip');
     if (skipBits.length) {
       parts.push('Why skips so far: ' + skipBits.join('; ') + '.');

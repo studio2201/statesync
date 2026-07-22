@@ -86,13 +86,7 @@ async fn test_init_cache_in_background() {
             .create_async().await;
 
     let client = Arc::new(MediaClient::new(server.url(), "key".to_string(), false));
-    let state = Arc::new(Mutex::new(AppState::new(vec![crate::state::ServerCache {
-        name: "test".to_string(),
-        users: std::collections::HashMap::new(),
-        imdb_to_id: std::collections::HashMap::new(),
-        tmdb_to_id: std::collections::HashMap::new(),
-        id_to_providers: std::collections::HashMap::new(),
-    }])));
+    let state = Arc::new(Mutex::new(AppState::new(vec![crate::state::ServerCache::empty("test".to_string())])));
 
     let res = init_cache_in_background(0, "test", &client, &state).await;
     assert!(res.is_ok());
@@ -106,15 +100,11 @@ async fn test_init_cache_in_background() {
 
 #[tokio::test]
 async fn test_handle_sessions_event() {
-    let caches = vec![crate::state::ServerCache {
-        name: "test_server".to_string(),
-        users: [("alice".to_string(), "u1".to_string())]
-            .into_iter()
-            .collect(),
-        imdb_to_id: std::collections::HashMap::new(),
-        tmdb_to_id: std::collections::HashMap::new(),
-        id_to_providers: std::collections::HashMap::new(),
-    }];
+    let mut cache = crate::state::ServerCache::empty("test_server");
+    cache
+        .users
+        .insert("alice".to_string(), "u1".to_string());
+    let caches = vec![cache];
     let state = Arc::new(Mutex::new(AppState::new(caches)));
 
     let sessions = vec![SessionInfo {
@@ -161,15 +151,11 @@ async fn test_handle_sessions_event() {
 
 #[tokio::test]
 async fn test_handle_userdata_changed_event() {
-    let caches = vec![crate::state::ServerCache {
-        name: "test_server".to_string(),
-        users: [("alice".to_string(), "u1".to_string())]
-            .into_iter()
-            .collect(),
-        imdb_to_id: std::collections::HashMap::new(),
-        tmdb_to_id: std::collections::HashMap::new(),
-        id_to_providers: std::collections::HashMap::new(),
-    }];
+    let mut cache = crate::state::ServerCache::empty("test_server");
+    cache
+        .users
+        .insert("alice".to_string(), "u1".to_string());
+    let caches = vec![cache];
     let state = Arc::new(Mutex::new(AppState::new(caches)));
 
     let info = UserDataChangedInfo {

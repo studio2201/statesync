@@ -133,16 +133,7 @@ fn parse_items_with_providers(data: serde_json::Value) -> Vec<PlayedItem> {
         .unwrap_or_default();
     let mut out = Vec::with_capacity(arr.len());
     for mut v in arr {
-        let imdb = v
-            .get("ProviderIds")
-            .and_then(|p| p.get("Imdb"))
-            .and_then(|s| s.as_str())
-            .map(|s| s.to_string());
-        let tmdb = v
-            .get("ProviderIds")
-            .and_then(|p| p.get("Tmdb"))
-            .and_then(|s| s.as_str())
-            .map(|s| s.to_string());
+        let p = super::ProviderIds::from_json(v.get("ProviderIds"));
         // Flatten UserData.IsFavorite onto the item for PlayedItem deserialize.
         if let Some(fav) = v
             .get("UserData")
@@ -154,17 +145,14 @@ fn parse_items_with_providers(data: serde_json::Value) -> Vec<PlayedItem> {
             }
         }
         if let Some(map) = v.as_object_mut() {
-            if let Some(imdb) = &imdb {
-                map.insert(
-                    "imdb_id".to_string(),
-                    serde_json::Value::String(imdb.clone()),
-                );
+            if !p.imdb.is_empty() {
+                map.insert("imdb_id".to_string(), serde_json::json!(p.imdb));
             }
-            if let Some(tmdb) = &tmdb {
-                map.insert(
-                    "tmdb_id".to_string(),
-                    serde_json::Value::String(tmdb.clone()),
-                );
+            if !p.tmdb.is_empty() {
+                map.insert("tmdb_id".to_string(), serde_json::json!(p.tmdb));
+            }
+            if !p.tvdb.is_empty() {
+                map.insert("tvdb_id".to_string(), serde_json::json!(p.tvdb));
             }
         }
         match serde_json::from_value::<PlayedItem>(v) {

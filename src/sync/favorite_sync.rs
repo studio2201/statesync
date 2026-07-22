@@ -49,7 +49,7 @@ pub async fn sync_favorite_to_targets(
         _ => format!("item ID '{}'", source_item_id),
     };
 
-    let (imdb_id, tmdb_id) = match resolve_item_providers(
+    let providers = match resolve_item_providers(
         source_index,
         source_item_id,
         source_client,
@@ -62,11 +62,14 @@ pub async fn sync_favorite_to_targets(
         Some(ids) => ids,
         None => return,
     };
-    if imdb_id.is_empty() && tmdb_id.is_empty() {
+    if providers.is_empty() {
         let mut state = state_lock.lock().await;
         state.log_event_detail(
             "warn",
-            &format!("Skipped favorite for '{}' (no IMDb/TMDb)", item_title),
+            &format!(
+                "Skipped favorite for '{}' (no Imdb/Tmdb/Tvdb in server metadata)",
+                item_title
+            ),
             Some(format!(
                 "user={} source={} item={}",
                 user_name, source_name, source_item_id
@@ -74,6 +77,10 @@ pub async fn sync_favorite_to_targets(
         );
         return;
     }
+    let history_provider = match providers.history_key() {
+        Some(k) => k,
+        None => return,
+    };
 
     for &(target_index, ref client_target) in target_clients {
         if config.servers[target_index].sync_direction == "send" {
@@ -93,8 +100,7 @@ pub async fn sync_favorite_to_targets(
         }
         let target_item_id = resolve_target_item(
             target_index,
-            &imdb_id,
-            &tmdb_id,
+            &providers,
             &target_name,
             target_user_id.as_deref(),
             client_target,
@@ -102,14 +108,7 @@ pub async fn sync_favorite_to_targets(
         )
         .await;
         if let (Some(t_item_id), Some(t_user_id)) = (target_item_id, target_user_id) {
-            let history_key = (
-                user_lower.clone(),
-                if !imdb_id.is_empty() {
-                    imdb_id.clone()
-                } else {
-                    tmdb_id.clone()
-                },
-            );
+            let history_key = (user_lower.clone(), history_provider.clone());
             let now = Instant::now();
             let mut state = state_lock.lock().await;
             if let Some(last) = state.last_syncs.get(&history_key) {
@@ -130,14 +129,13 @@ pub async fn sync_favorite_to_targets(
                 level: "success".to_string(),
                 message: message.clone(),
                 detail: Some(format!(
-                    "source={} → target={} | user={} | item_src={} item_tgt={} | imdb={} tmdb={} | IsFavorite={}",
+                    "source={} → target={} | user={} | item_src={} item_tgt={} | {} | IsFavorite={}",
                     source_name,
                     target_name,
                     user_name,
                     source_item_id,
                     t_item_id,
-                    if imdb_id.is_empty() { "—" } else { &imdb_id },
-                    if tmdb_id.is_empty() { "—" } else { &tmdb_id },
+                    providers.display_short(),
                     is_favorite
                 )),
                 source_name: Some(source_name.to_string()),

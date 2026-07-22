@@ -93,9 +93,8 @@ pub async fn force_sync_favorites_pair(
                 break;
             }
             let started_item = Instant::now();
-            let imdb = item.imdb_id.clone().unwrap_or_default();
-            let tmdb = item.tmdb_id.clone().unwrap_or_default();
-            if imdb.is_empty() && tmdb.is_empty() {
+            let providers = item.provider_ids();
+            if providers.is_empty() {
                 *skipped_total += 1;
                 *processed_total += 1;
                 status.by_field.favorite.skip += 1;
@@ -113,13 +112,18 @@ pub async fn force_sync_favorites_pair(
                 continue;
             }
             let permit = semaphore.acquire().await;
-            let resolved = target_client
-                .find_item_by_provider(tgt_user_id, &imdb, &tmdb)
-                .await
-                .ok()
-                .flatten();
-            let target_item_id = match resolved {
-                Some((id, _i, _t)) => id,
+            let target_name = ctx.config.servers[tgt_idx].name.clone();
+            let target_item_id = crate::sync::resolve::resolve_target_item(
+                tgt_idx,
+                &providers,
+                &target_name,
+                Some(tgt_user_id),
+                &target_client,
+                &ctx.state,
+            )
+            .await;
+            let target_item_id = match target_item_id {
+                Some(id) => id,
                 None => {
                     drop(permit);
                     *skipped_total += 1;
@@ -176,29 +180,24 @@ pub async fn force_sync_favorites_pair(
             match update_res {
                 Ok(Ok(())) => {
                     if !dry_run {
-                        let key = (
-                            src_username.to_lowercase(),
-                            if !imdb.is_empty() {
-                                imdb.clone()
-                            } else {
-                                tmdb.clone()
-                            },
-                        );
-                        let mut st = ctx.state.lock().await;
-                        let prev = st.last_syncs.get(&key).cloned();
-                        st.last_syncs.insert(
-                            key,
-                            SyncHistoryValue {
-                                position_ticks: prev
-                                    .as_ref()
-                                    .map(|p| p.position_ticks)
-                                    .unwrap_or(0),
-                                timestamp: Instant::now(),
-                                played: prev.as_ref().map(|p| p.played).unwrap_or(false),
-                                favorite: Some(true),
-                            },
-                        );
-                        drop(st);
+                        if let Some(hk) = providers.history_key() {
+                            let key = (src_username.to_lowercase(), hk);
+                            let mut st = ctx.state.lock().await;
+                            let prev = st.last_syncs.get(&key).cloned();
+                            st.last_syncs.insert(
+                                key,
+                                SyncHistoryValue {
+                                    position_ticks: prev
+                                        .as_ref()
+                                        .map(|p| p.position_ticks)
+                                        .unwrap_or(0),
+                                    timestamp: Instant::now(),
+                                    played: prev.as_ref().map(|p| p.played).unwrap_or(false),
+                                    favorite: Some(true),
+                                },
+                            );
+                            drop(st);
+                        }
                     }
                     *succeeded_total += 1;
                     *processed_total += 1;
@@ -212,11 +211,7 @@ pub async fn force_sync_favorites_pair(
                             user: src_user_id.to_string(),
                             server: ctx.config.servers[tgt_idx].name.clone(),
                             item_id: Some(target_item_id),
-                            provider: if !imdb.is_empty() {
-                                Some(imdb)
-                            } else {
-                                Some(tmdb)
-                            },
+                            provider: providers.history_key(),
                             message: e.to_string(),
                         },
                     );
@@ -232,11 +227,7 @@ pub async fn force_sync_favorites_pair(
                             user: src_user_id.to_string(),
                             server: ctx.config.servers[tgt_idx].name.clone(),
                             item_id: Some(target_item_id),
-                            provider: if !imdb.is_empty() {
-                                Some(imdb)
-                            } else {
-                                Some(tmdb)
-                            },
+                            provider: providers.history_key(),
                             message: format!(
                                 "favorite update timeout after {:?}",
                                 FORCE_UPDATE_TIMEOUT

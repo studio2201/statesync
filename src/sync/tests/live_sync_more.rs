@@ -51,14 +51,16 @@ async fn played_true_is_debounced_via_history() {
         vec![],
     );
     let mut emby = make_cache("emby", vec![("alice", "u1")]);
-    emby.id_to_providers
-        .insert("item1".to_string(), ("tt999".to_string(), "".to_string()));
+    emby.index_item(
+        "item1".to_string(),
+        crate::client::ProviderIds::from_parts("tt999", "", ""),
+    );
     let mut jf = make_cache("jellyfin", vec![("alice", "u2")]);
     jf.imdb_to_id
         .insert("tt999".to_string(), "item_jf".to_string());
     let app_state = std::sync::Arc::new(tokio::sync::Mutex::new(AppState::new(vec![emby, jf])));
 
-    let key = ("alice".to_string(), "tt999".to_string());
+    let key = ("alice".to_string(), "imdb:tt999".to_string());
     {
         let mut st = app_state.lock().await;
         st.last_syncs.insert(

@@ -56,15 +56,10 @@ async fn test_cache_stats() {
     assert_eq!(stats.total_servers, 0);
     assert_eq!(stats.total_users, 0);
 
-    let cache = ServerCache {
-        name: "test_server".to_string(),
-        users: [("alice".to_string(), "u1".to_string())]
-            .into_iter()
-            .collect(),
-        imdb_to_id: std::collections::HashMap::new(),
-        tmdb_to_id: std::collections::HashMap::new(),
-        id_to_providers: std::collections::HashMap::new(),
-    };
+    let mut cache = ServerCache::empty("test_server");
+    cache
+        .users
+        .insert("alice".to_string(), "u1".to_string());
     let app_state_with_cache = Arc::new(Mutex::new(AppState::new(vec![cache])));
     let stats2 = super::status::cache_stats(&app_state_with_cache).await;
     assert_eq!(stats2.total_servers, 1);

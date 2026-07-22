@@ -81,13 +81,7 @@ pub async fn init_clients_parallel(
                     drop(state);
                     Some((
                         client,
-                        statesync::state::ServerCache {
-                            name: name.clone(),
-                            users: std::collections::HashMap::new(),
-                            imdb_to_id: std::collections::HashMap::new(),
-                            tmdb_to_id: std::collections::HashMap::new(),
-                            id_to_providers: std::collections::HashMap::new(),
-                        },
+                        statesync::state::ServerCache::empty(name.clone()),
                     ))
                 }
             }
@@ -199,7 +193,7 @@ pub(super) fn format_force_skip_story(status: &ForceSyncStatus) -> String {
     }
     if sr.no_provider > 0 {
         bits.push(format!(
-            "{} no Imdb/Tmdb in server metadata",
+            "{} no Imdb/Tmdb/Tvdb in server metadata",
             sr.no_provider
         ));
     }
