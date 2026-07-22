@@ -59,14 +59,14 @@ pub fn story_played(
     dry_run: bool,
 ) -> (String, String) {
     let write = if dry_run {
-        "If the other app differs, count it as would-change (preview does not write)."
+        "If the other app differs, count it as would-update (preview does not write)."
     } else {
         "If the other app differs, update watched/resume there."
     };
     (
         format!("Copying watched history ({pair_i} of {pair_n})"),
         format!(
-            "Person: {user}. From {source}’s library → to {target}’s library. For each watched title in {source}, find the same title in {target} using shared catalog IDs (IMDb, TMDb, or TVDB) that Emby/Jellyfin already store on that library entry. {write} “Skipped” means we checked and did not need a change (already the same), could not find a shared catalog ID, or {target} has no matching library title."
+            "Person: {user}. From {source}’s library → to {target}’s library. For each watched title in {source}, find the same title in {target} using shared catalog IDs (IMDb, TMDb, or TVDB) that Emby/Jellyfin already store on that library entry. {write} “No change” is normal and good: we checked and the other library already matched, or we could not pair that library title (no shared catalog ID, or it is not in {target}’s library)."
         ),
     )
 }
@@ -104,7 +104,7 @@ pub fn story_finished(
         return (
             "Force sync cancelled".to_string(),
             format!(
-                "Stopped early. Checked {processed} library titles, updated {succeeded}, skipped {skipped}. Live play sync will resume."
+                "Stopped early. Checked {processed} library titles, updated {succeeded}, no change needed on {skipped}. Live play sync will resume."
             ),
         );
     }
@@ -112,17 +112,17 @@ pub fn story_finished(
         if failed == 0 {
             "Preview finished (no writes)"
         } else {
-            "Preview finished with errors (no writes)"
+            "Preview finished with some failures (no writes)"
         }
     } else if failed == 0 {
         "Force sync finished"
     } else {
-        "Force sync finished with errors"
+        "Force sync finished with some failures"
     };
     (
         head.to_string(),
         format!(
-            "Checked {processed} library titles. Updated (or would update) {succeeded}. Skipped {skipped} (already matched, or no shared catalog ID / no matching title in the other app). Failed {failed}. High skips usually mean both libraries already agree. Live play sync resumes."
+            "Checked {processed} library titles. Updated (or would update) {succeeded}. No change needed on {skipped} — usually both libraries already agree (that is success, not a problem). Failures: {failed}. Live play sync resumes."
         ),
     )
 }
@@ -147,7 +147,12 @@ mod tests {
         assert!(h.contains("watched"));
         assert!(d.contains("Emby") && d.contains("Jellyfin"));
         assert!(d.contains("library"));
-        assert!(d.contains("Skipped") || d.contains("skipped") || d.contains("“Skipped”"));
+        assert!(
+            d.contains("No change")
+                || d.contains("no change")
+                || d.contains("“No change”")
+        );
+        assert!(!d.to_lowercase().contains("skip"));
         assert!(!d.to_lowercase().contains("folder"));
         assert!(!d.to_lowercase().contains("file name"));
         assert!(!d.to_lowercase().contains("disk"));

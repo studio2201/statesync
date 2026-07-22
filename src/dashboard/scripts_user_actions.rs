@@ -8,7 +8,7 @@ pub const JS_USER_ACTIONS: &str = r#"async function forceSyncForUser(name) {
 async function toggleIgnoreUser(name, ignore) {
   if (!name) return;
   const verb = ignore ? 'Ignore' : 'Un-ignore';
-  if (ignore && !confirm(verb + ' "' + name + '"?\n\nLive sync and mesh force will skip this person (linked aliases too).')) return;
+  if (ignore && !confirm(verb + ' "' + name + '"?\n\nLive sync and force will leave this person out (linked aliases too).')) return;
   try {
     const res = await authedFetch('/api/users/ignore', {
       method: 'POST',

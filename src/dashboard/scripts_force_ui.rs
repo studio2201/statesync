@@ -157,7 +157,7 @@ function renderForceSync(s) {
     ? Math.max(1, Math.round((new Date(s.finished_at) - new Date(s.started_at)) / 1000))
     : (s.started_at ? Math.round((Date.now() - new Date(s.started_at).getTime()) / 1000) : 0);
   const verb = st === 'running' ? 'Running' : (st === 'completed' ? 'Done' : (st === 'failed' ? 'Failed' : s.state));
-  div.textContent = verb + ': looked at ' + s.processed + ' · pushed ' + s.succeeded + ' · skipped ' + s.skipped + ' · failed ' + s.failed + ' (' + elapsed + 's)'
+  div.textContent = verb + ': checked ' + s.processed + ' · updated ' + s.succeeded + ' · no change ' + s.skipped + ' · failed ' + s.failed + ' (' + elapsed + 's)'
     + (s.last_error ? ' · ' + s.last_error : '');
 }
 function setHowSyncExpanded(show) {

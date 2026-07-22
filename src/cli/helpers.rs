@@ -113,7 +113,7 @@ pub fn print_help() {
     println!("  --dry-run        Load caches / user mapping check; no play-state writes");
     println!("  --sync-force     Full backfill (played, position, favorites per Settings)");
     println!();
-    println!("  Force: phases + skip reasons. Preview without writing:");
+    println!("  Force: phases + no-change reasons. Preview without writing:");
     println!("    statesync --sync-force --dry-run");
     println!();
     println!("Common environment:");
@@ -189,24 +189,27 @@ pub(super) fn format_force_skip_story(status: &ForceSyncStatus) -> String {
     let sr = &status.skip_reasons;
     let mut bits = Vec::new();
     if sr.already_equal > 0 {
-        bits.push(format!("{} already matched", sr.already_equal));
+        bits.push(format!("{} already same (good)", sr.already_equal));
     }
     if sr.no_provider > 0 {
         bits.push(format!(
-            "{} no catalog ID on source library title",
+            "{} could not pair (no catalog ID)",
             sr.no_provider
         ));
     }
     if sr.no_match > 0 {
-        bits.push(format!("{} not in other library", sr.no_match));
+        bits.push(format!(
+            "{} could not pair (not in other library)",
+            sr.no_match
+        ));
     }
     if sr.other > 0 {
-        bits.push(format!("{} other", sr.other));
+        bits.push(format!("{} other no-change", sr.other));
     }
     if bits.is_empty() {
         String::new()
     } else {
-        format!(" · skips: {}", bits.join(", "))
+        format!(" · no change: {}", bits.join(", "))
     }
 }
 
@@ -219,7 +222,7 @@ pub(super) fn print_force_progress(status: &ForceSyncStatus) {
         status.scope.join("+")
     };
     println!(
-        "  [{}] {}/{} · pushed {} · skipped {} · failed {} · user={} · scope={}{}",
+        "  [{}] {}/{} · updated {} · no change {} · failed {} · user={} · scope={}{}",
         phase,
         status.processed,
         status.total_pairs.max(1),

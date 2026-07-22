@@ -39,7 +39,7 @@ pub fn how_sync_card() -> Markup {
                                 div class="how-step" {
                                     div class="how-num" { "2" }
                                     div class="how-title" { "Match people" }
-                                    p { "Same username matches automatically. Different names → " strong { "Link users" } ". Skip someone with " strong { "Actions → Ignore" } "." }
+                                    p { "Same username matches automatically. Different names → " strong { "Link users" } ". Leave someone out with " strong { "Actions → Ignore" } "." }
                                 }
                                 div class="how-step" {
                                     div class="how-num" { "3" }

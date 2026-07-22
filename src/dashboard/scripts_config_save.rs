@@ -199,12 +199,12 @@ function applyForceSyncLiveUi(fs) {
     if (preparing && !done) {
       txt.textContent = 'elapsed ' + elapsed + 's';
     } else if (totalPairs > 0) {
-      txt.textContent = pct + '% · looked at ' + processed + ' of ~' + totalPairs
-        + ' · pushed ' + succeeded + ' · skipped ' + skipped
+      txt.textContent = pct + '% · checked ' + processed + ' of ~' + totalPairs
+        + ' · updated ' + succeeded + ' · no change ' + skipped
         + (failed ? ' · failed ' + failed : '')
         + ' · ' + rate + '/s · ' + elapsed + 's';
     } else {
-      txt.textContent = 'looked at ' + processed + ' · pushed ' + succeeded + ' · skipped ' + skipped
+      txt.textContent = 'checked ' + processed + ' · updated ' + succeeded + ' · no change ' + skipped
         + (failed ? ' · failed ' + failed : '')
         + ' · ' + rate + '/s · ' + elapsed + 's';
     }
@@ -239,12 +239,12 @@ function applyForceSyncLiveUi(fs) {
     if (fs.story_detail) parts.push(fs.story_detail);
     const sr = fs.skip_reasons || {};
     const skipBits = [];
-    if (sr.already_equal) skipBits.push(sr.already_equal + ' already the same in both libraries');
-    if (sr.no_provider) skipBits.push(sr.no_provider + ' no shared catalog ID (IMDb/TMDb/TVDB) on that library title in the source app');
-    if (sr.no_match) skipBits.push(sr.no_match + ' no matching library title in the other app');
-    if (sr.other) skipBits.push(sr.other + ' other skip');
+    if (sr.already_equal) skipBits.push(sr.already_equal + ' already the same in both libraries (good)');
+    if (sr.no_provider) skipBits.push(sr.no_provider + ' could not pair — source library title has no shared catalog ID (IMDb/TMDb/TVDB)');
+    if (sr.no_match) skipBits.push(sr.no_match + ' could not pair — title not in the other app’s library');
+    if (sr.other) skipBits.push(sr.other + ' other no-change');
     if (skipBits.length) {
-      parts.push('Why skips so far: ' + skipBits.join('; ') + '.');
+      parts.push('Why no change so far: ' + skipBits.join('; ') + '.');
     }
     if (!done) {
       parts.push(dry

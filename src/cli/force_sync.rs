@@ -23,7 +23,7 @@ pub(super) fn parse_sync_force_args(args: &[String]) -> (Direction, bool) {
             println!(
                 "Uses Settings scopes (force played / position / favorites) and user allowlist."
             );
-            println!("Skips already matched targets. Story: phases + skip reasons.");
+            println!("Leaves already-matching library titles unchanged. Story: phases + no-change reasons.");
             println!("Rate: STATESYNC_FORCE_RATE items/sec (default 5, max 50).");
             std::process::exit(0);
         }
@@ -157,15 +157,15 @@ pub async fn run_sync_force_cli(args: &[String]) -> anyhow::Result<()> {
         {
             "Force sync cancelled"
         }
-        ForceSyncState::Failed if dry_run => "Force preview finished with errors (no writes)",
-        ForceSyncState::Failed => "Force sync finished with errors",
+        ForceSyncState::Failed if dry_run => "Force preview finished with some failures (no writes)",
+        ForceSyncState::Failed => "Force sync finished with some failures",
         _ => "Force sync ended",
     };
     println!(
-        "{} · looked at {} · {} {} · skipped {} · failed {}",
+        "{} · checked {} · {} {} · no change {} · failed {}",
         verb,
         status.processed,
-        if dry_run { "would push" } else { "pushed" },
+        if dry_run { "would update" } else { "updated" },
         status.succeeded,
         status.skipped,
         status.failed
@@ -179,7 +179,7 @@ pub async fn run_sync_force_cli(args: &[String]) -> anyhow::Result<()> {
         || bf.favorite.ok + bf.favorite.skip + bf.favorite.fail > 0
     {
         println!(
-            "  played {} ok / {} skip / {} fail · favorites {} ok / {} skip / {} fail",
+            "  played {} updated / {} no change / {} fail · favorites {} updated / {} no change / {} fail",
             bf.played.ok,
             bf.played.skip,
             bf.played.fail,

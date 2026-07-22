@@ -108,7 +108,7 @@ pub(super) fn draw_tui_from_json(status: &serde_json::Value) {
                 "\x1B[31mlast force had errors\x1B[0m"
             };
             let mut line = format!(
-                "{}  pushed {} · skipped {} · failed {}",
+                "{}  updated {} · no change {} · failed {}",
                 label, ok, skip, fail
             );
             if let Some(sr) = fs.get("skip_reasons") {
@@ -117,7 +117,7 @@ pub(super) fn draw_tui_from_json(status: &serde_json::Value) {
                     .and_then(|v| v.as_u64())
                     .unwrap_or(0);
                 if ae > 0 {
-                    line.push_str(&format!(" · {} already matched", ae));
+                    line.push_str(&format!(" · {} already same (good)", ae));
                 }
             }
             println!("{}", line);

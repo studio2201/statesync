@@ -47,17 +47,17 @@ pub const JS_ACTIONS: &str = r#"    const logsDiv = $('syncLogs');
         const statusColor = st === 'completed' ? 'var(--green)' : 'var(--red)';
         const label = st === 'completed' ? 'finished cleanly' : 'finished with errors';
         let story = 'Last force sync <span style="color:' + statusColor + '">' + label + '</span> ' + ago + '. ';
-        story += 'Looked at ' + (fs.processed || 0) + ' items, pushed ' + (fs.succeeded || 0);
-        if (fs.skipped > 0) story += ', skipped ' + fs.skipped;
+        story += 'Checked ' + (fs.processed || 0) + ' library titles, updated ' + (fs.succeeded || 0);
+        if (fs.skipped > 0) story += ', no change needed on ' + fs.skipped;
         if (fs.failed > 0) story += ', failed ' + fs.failed;
         const bf = fs.by_field || {};
         if (bf.favorite && (bf.favorite.ok || bf.favorite.skip || bf.favorite.fail)) {
-          story += ' · favorites ' + (bf.favorite.ok || 0) + ' ok';
+          story += ' · favorites updated ' + (bf.favorite.ok || 0);
         }
         const sr = fs.skip_reasons || {};
-        if (sr.already_equal) story += ' · ' + sr.already_equal + ' already same in both libraries';
-        if (sr.no_provider) story += ' · ' + sr.no_provider + ' no catalog ID on source library title';
-        if (sr.no_match) story += ' · ' + sr.no_match + ' no matching title in other library';
+        if (sr.already_equal) story += ' · ' + sr.already_equal + ' already same (good)';
+        if (sr.no_provider) story += ' · ' + sr.no_provider + ' could not pair (no catalog ID)';
+        if (sr.no_match) story += ' · ' + sr.no_match + ' could not pair (not in other library)';
         if (fs.scope && fs.scope.length) story += ' · scope ' + fs.scope.join('/');
         story += '.';
         left.innerHTML = story;
