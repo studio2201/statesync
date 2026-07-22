@@ -52,13 +52,15 @@ mod tests {
         assert!(html_str.contains("How sync works"));
         assert!(html_str.contains("howSyncCollapsedHint"));
         assert!(html_str.contains("how-pills"));
-        assert!(html_str.contains("Live play sync"));
+        assert!(html_str.contains("Emby/Jellyfin libraries"));
         assert!(html_str.contains("Actions"));
         assert!(html_str.contains("Not synced:"));
         assert!(html_str.contains("how-dot-live"));
         assert!(html_str.contains("fsStoryExpanded"));
         assert!(html_str.contains("fsStoryToggleBtn"));
         assert!(html_str.contains("toggleForceStory"));
+        assert!(html_str.contains("never look at folders or files")
+            || html_str.contains("never look at folders"));
         assert!(html_str.contains("/favicon.jpg"));
         assert!(html_str.contains("userActionsModal"));
         assert!(html_str.contains("openUserActionsModal"));

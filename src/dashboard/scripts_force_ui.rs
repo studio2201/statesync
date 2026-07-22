@@ -54,8 +54,8 @@ async function forceSync(dryRun, onlyUser) {
       ? ('Preview started' + (onlyUser ? (' for "' + onlyUser + '"') : ' for every linked person'))
       : ('Force sync started' + (onlyUser ? (' for "' + onlyUser + '"') : ' for every linked person')),
     story_detail: dryRun
-      ? 'Preview counts what would change. No data is written. Next: count watched titles on each server. Matching uses Imdb/Tmdb/Tvdb from server metadata (cache-first) — never folder or file names.'
-      : 'Catch-up for past watched history, resume, and favorites. Live play sync is paused. Next: count watched titles. Matching uses Imdb/Tmdb/Tvdb from Emby/Jellyfin metadata, in-memory index first — not disk paths.'
+      ? 'Preview only. We compare Emby/Jellyfin library catalogs (what each app knows about a title) — not your media files. Nothing is written.'
+      : 'Catch-up between Emby/Jellyfin libraries only — not your media files. Live play sync is paused until this finishes.'
   });
   const statusHint = $('forceSyncStatus');
   if (statusHint) {

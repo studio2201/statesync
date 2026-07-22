@@ -15,49 +15,51 @@ pub fn how_sync_card() -> Markup {
                         }
                         div id="howSyncBody" {
                             p class="how-lead" {
-                                "StateSync never moves video. It only copies "
+                                "StateSync never touches your media files. It only copies "
                                 strong { "watched" }
                                 ", "
                                 strong { "resume" }
                                 ", and "
                                 strong { "favorites" }
-                                " between Emby and Jellyfin (and same-type pairs)."
+                                " between "
+                                strong { "Emby/Jellyfin libraries" }
+                                " (each app’s catalog of titles)."
                             }
                             div class="how-pills" {
                                 span class="how-pill" { strong { "Live" } " — plays and hearts as they happen" }
-                                span class="how-pill" { strong { "Force" } " — history backfill (optional)" }
+                                span class="how-pill" { strong { "Force" } " — catch up the past (optional)" }
                                 span class="how-pill" { strong { "Actions" } " — per-person Force / Ignore / Clear" }
                             }
                             div class="how-grid" {
                                 div class="how-step" {
                                     div class="how-num" { "1" }
                                     div class="how-title" { "Connect" }
-                                    p { "Add each server (URL + API key). Type is auto-detected. StateSync opens a live event stream so plays show up here as they happen." }
+                                    p { "Add each Emby or Jellyfin server (URL + API key). StateSync listens for plays from that app’s library." }
                                 }
                                 div class="how-step" {
                                     div class="how-num" { "2" }
                                     div class="how-title" { "Match people" }
-                                    p { "Same username matches automatically. Different names → " strong { "Link users" } ". Skip someone with " strong { "Actions → Ignore" } " (or Settings ignore list)." }
+                                    p { "Same username matches automatically. Different names → " strong { "Link users" } ". Skip someone with " strong { "Actions → Ignore" } "." }
                                 }
                                 div class="how-step" {
                                     div class="how-num" { "3" }
                                     div class="how-title" { "Match titles" }
-                                    p { "Titles match by " strong { "Imdb, Tmdb, or Tvdb" } " in Emby/Jellyfin item metadata (API ProviderIds) — " strong { "not" } " folder or file names. Force reuses the in-memory library index first so it does not re-search every title over HTTP. Same title on two libraries syncs when both sides share any of those ids." }
+                                    p { "A title in Emby’s library is the same as a title in Jellyfin’s library when both apps share a catalog ID (IMDb, TMDb, or TVDB) on that library entry. We never look at folders or files." }
                                 }
                                 div class="how-step" {
                                     div class="how-num" { "4" }
                                     div class="how-title" { "Live sync" }
-                                    p { "Play, pause, finish, or favorite → pushes played / resume / hearts if enabled in " strong { "Settings" } ". Small position wobble under the threshold is ignored." }
+                                    p { "Play, pause, finish, or favorite in one app → update the same library title in the other (if enabled in " strong { "Settings" } ")." }
                                 }
                                 div class="how-step" {
                                     div class="how-num" { "5" }
                                     div class="how-title" { "Force sync" }
-                                    p { "History backfill. " strong { "Preview force" } " counts with no writes. Live play sync " strong { "pauses" } " until force finishes. Watch the live banner for looked / pushed / skipped." }
+                                    p { "Catch up older watched history between libraries. " strong { "Preview force" } " counts only. Live sync " strong { "pauses" } " while force runs. The banner shows person, route, and progress." }
                                 }
                                 div class="how-step" {
                                     div class="how-num" { "6" }
                                     div class="how-title" { "Actions" }
-                                    p { "On " strong { "Mapped users" } ", open " strong { "Actions" } " (or click a name first): " strong { "Force" } " this person, " strong { "Ignore" } ", or " strong { "Clear watched" } ". Clear only wipes played flags — not libraries or favorites." }
+                                    p { "On " strong { "Mapped users" } ": " strong { "Force" } " one person, " strong { "Ignore" } ", or " strong { "Clear watched" } " (played flags only — not the library or favorites)." }
                                 }
                             }
                             div class="how-legend" {

@@ -193,7 +193,7 @@ pub(super) fn format_force_skip_story(status: &ForceSyncStatus) -> String {
     }
     if sr.no_provider > 0 {
         bits.push(format!(
-            "{} no Imdb/Tmdb/Tvdb in server metadata",
+            "{} no catalog ID on source library title",
             sr.no_provider
         ));
     }

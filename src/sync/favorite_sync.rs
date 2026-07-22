@@ -67,7 +67,7 @@ pub async fn sync_favorite_to_targets(
         state.log_event_detail(
             "warn",
             &format!(
-                "Skipped favorite for '{}' (no Imdb/Tmdb/Tvdb in server metadata)",
+                "Skipped favorite for '{}' (no catalog ID on that library title)",
                 item_title
             ),
             Some(format!(

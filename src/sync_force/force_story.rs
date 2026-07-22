@@ -1,4 +1,4 @@
-//! First-principles human storytelling for force-sync progress.
+//! Plain-language force-sync storytelling (Emby/Jellyfin libraries only).
 
 use super::ForceSyncStatus;
 
@@ -31,12 +31,12 @@ pub fn story_started(dry_run: bool, only_user: Option<&str>) -> (String, String)
     if dry_run {
         (
             format!("Preview started{who}"),
-            "Preview counts what would change. No watched, resume, or favorite data is written. Live play sync is paused until this finishes. Next: count how many titles each person has already watched on each server.".to_string(),
+            "Preview only: count what would change. Nothing is written. Live play sync is paused. We work with Emby/Jellyfin library catalogs (what each app knows about a title) — not your media files.".to_string(),
         )
     } else {
         (
             format!("Force sync started{who}"),
-            "Goal: make watched history, resume points, and favorites match across your servers for linked people. This is catch-up for the past — not a Movies-then-TV library walk. Live play sync is paused until this finishes. Next: count watched titles on each server.".to_string(),
+            "Catch-up: make watched, resume, and favorites match between your media apps for linked people. We only talk to Emby/Jellyfin libraries — never open your media files. Live play sync is paused until this finishes.".to_string(),
         )
     }
 }
@@ -45,7 +45,7 @@ pub fn story_counting(user: &str, source: &str, pair_i: u64, pair_n: u64) -> (St
     (
         format!("Counting watched titles ({pair_i} of {pair_n})"),
         format!(
-            "Person: {user}. Server: {source}. Asking this server how many titles this person has already marked watched (and favorited). Emby/Jellyfin return one combined list — not Movies first, then shows, then music. Folder names and file names are never read. Matching later uses Imdb, Tmdb, or Tvdb already stored on each item’s server metadata, and prefers the in-memory library index before HTTP search."
+            "Person: {user}. Asking {source}’s library how many titles this person already marked watched (and favorited). One combined list from that app — not “all movies first, then all TV.” Next we match those library titles on the other app."
         ),
     )
 }
@@ -59,14 +59,14 @@ pub fn story_played(
     dry_run: bool,
 ) -> (String, String) {
     let write = if dry_run {
-        "If different, count as would-push (preview does not write)."
+        "If the other app differs, count it as would-change (preview does not write)."
     } else {
-        "If different, write the change on the destination."
+        "If the other app differs, update watched/resume there."
     };
     (
         format!("Copying watched history ({pair_i} of {pair_n})"),
         format!(
-            "Person: {user}. Route: {source} → {target}. Reading each watched title on {source} (server list order — mixed movies/episodes/etc.). For each title, use Imdb/Tmdb/Tvdb from that item’s server metadata (not folder or file names). Look up the same ids on {target} in the in-memory library index first; only search over HTTP on a cache miss. {write} \"Skipped\" means we looked and did not write: already the same, no usable provider id on the source item, or the title was not found on {target}."
+            "Person: {user}. From {source}’s library → to {target}’s library. For each watched title in {source}, find the same title in {target} using shared catalog IDs (IMDb, TMDb, or TVDB) that Emby/Jellyfin already store on that library entry. {write} “Skipped” means we checked and did not need a change (already the same), could not find a shared catalog ID, or {target} has no matching library title."
         ),
     )
 }
@@ -80,14 +80,14 @@ pub fn story_favorites(
     dry_run: bool,
 ) -> (String, String) {
     let write = if dry_run {
-        "Preview only — hearts are not changed."
+        "Preview only — favorites are not changed."
     } else {
-        "Write the heart on the destination only when needed."
+        "Update the heart on the other app only when needed."
     };
     (
         format!("Copying favorites ({pair_i} of {pair_n})"),
         format!(
-            "Person: {user}. Route: {source} → {target}. Same matching as watched history: Imdb/Tmdb/Tvdb from server metadata, cache-first. {write} \"Skipped\" still means we checked the title."
+            "Person: {user}. From {source}’s library → to {target}’s library. Same idea as watched history: match library titles by shared catalog IDs, then {write}"
         ),
     )
 }
@@ -104,7 +104,7 @@ pub fn story_finished(
         return (
             "Force sync cancelled".to_string(),
             format!(
-                "Stopped early. Looked at {processed} titles, pushed {succeeded}, skipped {skipped}. Live play sync will resume."
+                "Stopped early. Checked {processed} library titles, updated {succeeded}, skipped {skipped}. Live play sync will resume."
             ),
         );
     }
@@ -122,7 +122,7 @@ pub fn story_finished(
     (
         head.to_string(),
         format!(
-            "Looked at {processed} titles. Pushed (or would push) {succeeded}. Skipped {skipped} (checked; no write needed, or could not match by Imdb/Tmdb/Tvdb metadata). Failed {failed}. High skips usually mean both servers already agree, or some items have none of those ids in server metadata. Folder/file names are never required. Live play sync resumes."
+            "Checked {processed} library titles. Updated (or would update) {succeeded}. Skipped {skipped} (already matched, or no shared catalog ID / no matching title in the other app). Failed {failed}. High skips usually mean both libraries already agree. Live play sync resumes."
         ),
     )
 }
@@ -137,17 +137,20 @@ mod tests {
         assert!(h.contains("Counting"));
         assert!(d.contains("alice"));
         assert!(d.contains("Emby"));
-        assert!(d.contains("combined list"));
+        assert!(d.contains("library"));
+        assert!(!d.to_lowercase().contains("folder"));
     }
 
     #[test]
-    fn played_story_names_route() {
+    fn played_story_is_about_libraries_not_files() {
         let (h, d) = story_played("bob", "Emby", "Jellyfin", 2, 4, false);
         assert!(h.contains("watched"));
-        assert!(d.contains("Emby → Jellyfin"));
-        assert!(d.contains("Imdb") || d.contains("Tmdb") || d.contains("metadata"));
-        assert!(d.contains("Skipped"));
-        assert!(d.contains("not the folder") || d.contains("folder"));
+        assert!(d.contains("Emby") && d.contains("Jellyfin"));
+        assert!(d.contains("library"));
+        assert!(d.contains("Skipped") || d.contains("skipped") || d.contains("“Skipped”"));
+        assert!(!d.to_lowercase().contains("folder"));
+        assert!(!d.to_lowercase().contains("file name"));
+        assert!(!d.to_lowercase().contains("disk"));
     }
 
     #[test]
