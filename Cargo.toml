@@ -1,6 +1,6 @@
 [package]
 name = "statesync"
-version = "0.28.73"
+version = "0.28.74"
 edition = "2024"
 license = "Apache-2.0"
 readme = "README.md"
