@@ -99,9 +99,8 @@ pub async fn test_connection(
         let client = MediaClient::new(clean_url.clone(), clean_key.clone(), is_emby);
         match client.get_users().await {
             Ok(users) => {
-                let kind = if is_emby { "Emby" } else { "Jellyfin" };
                 let key_note = if used_saved_key {
-                    " using saved API key"
+                    " (saved API key)"
                 } else {
                     ""
                 };
@@ -110,8 +109,8 @@ pub async fn test_connection(
                     Json(json!({
                         "status": "ok",
                         "message": format!(
-                            "OK — {kind} at {clean_url} ({users} users){key_note}. Same path Live uses when this server is saved.",
-                            users = users.len()
+                            "OK — {clean_url} · {} users{key_note}. Same path Live uses when saved.",
+                            users.len()
                         ),
                         "is_emby": is_emby,
                         "url": clean_url,

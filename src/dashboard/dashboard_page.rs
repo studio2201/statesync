@@ -66,7 +66,6 @@ pub fn render_dashboard() -> Markup {
                                 }
                             }
                             div id="syncedUsers" {}
-                            div id="forceSyncStatus" class="form-hint" style="margin-top:10px" {}
                         }
                         div class="stack" {
                             div class="card" {
@@ -110,7 +109,7 @@ pub fn render_dashboard() -> Markup {
                                 label { "Server address" }
                                 input type="text" id="serverUrl" placeholder="http://emby-or-jellyfin:8096" required {};
                                 p class="form-hint" { "Full browser link or host:port; paths stripped." }
-                                p class="form-hint" id="serverTypeHint" { "Type auto-detected on test/save." }
+                                p class="form-hint" id="serverTypeHint" { "Works with Emby or Jellyfin." }
                             }
                             div class="form-group" {
                                 label { "API key" }

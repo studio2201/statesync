@@ -61,18 +61,22 @@ pub const JS_SERVER_FORM: &str = r#"function openServerModal(idx) {
 }
 /** isEmby: true/false/null. confirmed=true after Test connection or save detect. */
 function setDetectedType(isEmby, confirmed) {
+  // Type is kept for API path hints only — not shown as a product label.
   const hint = $('serverTypeHint');
   if (isEmby === null || isEmby === undefined) {
     $('serverType').value = '';
-    if (hint) hint.textContent = 'Emby vs Jellyfin is detected automatically when you test or save.';
+    if (hint) {
+      hint.textContent = 'Works with Emby or Jellyfin. Type is handled automatically.';
+      hint.style.color = '';
+    }
     return;
   }
   $('serverType').value = isEmby ? 'emby' : 'jellyfin';
   if (hint) {
     hint.textContent = confirmed
-      ? ('Detected: ' + (isEmby ? 'Emby' : 'Jellyfin'))
-      : ('Saved as ' + (isEmby ? 'Emby' : 'Jellyfin') + ' (re-detected on test/save)');
-    hint.style.color = 'var(--green)';
+      ? 'Connection OK. Ready to save.'
+      : 'Works with Emby or Jellyfin. Type is handled automatically.';
+    hint.style.color = confirmed ? 'var(--green)' : '';
   }
 }
 function pickType(t) {

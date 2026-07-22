@@ -144,14 +144,12 @@ pub const JS_SESSIONS_USERS: &str = r#"const activeDiv = $('activeSessions');
         const cfg = (currentConfig.servers || [])[si] || {};
         const hostPort = srv.host_port || nameFromUrl(cfg.url || srv.url || '') || '';
         const niceName = String(srv.name || cfg.name || '').trim();
-        const kind = (srv.is_emby === true || cfg.is_emby === true) ? 'Emby'
-          : (srv.is_emby === false || cfg.is_emby === false) ? 'Jellyfin' : '';
         // Prefer distinct address (host:port). Show config name only when it adds info.
+        // Do not label Emby/Jellyfin here — type is auto-detected for APIs and often wrong in UI.
         let title = hostPort || niceName || ('Server ' + (si + 1));
         if (niceName && hostPort && niceName !== hostPort && niceName.toLowerCase() !== hostPort.toLowerCase()) {
           title = niceName + '\n' + hostPort;
         }
-        if (kind) title = title + (title.indexOf('\n') >= 0 ? '\n' : ' · ') + kind;
         h.textContent = title;
         h.title = srv.display_label || title.replace(/\n/g, ' · ');
         headerRow2.appendChild(h);

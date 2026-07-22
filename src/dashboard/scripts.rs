@@ -163,10 +163,7 @@ async function loadDashboard() {
         statusSpanEl.title = 'Raw: ' + rawWs;
         const leftInner = document.createElement('div'); leftInner.className = 'server-meta';
         const nameEl = document.createElement('div'); nameEl.className = 'name';
-        nameEl.textContent = displayName + ' ';
-        const badgeEl = document.createElement('span'); badgeEl.className = 'badge';
-        badgeEl.textContent = (srv.is_emby ? 'Emby' : 'Jellyfin') + dirBadge;
-        nameEl.appendChild(badgeEl);
+        nameEl.textContent = displayName + (dirBadge ? dirBadge : '');
         const urlEl = document.createElement('div'); urlEl.className = 'url';
         // Address line is always host:port when known (distinct even if names collide).
         urlEl.textContent = hostPort || ((sStatus.url || srv.url || '').replace(/^https?:\/\//i, '').split('/')[0] || '—');

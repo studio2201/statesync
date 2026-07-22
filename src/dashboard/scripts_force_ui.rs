@@ -57,14 +57,6 @@ async function forceSync(dryRun, onlyUser) {
       ? 'Libraries only. No writes.'
       : 'Libraries only. Live sync paused.'
   });
-  const statusHint = $('forceSyncStatus');
-  if (statusHint) {
-    statusHint.textContent = onlyUser
-      ? ((dryRun ? 'Preview for person "' : 'Force sync for person "') + onlyUser + '"…')
-      : (dryRun
-        ? 'Preview started — counting watched titles (no writes)…'
-        : 'Force sync started — counting watched titles on each linked server…');
-  }
   showToast(onlyUser
     ? ((dryRun ? 'Preview force for ' : 'Force sync for ') + onlyUser)
     : (dryRun ? 'Force preview started (no writes)' : 'Force sync started'));
@@ -115,7 +107,6 @@ async function pollForceSync() {
   try {
     const res = await authedFetch('/api/sync/force/status');
     const s = await res.json();
-    renderForceSync(s);
     const st = forceStateKey(s.state);
     if (st === 'running' || (s.started_at && !s.finished_at && st !== 'completed' && st !== 'failed' && st !== 'idle')) {
       window._forceSyncOptimistic = false;
@@ -144,21 +135,6 @@ async function pollForceSync() {
     console.error(err);
     _forceSyncTimer = setTimeout(pollForceSync, 2000);
   }
-}
-function renderForceSync(s) {
-  const div = $('forceSyncStatus');
-  if (!div) return;
-  const st = forceStateKey(s.state);
-  if (st === 'idle' && !s.started_at) {
-    div.textContent = 'Force sync has not been run yet.';
-    return;
-  }
-  const elapsed = s.finished_at && s.started_at
-    ? Math.max(1, Math.round((new Date(s.finished_at) - new Date(s.started_at)) / 1000))
-    : (s.started_at ? Math.round((Date.now() - new Date(s.started_at).getTime()) / 1000) : 0);
-  const verb = st === 'running' ? 'Running' : (st === 'completed' ? 'Done' : (st === 'failed' ? 'Failed' : s.state));
-  div.textContent = verb + ': checked ' + s.processed + ' · updated ' + s.succeeded + ' · no change ' + s.skipped + ' · failed ' + s.failed + ' (' + elapsed + 's)'
-    + (s.last_error ? ' · ' + s.last_error : '');
 }
 function setHowSyncExpanded(show) {
   const body = $('howSyncBody');
