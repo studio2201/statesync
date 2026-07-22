@@ -8,10 +8,6 @@
 
 Watched, resume, and favorites synced across Emby and Jellyfin.
 
-<p align="center">
-  <img src="assets/mascot.png" alt="StateSync mascot" width="220">
-</p>
-
 ## Install
 
 ```bash

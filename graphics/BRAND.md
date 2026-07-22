@@ -1,21 +1,17 @@
 # StateSync brand
 
-## Palette (studio2201 + product)
+## Marks
 
-- Background: charcoal `#0b0f14` / `#121820`
-- Accent cyan: `#00e5ff` / `#3b9eff`
-- Accent green: `#39ff14` / `#3dd68c`
-- Text bright: `#e8eef5`
+| Asset | Role |
+|-------|------|
+| `graphics/statesync_icon.jpg` | **Canonical app icon** (studio2201 neon sync arrows; no text) |
+| `assets/icon.png` | PNG export of the same icon for README |
+| `assets/header.png` / `graphics/statesync_header_pinup.jpg` | README header (retro pinup + sync reels; no text) |
+| `graphics/statesync_header_neon.jpg` | Previous geometric neon banner (archived) |
+| `graphics/statesync_mascot.png` | Optional mascot still (not the app icon) |
 
-## Assets (no embedded text)
+## Palette
 
-| File | Role |
-|------|------|
-| `graphics/statesync_header.jpg` / `.png` | README banner (preserved product art) |
-| `graphics/statesync_icon.jpg` / `.png` | App icon (preserved product art) |
-| `graphics/statesync_mascot.png` | Retro pinup mascot (cyan/green sync reels) |
-| `assets/header.png` | Org-style README header symlink copy |
-| `assets/icon.png` | Org-style README icon |
-| `assets/mascot.png` | Org-style mascot |
-
-Existing header and icon are the canonical product marks. Mascot adds the pinup identity without replacing them.
+- Background charcoal: `#0b0f14`
+- Cyan: `#00e5ff` / `#3b9eff`
+- Green: `#39ff14` / `#3dd68c`

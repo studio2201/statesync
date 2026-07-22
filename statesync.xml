@@ -13,7 +13,7 @@
   <Category>MediaApp:Video MediaApp:Other</Category>
   <WebUI>http://[IP]:[PORT:4601]</WebUI>
   <TemplateURL>https://raw.githubusercontent.com/studio2201/statesync/master/unraid/unraid-template.xml</TemplateURL>
-  <Icon>https://raw.githubusercontent.com/studio2201/statesync/master/assets/icon.png</Icon>
+  <Icon>https://raw.githubusercontent.com/studio2201/statesync/master/graphics/statesync_icon.jpg</Icon>
   <ExtraParams />
   <PostArgs />
   <CPUset />
