@@ -1,6 +1,6 @@
 [package]
 name = "statesync"
-version = "0.28.60"
+version = "0.28.61"
 edition = "2024"
 
 [dependencies]

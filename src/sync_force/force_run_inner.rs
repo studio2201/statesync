@@ -13,7 +13,9 @@ pub(super) async fn run_force_sync_inner(
 ) -> ForceSyncStatus {
     let config = &ctx.config;
 
-    let pairs = super::force_pair_plan::plan_force_pairs(config, &ctx.state).await;
+    let pairs =
+        super::force_pair_plan::plan_force_pairs(config, &ctx.state, ctx.only_user.as_deref())
+            .await;
 
     let mut total_items = 0u64;
     for (src_idx, _, _, src_user_id, _) in &pairs {

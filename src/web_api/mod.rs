@@ -13,6 +13,7 @@ pub mod sync;
 pub mod tests;
 #[cfg(test)]
 pub mod tests_more;
+pub mod user_ignore;
 pub mod users;
 pub mod validation;
 
@@ -21,4 +22,5 @@ pub use force_api::{get_sync_force_status, post_sync_force, post_sync_force_canc
 pub use server::{get_server_info, post_server_info, serve_poster, test_connection};
 pub use status::{CacheStats, cache_stats, get_status};
 pub use sync::{post_reload, post_users_refresh};
+pub use user_ignore::post_user_ignore;
 pub use users::post_clear_watched;

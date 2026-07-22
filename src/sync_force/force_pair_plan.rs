@@ -4,9 +4,13 @@ use std::sync::Arc;
 use tokio::sync::Mutex;
 
 /// Build (src_idx, tgt_idx, username, src_user_id, tgt_user_id) pairs for force mesh.
+///
+/// `only_user`: when set, only that person (+ linked aliases) is included — intentional
+/// per-user force, even if they are on the ignore list.
 pub async fn plan_force_pairs(
     config: &Config,
     state: &Arc<Mutex<AppState>>,
+    only_user: Option<&str>,
 ) -> Vec<(usize, usize, String, String, String)> {
     let sources: Vec<usize> = (0..config.servers.len())
         .filter(|&i| config.servers[i].sync_direction != "receive")
@@ -23,7 +27,15 @@ pub async fn plan_force_pairs(
             None => continue,
         };
         for (username, src_user_id) in &cache.users {
-            if !config.sync.user_allowed(username, &config.user_mappings) {
+            if let Some(filter) = only_user {
+                if !crate::config::SyncOptions::user_matches_filter(
+                    username,
+                    filter,
+                    &config.user_mappings,
+                ) {
+                    continue;
+                }
+            } else if !config.sync.user_allowed(username, &config.user_mappings) {
                 continue;
             }
             for &tgt in &targets {

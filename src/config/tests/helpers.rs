@@ -110,6 +110,32 @@ fn test_user_allowlist_matches_and_mappings() {
 }
 
 #[test]
+fn test_user_ignorelist_blocks_and_mappings() {
+    let mut s = crate::config::SyncOptions::default();
+    assert!(s.user_allowed("guest", &[]));
+    s.user_ignorelist = vec!["Guest".into()];
+    assert!(s.user_is_ignored("guest", &[]));
+    assert!(!s.user_allowed("guest", &[]));
+    let maps = vec![vec!["guest".into(), "guest_jf".into()]];
+    assert!(s.user_is_ignored("guest_jf", &maps));
+    assert!(!s.user_allowed("guest_jf", &maps));
+    // Ignore wins over allowlist.
+    s.user_allowlist = vec!["guest".into()];
+    assert!(!s.user_allowed("guest", &[]));
+}
+
+#[test]
+fn test_user_matches_filter_mapping() {
+    let maps = vec![vec!["Alice".into(), "alice_jf".into()]];
+    assert!(crate::config::SyncOptions::user_matches_filter(
+        "alice_jf", "Alice", &maps
+    ));
+    assert!(!crate::config::SyncOptions::user_matches_filter(
+        "bob", "Alice", &maps
+    ));
+}
+
+#[test]
 fn test_sync_options_missing_fields_deserialize() {
     let cfg: crate::config::Config = serde_json::from_str(r#"{"servers":[]}"#).unwrap();
     assert!(cfg.sync.live_favorites);

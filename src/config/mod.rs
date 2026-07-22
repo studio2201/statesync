@@ -70,6 +70,10 @@ pub struct SyncOptions {
     /// Empty = everyone. Also matches names linked via user_mappings.
     #[serde(default)]
     pub user_allowlist: Vec<String>,
+    /// Usernames that never live- or force-sync (guests, kids, test accounts).
+    /// Takes priority over the allowlist. Linked aliases share the ignore.
+    #[serde(default)]
+    pub user_ignorelist: Vec<String>,
 }
 
 fn default_true() -> bool {
@@ -86,41 +90,87 @@ impl Default for SyncOptions {
             force_position: true,
             force_favorites: true,
             user_allowlist: Vec::new(),
+            user_ignorelist: Vec::new(),
         }
     }
 }
 
 impl SyncOptions {
-    /// True if this username may sync (allowlist empty = all users).
-    pub fn user_allowed(&self, username: &str, user_mappings: &[Vec<String>]) -> bool {
-        if self.user_allowlist.is_empty() {
-            return true;
-        }
-        let want: std::collections::HashSet<String> = self
-            .user_allowlist
-            .iter()
+    fn name_set(list: &[String]) -> std::collections::HashSet<String> {
+        list.iter()
             .map(|s| s.trim().to_lowercase())
             .filter(|s| !s.is_empty())
-            .collect();
-        if want.is_empty() {
-            return true;
-        }
+            .collect()
+    }
+
+    fn group_touches(
+        set: &std::collections::HashSet<String>,
+        username: &str,
+        maps: &[Vec<String>],
+    ) -> bool {
         let u = username.trim().to_lowercase();
-        if want.contains(&u) {
+        if set.contains(&u) {
             return true;
         }
-        // Linked aliases: if any name in the same mapping group is allowlisted, allow all.
+        for group in maps {
+            let members: Vec<String> = group
+                .iter()
+                .map(|s| s.trim().to_lowercase())
+                .filter(|s| !s.is_empty())
+                .collect();
+            if members.iter().any(|m| m == &u) && members.iter().any(|m| set.contains(m)) {
+                return true;
+            }
+        }
+        false
+    }
+
+    /// True if this person is on the ignore list (or linked to someone who is).
+    pub fn user_is_ignored(&self, username: &str, user_mappings: &[Vec<String>]) -> bool {
+        let ignored = Self::name_set(&self.user_ignorelist);
+        if ignored.is_empty() {
+            return false;
+        }
+        Self::group_touches(&ignored, username, user_mappings)
+    }
+
+    /// True if `username` is the same person as `filter` (exact or linked mapping).
+    pub fn user_matches_filter(
+        username: &str,
+        filter: &str,
+        user_mappings: &[Vec<String>],
+    ) -> bool {
+        let u = username.trim().to_lowercase();
+        let f = filter.trim().to_lowercase();
+        if u.is_empty() || f.is_empty() {
+            return false;
+        }
+        if u == f {
+            return true;
+        }
         for group in user_mappings {
             let members: Vec<String> = group
                 .iter()
                 .map(|s| s.trim().to_lowercase())
                 .filter(|s| !s.is_empty())
                 .collect();
-            if members.iter().any(|m| m == &u) && members.iter().any(|m| want.contains(m)) {
+            if members.iter().any(|m| m == &u) && members.iter().any(|m| m == &f) {
                 return true;
             }
         }
         false
+    }
+
+    /// True if this username may sync (not ignored; allowlist empty = all users).
+    pub fn user_allowed(&self, username: &str, user_mappings: &[Vec<String>]) -> bool {
+        if self.user_is_ignored(username, user_mappings) {
+            return false;
+        }
+        let want = Self::name_set(&self.user_allowlist);
+        if want.is_empty() {
+            return true;
+        }
+        Self::group_touches(&want, username, user_mappings)
     }
 }
 

@@ -22,6 +22,7 @@ pub async fn post_sync_force(
                 crate::sync_force::ForceSyncOptions {
                     direction: crate::sync_force::Direction::Both,
                     dry_run: false,
+                    user: None,
                 }
             } else {
                 let body = serde_json::json!({
@@ -105,6 +106,27 @@ pub async fn post_sync_force(
         ));
         clients.push(client);
     }
+    let only_user = opts
+        .user
+        .as_ref()
+        .map(|s| s.trim().to_string())
+        .filter(|s| !s.is_empty());
+    if let Some(ref u) = only_user {
+        if u.len() > 64 {
+            *tracker.running.lock().await = false;
+            return Response::builder()
+                .status(StatusCode::BAD_REQUEST)
+                .body(Body::from(
+                    r#"{"status":"error","message":"user name too long"}"#,
+                ))
+                .unwrap_or_else(|_| {
+                    axum::response::Response::builder()
+                        .status(500)
+                        .body(axum::body::Body::from("Internal Server Error"))
+                        .unwrap_or_default()
+                });
+        }
+    }
     let ctx = crate::sync_force::ForceContext {
         config,
         clients,
@@ -112,6 +134,7 @@ pub async fn post_sync_force(
         tracker: tracker.clone(),
         direction: crate::sync_force::Direction::Both,
         dry_run: opts.dry_run,
+        only_user,
     };
     let tracker_for_status = tracker.clone();
     tokio::spawn(async move {

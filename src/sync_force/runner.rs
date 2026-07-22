@@ -35,6 +35,9 @@ pub async fn run_force_sync(ctx: ForceContext) -> ForceSyncStatus {
     if ctx.dry_run {
         scope.push("dry-run".to_string());
     }
+    if let Some(ref u) = ctx.only_user {
+        scope.push(format!("user={}", u));
+    }
     {
         let mut status = ctx.tracker.status.lock().await;
         *status = ForceSyncStatus {
@@ -47,7 +50,7 @@ pub async fn run_force_sync(ctx: ForceContext) -> ForceSyncStatus {
             succeeded: 0,
             skipped: 0,
             failed: 0,
-            current_user: None,
+            current_user: ctx.only_user.clone(),
             last_error: None,
             errors: Vec::new(),
             phase: Some("preparing".to_string()),
@@ -59,13 +62,19 @@ pub async fn run_force_sync(ctx: ForceContext) -> ForceSyncStatus {
     }
     {
         let mut st = ctx.state.lock().await;
+        let who = ctx
+            .only_user
+            .as_deref()
+            .map(|u| format!(" for '{}'", u))
+            .unwrap_or_default();
+        let headline = if ctx.dry_run {
+            format!("Force sync preview started{who} (dry run — no writes)")
+        } else {
+            format!("Force sync started{who}")
+        };
         st.log_event_detail(
             "info",
-            if ctx.dry_run {
-                "Force sync preview started (dry run — no writes)"
-            } else {
-                "Force sync started"
-            },
+            &headline,
             Some(format!(
                 "scope={} · live play sync paused until finished",
                 if scope.is_empty() {

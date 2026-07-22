@@ -155,6 +155,11 @@ pub fn render_dashboard() -> Markup {
                             p class="form-hint" { "Empty = all users. One name per line; linked aliases included." }
                         }
                         div class="form-group" {
+                            label { "Ignore users (optional)" }
+                            textarea id="cfgUserIgnorelist" rows="3" placeholder="guest&#10;kids" {};
+                            p class="form-hint" { "Never live- or force-sync these people. Or use Ignore on Mapped users." }
+                        }
+                        div class="form-group" {
                             label { "Username mappings (advanced text)" }
                             textarea id="cfgUserMappings" rows="4" placeholder="alice, alice_jf&#10;bob, Robert" {};
                             p class="form-hint" { "Or use Link users for a visual picker. One group per line, comma-separated names." }

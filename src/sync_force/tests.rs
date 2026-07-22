@@ -16,6 +16,11 @@ mod tests {
         assert_eq!(opts2.direction, crate::sync_force::Direction::Both);
         let opts3: crate::sync_force::ForceSyncOptions = serde_json::from_str(r#"{}"#).unwrap();
         assert_eq!(opts3.direction, crate::sync_force::Direction::Both);
+        assert!(opts3.user.is_none());
+        let opts4: crate::sync_force::ForceSyncOptions =
+            serde_json::from_str(r#"{"user":"alice","dry_run":true}"#).unwrap();
+        assert_eq!(opts4.user.as_deref(), Some("alice"));
+        assert!(opts4.dry_run);
     }
 
     #[test]
@@ -185,6 +190,7 @@ mod tests {
             state,
             tracker: tracker.clone(),
             dry_run: false,
+            only_user: None,
         };
 
         let mut status = ForceSyncStatus::idle();

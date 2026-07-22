@@ -18,6 +18,9 @@ pub struct ForceSyncOptions {
     /// If true, count would-be writes but do not change any server.
     #[serde(default)]
     pub dry_run: bool,
+    /// If set, only this person (and linked aliases) is force-synced.
+    #[serde(default)]
+    pub user: Option<String>,
 }
 
 /// Force-sync direction. Runtime always meshes send→receive (Both).
@@ -186,4 +189,6 @@ pub struct ForceContext {
     pub tracker: Arc<SyncForceTracker>,
     /// Preview only — no UserData writes.
     pub dry_run: bool,
+    /// Limit mesh to this username (and mapped aliases). None = all allowed users.
+    pub only_user: Option<String>,
 }

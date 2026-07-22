@@ -64,6 +64,8 @@ async function saveSettings() {
   const chk = (id, def) => { const el = $(id); return el ? !!el.checked : def; };
   const allowRaw = ($('cfgUserAllowlist') && $('cfgUserAllowlist').value) || '';
   const user_allowlist = allowRaw.split(/[\n,]+/).map(s => s.trim()).filter(s => s.length > 0);
+  const ignRaw = ($('cfgUserIgnorelist') && $('cfgUserIgnorelist').value) || '';
+  const user_ignorelist = ignRaw.split(/[\n,]+/).map(s => s.trim()).filter(s => s.length > 0);
   currentConfig.sync = {
     live_played: chk('syncLivePlayed', true),
     live_position: chk('syncLivePosition', true),
@@ -71,7 +73,8 @@ async function saveSettings() {
     force_played: chk('syncForcePlayed', true),
     force_position: chk('syncForcePosition', true),
     force_favorites: chk('syncForceFavorites', true),
-    user_allowlist
+    user_allowlist,
+    user_ignorelist
   };
   const mappingsLines = $('cfgUserMappings').value.split('\n');
   const user_mappings = [];

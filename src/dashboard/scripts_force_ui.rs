@@ -24,14 +24,19 @@ pub const JS_FORCE_UI: &str = r#"async function clearWatchedForUser(name) {
     showToast('Clear watched failed: ' + err.message);
   }
 }
-async function forceSync(dryRun) {
+async function forceSync(dryRun, onlyUser) {
   dryRun = !!dryRun;
+  onlyUser = (onlyUser && String(onlyUser).trim()) || null;
   const btn = dryRun ? $('previewForceBtn') : $('forceSyncBtn');
   const other = dryRun ? $('forceSyncBtn') : $('previewForceBtn');
-  if (btn && btn.disabled) return;
-  if (btn) btn.disabled = true;
-  if (other) other.disabled = true;
+  if (!onlyUser) {
+    if (btn && btn.disabled) return;
+    if (btn) btn.disabled = true;
+    if (other) other.disabled = true;
+  }
   window._forceSyncOptimistic = true;
+  const scope = dryRun ? ['dry-run'] : [];
+  if (onlyUser) scope.push('user=' + onlyUser);
   applyForceSyncLiveUi({
     state: 'Running',
     started_at: new Date().toISOString(),
@@ -41,23 +46,29 @@ async function forceSync(dryRun) {
     succeeded: 0,
     skipped: 0,
     failed: 0,
-    current_user: null,
+    current_user: onlyUser,
     last_error: null,
     dry_run: dryRun,
-    scope: dryRun ? ['dry-run'] : []
+    scope: scope
   });
   const statusHint = $('forceSyncStatus');
   if (statusHint) {
-    statusHint.textContent = dryRun
-      ? 'Preview force — counting what would change (no writes)…'
-      : 'Force sync started — scanning history on every linked user…';
+    statusHint.textContent = onlyUser
+      ? ((dryRun ? 'Preview force for ' : 'Force sync for ') + onlyUser + '…')
+      : (dryRun
+        ? 'Preview force — counting what would change (no writes)…'
+        : 'Force sync started — scanning history on every linked user…');
   }
-  showToast(dryRun ? 'Force preview started (no writes)' : 'Force sync started');
+  showToast(onlyUser
+    ? ((dryRun ? 'Preview force for ' : 'Force sync for ') + onlyUser)
+    : (dryRun ? 'Force preview started (no writes)' : 'Force sync started'));
   try {
+    const payload = { direction: 'Both', dry_run: dryRun };
+    if (onlyUser) payload.user = onlyUser;
     const res = await authedFetch('/api/sync/force', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ direction: 'Both', dry_run: dryRun })
+      body: JSON.stringify(payload)
     });
     if (!res.ok && res.status !== 202) {
       let msg = 'HTTP ' + res.status;
@@ -78,6 +89,32 @@ async function forceSync(dryRun) {
     showToast((dryRun ? 'Preview' : 'Force sync') + ' failed: ' + err.message);
     if (btn) btn.disabled = false;
     if (other) other.disabled = false;
+  }
+}
+async function forceSyncForUser(name) {
+  if (!name) return;
+  if (!confirm('Force sync watched / resume / favorites for \"' + name + '\" only across all servers?')) return;
+  await forceSync(false, name);
+}
+async function toggleIgnoreUser(name, ignore) {
+  if (!name) return;
+  const verb = ignore ? 'Ignore' : 'Un-ignore';
+  if (ignore && !confirm(verb + ' \"' + name + '\"?\\n\\nLive sync and mesh force will skip this person (linked aliases too).')) return;
+  try {
+    const res = await authedFetch('/api/users/ignore', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: name, ignore: !!ignore })
+    });
+    const body = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(body.message || ('HTTP ' + res.status));
+    if (currentConfig.sync) {
+      currentConfig.sync.user_ignorelist = body.user_ignorelist || currentConfig.sync.user_ignorelist || [];
+    }
+    showToast(body.message || (verb + ' saved'));
+    setTimeout(loadDashboard, 400);
+  } catch (err) {
+    showToast(verb + ' failed: ' + err.message);
   }
 }
 async function cancelForceSync() {

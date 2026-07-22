@@ -111,6 +111,9 @@ pub async fn run_sync_force_cli(args: &[String]) -> anyhow::Result<()> {
     if !sync.user_allowlist.is_empty() {
         println!("  user allowlist: {}", sync.user_allowlist.join(", "));
     }
+    if !sync.user_ignorelist.is_empty() {
+        println!("  ignored users: {}", sync.user_ignorelist.join(", "));
+    }
     println!("Live play sync pauses until this finishes.\n");
 
     let last_print = Arc::new(tokio::sync::Mutex::new(std::time::Instant::now()));
@@ -141,6 +144,7 @@ pub async fn run_sync_force_cli(args: &[String]) -> anyhow::Result<()> {
         tracker: tracker.clone(),
         direction,
         dry_run,
+        only_user: None,
     };
     let status = run_force_sync(ctx).await;
     let _ = printer.await;

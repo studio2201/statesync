@@ -152,14 +152,43 @@ pub const JS_SESSIONS_USERS: &str = r#"const activeDiv = $('activeSessions');
           row.appendChild(cell);
         }
         const act = document.createElement('div');
-        act.style.cssText = 'display:flex;justify-content:flex-end';
+        act.style.cssText = 'display:flex;justify-content:flex-end;gap:4px;flex-wrap:wrap';
+        const btnCss = 'font-size:11px;padding:4px 8px';
+        const ignList = ((currentConfig.sync && currentConfig.sync.user_ignorelist) || [])
+          .map(n => String(n).trim().toLowerCase());
+        // Linked aliases: if any mapping group member is ignored, show Un-ignore.
+        let ignored = ignList.indexOf(String(u.name).trim().toLowerCase()) >= 0;
+        if (!ignored && currentConfig.user_mappings) {
+          currentConfig.user_mappings.forEach(group => {
+            const members = (group || []).map(n => String(n).trim().toLowerCase()).filter(Boolean);
+            if (members.indexOf(String(u.name).trim().toLowerCase()) >= 0
+                && members.some(m => ignList.indexOf(m) >= 0)) ignored = true;
+          });
+        }
+        const forceBtn = document.createElement('button');
+        forceBtn.className = 'btn'; forceBtn.style.cssText = btnCss;
+        forceBtn.textContent = 'Force';
+        forceBtn.title = 'Force sync this person only (played / resume / favorites)';
+        forceBtn.addEventListener('click', () => forceSyncForUser(u.name));
+        const ignBtn = document.createElement('button');
+        ignBtn.className = 'btn'; ignBtn.style.cssText = btnCss;
+        ignBtn.textContent = ignored ? 'Un-ignore' : 'Ignore';
+        ignBtn.title = ignored
+          ? 'Allow this person to sync again'
+          : 'Skip live and force sync for this person';
+        ignBtn.addEventListener('click', () => toggleIgnoreUser(u.name, !ignored));
         const clr = document.createElement('button');
-        clr.className = 'btn btn-danger';
-        clr.style.cssText = 'font-size:11px;padding:4px 8px';
+        clr.className = 'btn btn-danger'; clr.style.cssText = btnCss;
         clr.textContent = 'Clear watched';
         clr.title = 'Mark all watched items unwatched for this person on every server';
         clr.addEventListener('click', () => clearWatchedForUser(u.name));
-        act.appendChild(clr);
+        if (ignored) {
+          const badge = document.createElement('span');
+          badge.className = 'badge'; badge.textContent = 'Ignored';
+          badge.title = 'Live + mesh force skip this person';
+          act.appendChild(badge);
+        }
+        act.appendChild(forceBtn); act.appendChild(ignBtn); act.appendChild(clr);
         row.appendChild(act);
         grid.appendChild(row);
       });

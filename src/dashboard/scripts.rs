@@ -116,8 +116,9 @@ async function loadDashboard() {
     if (!currentConfig.sync) currentConfig.sync = {
       live_played: true, live_position: true, live_favorites: true,
       force_played: true, force_position: true, force_favorites: true,
-      user_allowlist: []
+      user_allowlist: [], user_ignorelist: []
     };
+    if (!currentConfig.sync.user_ignorelist) currentConfig.sync.user_ignorelist = [];
     if ($('syncThreshold')) $('syncThreshold').value = currentConfig.sync_threshold_seconds;
     const s = currentConfig.sync;
     const setChk = (id, v) => { const el = $(id); if (el) el.checked = !!v; };
@@ -129,6 +130,9 @@ async function loadDashboard() {
     setChk('syncForceFavorites', s.force_favorites !== false);
     if ($('cfgUserAllowlist')) {
       $('cfgUserAllowlist').value = (s.user_allowlist || []).join('\n');
+    }
+    if ($('cfgUserIgnorelist')) {
+      $('cfgUserIgnorelist').value = (s.user_ignorelist || []).join('\n');
     }
     if ($('cfgUserMappings')) {
       $('cfgUserMappings').value = (currentConfig.user_mappings || []).map(group => group.join(', ')).join('\n');
