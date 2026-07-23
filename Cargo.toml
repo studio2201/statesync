@@ -19,7 +19,7 @@ axum = "0.7"
 percent-encoding = "2.3"
 chrono = "0.4"
 maud = "0.26"
-shared-core = { git = "https://github.com/studio2201/shared-assets.git", tag = "v3.0.35" }
+shared-core = { git = "https://github.com/studio2201/shared-assets.git", tag = "v3.0.37" }
 
 [dev-dependencies]
 tower = { version = "0.5", features = ["util"] }
